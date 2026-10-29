@@ -180,6 +180,9 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 @media (min-width:900px){ .pwa .tools{top:calc(76px + env(safe-area-inset-top, 0px))} .pwa .panel{padding-top:calc(60px + env(safe-area-inset-top, 0px))} }
 .app{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .app input,.app select{-webkit-user-select:text;user-select:text}
+/* iPhone: eingeklappte Leiste inkl. Home-Indikator-Bereich, Inhalt darunter vollständig verbergen */
+.pwa .panel.collapsed{max-height:calc(52px + env(safe-area-inset-bottom, 0px));overflow:hidden}
+.pwa .panel.collapsed .pane{visibility:hidden}
 </style>
 </head>
 <body>
