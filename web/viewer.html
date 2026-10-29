@@ -179,6 +179,17 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 /* iPhone: eingeklappte Leiste inkl. Home-Indikator-Bereich, Inhalt darunter vollständig verbergen */
 .pwa .panel.collapsed{max-height:calc(52px + env(safe-area-inset-bottom, 0px));overflow:hidden}
 .pwa .panel.collapsed .pane{visibility:hidden}
+/* iPhone-Home-Bildschirm-App: volle Bildschirmhöhe (iOS meldet sonst die Höhe ohne Statusleiste) */
+.pwa .app{height:var(--app-h, 100%)}
+.pwa body{background:var(--bg-2)}
+/* Bedienleiste als Sheet mit Griff, durchgehend bis zum unteren Rand */
+@media (max-width:899px){
+  .pwa .panel{border-top:0;border-radius:18px 18px 0 0;margin-top:-18px;box-shadow:0 -10px 30px rgba(0,0,0,.28)}
+  .pwa .handle{position:relative;padding-top:14px}
+  .pwa .handle::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:var(--line)}
+  .pwa .panel.collapsed{max-height:calc(60px + env(safe-area-inset-bottom, 0px))}
+  .pwa .hint{bottom:32px}
+}
 </style>
 
 <div class="app" id="app">
@@ -1406,6 +1417,15 @@ if (window.Android && typeof window.Android.saveImage === "function") {
 // iPhone/iPad: Die Dateiauswahl kennt STL & Co. nicht und würde sie ausgrauen – deshalb alle Dateien zulassen.
 // Außerdem das Seiten-Zoomen per Pinch-Geste von Safari unterdrücken, die Geste gehört dem 3D-Modell.
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// Vom Home-Bildschirm gestartet (iOS): Fensterhöhe ist um die Statusleiste zu klein – auf volle Bildschirmhöhe setzen
+if (navigator.standalone === true) {
+  const fitHeight = () => {
+    const land = innerWidth > innerHeight;
+    const full = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    document.documentElement.style.setProperty("--app-h", Math.max(innerHeight, full) + "px");
+  };
+  fitHeight(); addEventListener("resize", fitHeight); addEventListener("orientationchange", () => setTimeout(fitHeight, 250));
+}
 if (isIOS) {
   $("fileInput").removeAttribute("accept");
   ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
