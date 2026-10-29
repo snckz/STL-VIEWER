@@ -71,7 +71,7 @@ Modellblick hat **keine Internet-Berechtigung**. Dateien werden nur auf dem Ger�
 | `web/build.mjs` | Erzeugt daraus `index.html` für die App (`--offline` entfernt Web-Schriften) |
 | `android/` | Android-App: WebView-Hülle in Java, ohne Zusatzbibliotheken |
 | `.github/workflows/build-apk.yml` | Baut bei jedem Push die signierte APK und veröffentlicht sie als Release |
-| `.github/workflows/pages.yml` | Baut die installierbare Web-App (iPhone/iPad) und veröffentlicht sie über GitHub Pages |
+| `.github/workflows/pages.yml` | Baut die installierbare Web-App (iPhone/iPad) in den Zweig `gh-pages`, den GitHub Pages veröffentlicht |
 | `web/pwa/` | Manifest, Icons und Service Worker der Web-App |
 | `test/` | Browser-Tests mit Playwright und Testdateien |
 | `docs/` | Bilder für diese Seite |
