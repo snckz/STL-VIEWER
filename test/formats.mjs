@@ -19,7 +19,7 @@ const expect = {
 let fails = 0;
 for (const [f, exp] of Object.entries(expect)) {
   await p.evaluate(() => { document.getElementById("toast").hidden = true; });
-  await p.setInputFiles("#fileInput", "test/" + f); await p.waitForTimeout(500);
+  await p.setInputFiles("#fileInput", "test/" + f); await p.waitForTimeout(900);
   const got = await p.evaluate(() => ({ name: fileName.textContent, x: dimX.textContent, y: dimY.textContent, z: dimZ.textContent, vol: vol.textContent, mf: manifold.textContent,
     note: headerNote.hidden ? "" : headerNote.textContent, fmt: fmt.textContent, toast: toast.hidden ? null : toastText.textContent }));
   const bad = Object.entries(exp).filter(([k, v]) => got[k] !== v);

@@ -11,6 +11,8 @@
 
 ## Download
 
+### Android
+
 **[➜ Neueste Version herunterladen](../../releases/latest)** – dort die Datei `Modellblick-….apk` antippen.
 
 1. APK am Android-Handy herunterladen und öffnen.
@@ -20,6 +22,20 @@
 Voraussetzung: Android 8.0 oder neuer mit OpenGL ES 3.0 (praktisch alle Geräte ab 2017).
 
 > Google Play Protect kann bei Apps außerhalb des Play Store nachfragen. Das ist normal für frei verteilte APKs.
+
+### iPhone und iPad
+
+**[➜ snckz.github.io/STL-VIEWER](https://snckz.github.io/STL-VIEWER/)** in **Safari** öffnen, dann:
+
+1. Unten auf **Teilen** <kbd>⬆︎</kbd> tippen.
+2. **Zum Home-Bildschirm** wählen und **Hinzufügen** tippen.
+3. Modellblick startet ab jetzt vom Home-Bildschirm wie eine App – im Vollbild und auch ohne Internet.
+
+Dateien öffnest du über **Öffnen** in der App (Dateien, iCloud Drive, Downloads). Das Kamera-Symbol öffnet das Teilen-Menü, dort **Bild sichern** wählen. Voraussetzung: iOS/iPadOS 16.4 oder neuer.
+
+> Warum keine App aus dem App Store? Apple erlaubt Apps außerhalb des App Store nur mit kostenpflichtigem Entwicklerkonto. Die Web-App bietet dieselben Funktionen und braucht das nicht. Updates kommen automatisch beim nächsten Start mit Internet.
+
+Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installieren“ in der Adressleiste).
 
 ## Funktionen
 
@@ -55,6 +71,8 @@ Modellblick hat **keine Internet-Berechtigung**. Dateien werden nur auf dem Ger�
 | `web/build.mjs` | Erzeugt daraus `index.html` für die App (`--offline` entfernt Web-Schriften) |
 | `android/` | Android-App: WebView-Hülle in Java, ohne Zusatzbibliotheken |
 | `.github/workflows/build-apk.yml` | Baut bei jedem Push die signierte APK und veröffentlicht sie als Release |
+| `.github/workflows/pages.yml` | Baut die installierbare Web-App (iPhone/iPad) und veröffentlicht sie über GitHub Pages |
+| `web/pwa/` | Manifest, Icons und Service Worker der Web-App |
 | `test/` | Browser-Tests mit Playwright und Testdateien |
 | `docs/` | Bilder für diese Seite |
 

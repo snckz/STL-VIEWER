@@ -58,6 +58,13 @@ button,input,select{font:inherit;color:inherit}
 .tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .tool svg{width:20px;height:20px}
 .tools hr{border:0;height:1px;background:var(--line);margin:2px 6px}
+.tool{flex:none}
+@media (max-height:900px){ .tool{width:38px;height:38px} .tools{gap:5px} }
+/* Wenig Platz (kleine Handys): Knöpfe in mehrere Spalten von rechts nach links umbrechen – Zeilenzahl setzt das Skript */
+.tools.grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows), auto);direction:rtl;gap:5px}
+.tools.grid > *{direction:ltr}
+.tools.grid hr{display:none}
+@media (max-width:420px){ .tabs .tab{min-width:0;flex:1 1 0;padding:0 2px;font-size:13px} .tabs{padding:0 2px} .handle .collapse{width:34px;margin-right:2px} }
 
 .hint{position:absolute;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:66px;bottom:14px;width:fit-content;max-width:calc(100% - 82px);font-size:12px;line-height:1.4;color:var(--muted);background:color-mix(in srgb,var(--bg) 80%,transparent);padding:6px 12px;border-radius:10px;transition:opacity .4s}
 .hint.gone{opacity:0;pointer-events:none}
@@ -161,6 +168,14 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
   .tools{top:76px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01s!important}}
+
+/* Installierte Web-App (iOS „Zum Home-Bildschirm“): Inhalt läuft unter Statusleiste und Notch */
+.pwa .top{padding-top:calc(10px + env(safe-area-inset-top, 0px))}
+.pwa .tools{top:calc(72px + env(safe-area-inset-top, 0px))}
+.pwa .toast{top:calc(70px + env(safe-area-inset-top, 0px))}
+@media (min-width:900px){ .pwa .tools{top:calc(76px + env(safe-area-inset-top, 0px))} .pwa .panel{padding-top:calc(60px + env(safe-area-inset-top, 0px))} }
+.app{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.app input,.app select{-webkit-user-select:text;user-select:text}
 </style>
 
 <div class="app" id="app">
@@ -1025,6 +1040,12 @@ window.loadModelBase64 = (name, b64) => {
   catch (_) { showLoading(false); showToast("Die geteilte Datei konnte nicht gelesen werden."); }
 };
 window.setLoading = (on, text) => showLoading(!!on, text);
+// Installierte Web-App am Computer/Android-Chrome: Dateien über „Öffnen mit“ (file_handlers im Manifest)
+if ("launchQueue" in window) {
+  window.launchQueue.setConsumer(async (params) => {
+    if (params.files && params.files.length) { try { loadFile(await params.files[0].getFile()); } catch (_) { showToast("Die Datei konnte nicht geöffnet werden."); } }
+  });
+}
 window.showMessage = (t) => showToast(t);
 
 /* ---------------- UI ---------------- */
@@ -1068,7 +1089,17 @@ function selectTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("
 tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t)); t.tabIndex = i ? -1 : 0;
   t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n); } }); });
 $("collapse").addEventListener("click", () => { const c = $("panel").classList.toggle("collapsed"); $("collapse").setAttribute("aria-expanded", String(!c)); });
-new ResizeObserver(() => { state.dirty = true; }).observe($("stage"));
+function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
+  const tools = document.querySelector(".tools"), stage = $("stage");
+  tools.classList.remove("grid");
+  const free = stage.clientHeight - tools.offsetTop - 12;
+  if (tools.offsetHeight > free) {
+    const btn = tools.querySelector(".tool").offsetHeight + 5;
+    tools.style.setProperty("--rows", Math.max(2, Math.floor((free + 5) / btn)));
+    tools.classList.add("grid");
+  }
+}
+new ResizeObserver(() => { state.dirty = true; layoutTools(); }).observe($("stage"));
 
 // Farben
 const COLORS = [["Bernstein","#f2a541"],["Weiß","#eeeeea"],["Schwarz","#2b2d31"],["Grau","#8c9096"],["Rot","#d6403a"],["Orange","#ee7a2b"],["Gelb","#f2cf3c"],["Grün","#3fae5c"],["Blau","#2f6fd6"],["Türkis","#26a6a6"],["Lila","#8a55c9"],["Pink","#e66aa6"],["Holz","#b58553"],["Silber","#c5cbd3"]];
@@ -1351,12 +1382,30 @@ $("layFlat").addEventListener("click", () => {
   showToast("Größte ebene Fläche liegt jetzt auf dem Druckbett.", "info");
 });
 
-// Screenshot (nur in der Android-App, dort wird das Bild in der Galerie gespeichert)
+// Bild speichern: Android-App über die Brücke (Galerie), sonst – z. B. iPhone – über das Teilen-Menü („Bild sichern“)
+const shotName = () => (state.mesh ? state.mesh.name : "modell").replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_") + "_" + Date.now() + ".png";
+const canShareFiles = (() => { try { return window.top === window && !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], "t.png", { type: "image/png" })] }); } catch (_) { return false; } })();
 if (window.Android && typeof window.Android.saveImage === "function") {
   $("shot").hidden = false;
   $("shot").addEventListener("click", () => { draw(); const data = canvas.toDataURL("image/png").split(",")[1];
-    const base = (state.mesh ? state.mesh.name : "modell").replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_");
-    window.Android.saveImage(data, base + "_" + Date.now() + ".png"); });
+    window.Android.saveImage(data, shotName()); });
+} else if (canShareFiles) {
+  $("shot").hidden = false; $("shot").title = "Bild teilen oder sichern"; $("shot").setAttribute("aria-label", "Bild teilen oder sichern");
+  $("shot").addEventListener("click", async () => {
+    draw();   // synchron erzeugen, damit das Teilen noch als direkte Reaktion auf das Tippen gilt
+    const bin = atob(canvas.toDataURL("image/png").split(",")[1]); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    try { await navigator.share({ files: [new File([u8], shotName(), { type: "image/png" })], title: "Modellblick" }); }
+    catch (e) { if (e && e.name !== "AbortError") showToast("Das Bild konnte nicht geteilt werden."); }
+  });
+}
+
+// iPhone/iPad: Die Dateiauswahl kennt STL & Co. nicht und würde sie ausgrauen – deshalb alle Dateien zulassen.
+// Außerdem das Seiten-Zoomen per Pinch-Geste von Safari unterdrücken, die Geste gehört dem 3D-Modell.
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (isIOS) {
+  $("fileInput").removeAttribute("accept");
+  ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 }
 
 /* ---------------- Beispielmodell: Torusknoten ---------------- */
