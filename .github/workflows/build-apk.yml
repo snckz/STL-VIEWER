@@ -48,7 +48,14 @@ jobs:
         env:
           VERSION_CODE: ${{ github.run_number }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: gradle --no-daemon assembleRelease
+        run: |
+          set -o pipefail
+          gradle --no-daemon assembleRelease 2>&1 | tee ../gradle.log || {
+            # Die wichtigsten Fehlerzeilen als Annotation ausgeben, damit sie ohne Anmeldung sichtbar sind
+            MSG=$(grep -E -A12 "What went wrong|error:|ERROR:|AAPT|FAILED|Execution failed" ../gradle.log | head -n 60 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+            echo "::error title=Gradle-Build fehlgeschlagen::$MSG"
+            exit 1
+          }
 
       - name: Signatur prüfen
         run: |
