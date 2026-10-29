@@ -13,7 +13,7 @@ await page.waitForTimeout(800);
 const r = {};
 const info = async () => page.evaluate(() => ({ name: document.getElementById("fileName").textContent, x: dimX.textContent, y: dimY.textContent, z: dimZ.textContent,
   vol: vol.textContent, area: area.textContent, tris: tris.textContent, verts: verts.textContent, mf: manifold.textContent, fit: document.getElementById("fit-chip").textContent,
-  w: weight.textContent, fil: filament.textContent, toast: toast.hidden ? null : toastText.textContent }));
+  w: estWeight.textContent, fil: estLen.textContent, time: estTime.textContent, toast: toast.hidden ? null : toastText.textContent }));
 r.demo = await info();
 await page.screenshot({ path: shots + "/01_demo.png" });
 // Pixel-Check: Mitte des Canvas darf nicht Hintergrund sein
@@ -50,10 +50,10 @@ await page.screenshot({ path: shots + "/04_color.png" });
 await page.click("#tab-view"); await page.check('#optWire', {force:true}); await page.check('#optOverhang', {force:true}); await page.click('[data-view="front"]');
 r.switches = await page.evaluate(() => [__viewer.state.wire, __viewer.state.overhang]);
 await page.screenshot({ path: shots + "/05_view.png" });
-await page.click("#tab-print"); await page.click('[data-scale="200"]');
+await page.click("#tab-rotate"); await page.click('[data-scale="200"]');
 r.scaled = await info();
-await page.selectOption("#printer", { label: "Bambu A1 mini" });
-await page.click('[data-rot="x"]'); r.rotX = await info();
+await page.click('[data-rot90="x"]'); r.rotX = await info();
+await page.click("#tab-print"); await page.selectOption("#printer", { label: "Bambu A1 mini" });
 await page.screenshot({ path: shots + "/06_print.png" });
 // Base64 Schnittstelle der Android-App
 const b64 = (await import("node:fs")).readFileSync(root + "/test/cube20.stl").toString("base64");

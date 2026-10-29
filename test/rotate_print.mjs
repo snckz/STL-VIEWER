@@ -1,0 +1,51 @@
+// Prüft Drehen-Tab (Regler, +90°, Flach hinlegen, Zurücksetzen) und die Druckvorschau (Schätzung, Schichtregler).
+import { chromium } from "/opt/npm-tools/node_modules/playwright/index.mjs";
+const shots = process.argv[2];
+const b = await chromium.launch({ args: ["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); const errs = [];
+p.on("pageerror", e => errs.push(e.message));
+await p.goto("file://" + process.cwd() + "/dist/index.html"); await p.waitForTimeout(500);
+const dims = () => p.evaluate(() => [dimX.textContent, dimY.textContent, dimZ.textContent, vol.textContent, estTime.textContent, estWeight.textContent]);
+const r = {}; let fails = 0; const check = (name, cond, got) => { if (!cond) { fails++; console.log("FEHLER", name, JSON.stringify(got)); } else console.log("ok   ", name); };
+await p.setInputFiles("#fileInput", "test/tall.stl"); await p.waitForTimeout(400);
+await p.click("#tab-rotate");
+await p.click('[data-rot90="y"]'); r.y90 = await dims();
+check("Y +90° legt Zylinder hin", r.y90[0] === "300,0" && r.y90[2] === "60,00", r.y90);
+await p.click("#rotReset"); r.reset = await dims();
+check("Zurücksetzen", r.reset[2] === "300,0", r.reset);
+// Regler auf 30° (wie Ziehen) und loslassen
+await p.evaluate(() => { const el = document.getElementById("rotX"); el.value = 30; el.dispatchEvent(new Event("input")); el.dispatchEvent(new Event("change")); });
+await p.waitForTimeout(200); r.x30 = await dims();
+check("X 30° kippt das Modell", parseFloat(r.x30[2].replace(",", ".")) > 250 && parseFloat(r.x30[2].replace(",", ".")) < 300 && r.x30[3] === r.reset[3], r.x30);
+await p.screenshot({ path: shots + "/10_rotate.png" });
+await p.fill("#rotZOut", "45"); await p.press("#rotZOut", "Enter"); await p.locator("#rotZOut").blur();
+check("Gradzahl eintippen", await p.evaluate(() => __viewer.state.rot[2] === 45 && rotZ.value === "45"), null);
+await p.fill("#rotZOut", "0"); await p.locator("#rotZOut").blur();
+await p.click("#layFlat"); await p.waitForTimeout(200); r.flat = await dims();
+check("Flach hinlegen stellt den Zylinder auf eine Stirnfläche", r.flat[2] === "300,0", r.flat);
+check("Winkel nach Flach hinlegen 0°", (await p.evaluate(() => [rotXOut.value, rotYOut.value, rotZOut.value])).every(t => t === "0"), null);
+// Druckvorschau
+await p.setInputFiles("#fileInput", "test/cube20.stl"); await p.waitForTimeout(300);
+await p.click("#tab-print");
+const t02 = await p.evaluate(() => [estTime.textContent, estLayers.textContent, estWeight.textContent]);
+await p.selectOption("#layerH", "0.12"); const t012 = await p.evaluate(() => [estTime.textContent, estLayers.textContent]);
+check("feinere Schichten = mehr Schichten", t02[1] === "100" && t012[1] === "167", [t02, t012]);
+await p.selectOption("#layerH", "0.2");
+await p.evaluate(() => { const el = document.getElementById("infill"); el.value = 100; el.dispatchEvent(new Event("input")); });
+const full = await p.evaluate(() => estWeight.textContent);
+check("100 % Füllung ≈ massives Gewicht (9,9 g)", Math.abs(parseFloat(full.replace(",", ".")) - 9.9) < 1.2, full);
+await p.evaluate(() => { const el = document.getElementById("infill"); el.value = 15; el.dispatchEvent(new Event("input")); });
+await p.selectOption("#printer", "ender3"); const slow = await p.evaluate(() => estTime.textContent);
+check("Ender 3 langsamer als Bambu", slow !== t02[0], [slow, t02[0]]);
+await p.selectOption("#printer", "bambu");
+await p.evaluate(() => { const el = document.getElementById("layerSlider"); el.value = 40; el.dispatchEvent(new Event("input")); });
+const lay = await p.evaluate(() => [layerOut.textContent, __viewer.state.clipZ, __viewer.state.layerPreview]);
+check("Schichtregler schneidet bei Schicht 40", Math.abs(lay[1] - 8) < 1e-9 && lay[2] && lay[0].startsWith("Schicht 40 / 100"), lay);
+await p.evaluate(() => { __viewer.state.cam.phi = 0.45; __viewer.state.cam.dist *= 0.8; __viewer.state.dirty = true; });
+await p.waitForTimeout(300); await p.screenshot({ path: shots + "/11_print.png" });
+// Überhang-Hinweis + Stützen
+await p.setInputFiles("#fileInput", "test/bambu.3mf"); await p.waitForTimeout(400);
+const hint = await p.evaluate(() => supportHint.textContent);
+check("Würfel ohne Überhänge", hint.startsWith("Keine"), hint);
+console.log(fails ? fails + " Fehler" : "alles ok", errs);
+await b.close(); process.exit(fails ? 1 : 0);

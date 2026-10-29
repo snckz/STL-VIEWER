@@ -6,7 +6,7 @@
   <img src="docs/screen-info.png" width="24%" alt="Modell mit Abmessungen, Volumen und Netzprüfung">
   <img src="docs/screen-color.png" width="24%" alt="Modell in Türkis eingefärbt">
   <img src="docs/screen-overhang.png" width="24%" alt="Überhänge rot markiert">
-  <img src="docs/screen-print.png" width="24%" alt="Druck-Check: Modell passt nicht aufs Druckbett">
+  <img src="docs/screen-print.png" width="24%" alt="Druckvorschau mit geschätzter Druckzeit">
 </p>
 
 ## Download
@@ -27,7 +27,8 @@ Voraussetzung: Android 8.0 oder neuer mit OpenGL ES 3.0 (praktisch alle Geräte 
 - **Einfärben:** 14 Filamentfarben oder eine eigene Farbe, Glanz-Regler, drei Hintergründe.
 - **Infos:** Maße X/Y/Z in mm, Volumen, Oberfläche, Anzahl Dreiecke und Punkte, Format, Dateigröße.
 - **Netzprüfung:** zeigt, ob das Modell geschlossen ist oder offene Kanten und Mehrfachkanten hat.
-- **Druck-Check:** Druckbett für Bambu X1/P1/A1, A1 mini, Prusa, Creality und Voron. Warnung, wenn das Modell nicht aufs Bett passt. Gewicht und Filamentlänge für PLA, PETG, ABS, ASA, TPU, Nylon und Resin. Skalieren (auch Zoll → mm) und um 90° drehen.
+- **Drehen:** Modell frei um X, Y und Z drehen (Regler oder Gradzahl eintippen), +90°-Knöpfe, „Flach hinlegen“ legt die größte ebene Fläche aufs Bett. Größe ändern, auch Zoll → mm.
+- **Druckvorschau:** geschätzte Druckzeit, Filament in Gramm und Metern, Kosten und Schichtanzahl – abhängig von Drucker (Bambu, Prusa, Creality, Voron), Material (PLA, PETG, ABS, ASA, TPU, Nylon), Schichthöhe, Füllung, Wänden und Stützen. Ein Schichtregler zeigt Schicht für Schicht, wie weit der Druck nach welcher Zeit ist. Warnung, wenn das Modell nicht aufs Bett passt.
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/Modellblick`).
 
@@ -88,7 +89,7 @@ node test/e2e.mjs . <ordner-fuer-screenshots>
 
 ## Hinweise
 
-- Gewicht und Filamentlänge gelten für 100 % Füllung. Mit üblichen 15 % Füllung liegt ein Druck meist bei 30–50 % davon.
+- Druckzeit und Filament sind Schätzungen (etwa ±30 %), berechnet aus den Querschnitten des Modells und typischen Slicer-Profilen. Den exakten Wert liefert der Slicer.
 - OBJ-Dateien werden von Y-oben nach Z-oben gedreht, wie in Slicern üblich.
 - Sehr große Dateien (mehrere Millionen Dreiecke) hängen vom Speicher des Geräts ab.
 

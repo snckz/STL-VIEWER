@@ -30,6 +30,7 @@ html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:-1px;padding:0;border:0}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -71,7 +72,7 @@ button,input,select{font:inherit;color:inherit}
 .panel.collapsed{max-height:52px}
 .handle{display:flex;align-items:center;gap:4px;padding:6px max(10px, 0px) 0;}
 .tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 6px}
-.tab{flex:1;min-width:64px;height:40px;border:0;background:none;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
+.tab{flex:1;min-width:56px;padding:0 4px;height:40px;border:0;background:none;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
 .tab[aria-selected="true"]{color:var(--fg)}
 .tab[aria-selected="true"]::after{content:"";position:absolute;left:30%;right:30%;bottom:2px;height:3px;border-radius:3px;background:var(--accent)}
 .collapse{width:40px;height:40px;border:0;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;margin-right:6px}
@@ -129,6 +130,22 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .stat span{font-family:var(--font-mono);font-size:18px;font-variant-numeric:tabular-nums}
 .stat small{color:var(--muted);font-size:11px}
 .note{color:var(--muted);font-size:12px;line-height:1.5;margin:0}
+
+/* Drehen */
+.rot-list{display:grid;gap:4px}
+.rot-row{display:grid;grid-template-columns:28px minmax(0,1fr) 68px auto;align-items:center;gap:10px;min-height:44px}
+.axis{font-family:var(--font-mono);font-weight:600;font-size:13px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--surface)}
+.axis.x{color:#ef6a5b}.axis.y{color:#5cc98a}.axis.z{color:#5fa8f5}
+.deg-in{height:36px;padding:0 8px;text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px}
+.btn.mini{min-height:34px;padding:0 10px;font-size:12px;font-family:var(--font-mono)}
+
+/* Druckschätzung */
+.estimate{display:grid;gap:8px}
+.est-main{display:grid;gap:2px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.est-main span{font-family:var(--font-display);font-weight:700;font-size:30px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--fg)}
+.est-main small,.stat small{color:var(--muted);font-size:11px}
+.est-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.est-grid .stat span{font-size:16px;white-space:nowrap}
 
 /* Overlays */
 .overlay{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(4px);padding:24px}
@@ -196,6 +213,7 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
         <button class="tab" role="tab" id="tab-info" aria-controls="pane-info" aria-selected="true">Info</button>
         <button class="tab" role="tab" id="tab-color" aria-controls="pane-color" aria-selected="false">Farbe</button>
         <button class="tab" role="tab" id="tab-view" aria-controls="pane-view" aria-selected="false">Ansicht</button>
+        <button class="tab" role="tab" id="tab-rotate" aria-controls="pane-rotate" aria-selected="false">Drehen</button>
         <button class="tab" role="tab" id="tab-print" aria-controls="pane-print" aria-selected="false">Druck</button>
       </div>
       <button class="collapse" id="collapse" aria-label="Bereich ein-/ausklappen" aria-expanded="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -249,33 +267,35 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
       </div>
     </section>
 
-    <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
-      <div class="grid2">
-        <div class="field"><label class="label" for="printer">Drucker</label>
-          <select id="printer">
-            <option value="256,256,256">Bambu X1 / P1 / A1</option>
-            <option value="180,180,180">Bambu A1 mini</option>
-            <option value="250,210,220">Prusa MK4 / MK3</option>
-            <option value="180,180,180">Prusa Mini</option>
-            <option value="220,220,250">Creality Ender 3</option>
-            <option value="300,300,400">Creality Ender 5 Plus</option>
-            <option value="235,235,270">Creality K1</option>
-            <option value="350,350,350">Voron 2.4 (350)</option>
-          </select></div>
-        <div class="field"><label class="label" for="material">Material</label>
-          <select id="material">
-            <option value="1.24">PLA · 1,24 g/cm³</option>
-            <option value="1.27">PETG · 1,27 g/cm³</option>
-            <option value="1.04">ABS · 1,04 g/cm³</option>
-            <option value="1.07">ASA · 1,07 g/cm³</option>
-            <option value="1.21">TPU · 1,21 g/cm³</option>
-            <option value="1.14">Nylon · 1,14 g/cm³</option>
-            <option value="1.15">Resin · 1,15 g/cm³</option>
-          </select></div>
+    <section class="pane" id="pane-rotate" role="tabpanel" aria-labelledby="tab-rotate" hidden>
+      <div class="rot-list">
+        <div class="rot-row">
+          <label class="axis x" for="rotX">X</label>
+          <input type="range" id="rotX" min="-180" max="180" step="1" value="0" aria-label="Drehung um X" aria-valuetext="0 Grad">
+          <input class="num deg-in" type="number" id="rotXOut" step="any" value="0" inputmode="numeric" aria-label="X-Winkel in Grad">
+          <button class="btn mini" data-rot90="x" aria-label="X um 90° drehen">+90°</button>
+        </div>
+        <div class="rot-row">
+          <label class="axis y" for="rotY">Y</label>
+          <input type="range" id="rotY" min="-180" max="180" step="1" value="0" aria-label="Drehung um Y" aria-valuetext="0 Grad">
+          <input class="num deg-in" type="number" id="rotYOut" step="any" value="0" inputmode="numeric" aria-label="Y-Winkel in Grad">
+          <button class="btn mini" data-rot90="y" aria-label="Y um 90° drehen">+90°</button>
+        </div>
+        <div class="rot-row">
+          <label class="axis z" for="rotZ">Z</label>
+          <input type="range" id="rotZ" min="-180" max="180" step="1" value="0" aria-label="Drehung um Z" aria-valuetext="0 Grad">
+          <input class="num deg-in" type="number" id="rotZOut" step="any" value="0" inputmode="numeric" aria-label="Z-Winkel in Grad">
+          <button class="btn mini" data-rot90="z" aria-label="Z um 90° drehen">+90°</button>
+        </div>
       </div>
+      <div class="seg">
+        <button class="btn" id="layFlat" title="Größte ebene Fläche nach unten aufs Druckbett">Flach hinlegen</button>
+        <button class="btn" id="rotReset">Zurücksetzen</button>
+      </div>
+      <p class="note">Für genaue Winkel die Gradzahl antippen und eintippen. „Flach hinlegen“ legt die größte ebene Fläche aufs Bett, meist die beste Lage zum Drucken.</p>
       <div class="field">
-        <div class="range-head"><label class="label" for="scale">Skalierung</label><output id="scaleOut">100 %</output></div>
-        <div class="row"><input class="num" type="number" id="scale" min="1" max="10000" step="1" value="100" inputmode="decimal" aria-describedby="scaleOut" style="flex:1"></div>
+        <div class="range-head"><label class="label" for="scale">Größe</label><output id="scaleOut">100 %</output></div>
+        <input class="num" type="number" id="scale" min="1" max="10000" step="1" value="100" inputmode="decimal" aria-describedby="scaleOut">
         <div class="seg">
           <button class="btn" data-scale="50">50 %</button>
           <button class="btn" data-scale="100">100 %</button>
@@ -283,20 +303,76 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
           <button class="btn" data-scale="2540" title="Modell wurde in Zoll exportiert">Zoll → mm</button>
         </div>
       </div>
-      <div class="field">
-        <span class="label">Ausrichtung</span>
-        <div class="seg">
-          <button class="btn" data-rot="x">X 90°</button>
-          <button class="btn" data-rot="y">Y 90°</button>
-          <button class="btn" data-rot="z">Z 90°</button>
-        </div>
+    </section>
+
+    <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
+      <div class="grid2">
+        <div class="field"><label class="label" for="printer">Drucker</label>
+          <select id="printer">
+            <option value="bambu">Bambu X1 / P1</option>
+            <option value="bambuA1">Bambu A1</option>
+            <option value="bambuMini">Bambu A1 mini</option>
+            <option value="mk4">Prusa MK4 / Core One</option>
+            <option value="mk3">Prusa MK3</option>
+            <option value="mini">Prusa Mini</option>
+            <option value="ender3">Creality Ender 3</option>
+            <option value="ender5p">Creality Ender 5 Plus</option>
+            <option value="k1">Creality K1</option>
+            <option value="voron">Voron 2.4 (350)</option>
+          </select></div>
+        <div class="field"><label class="label" for="material">Material</label>
+          <select id="material">
+            <option value="pla">PLA</option>
+            <option value="petg">PETG</option>
+            <option value="abs">ABS</option>
+            <option value="asa">ASA</option>
+            <option value="tpu">TPU</option>
+            <option value="pa">Nylon</option>
+          </select></div>
       </div>
       <div class="row"><span>Passt aufs Druckbett</span><span id="fit-chip" class="chip na">–</span></div>
-      <div class="big">
-        <div class="stat"><small>Gewicht (massiv)</small><span id="weight">–</span></div>
-        <div class="stat"><small>Filament Ø 1,75 mm</small><span id="filament">–</span></div>
+
+      <div class="estimate">
+        <div class="est-main"><small>Geschätzte Druckzeit</small><span id="estTime">–</span><small id="estPrep">–</small></div>
+        <div class="est-grid">
+          <div class="stat"><small>Filament</small><span id="estWeight">–</span><small id="estLen">–</small></div>
+          <div class="stat"><small>Kosten</small><span id="estCost">–</span><small id="estCostNote">–</small></div>
+          <div class="stat"><small>Schichten</small><span id="estLayers">–</span><small id="estLayerH">–</small></div>
+        </div>
       </div>
-      <p class="note">Gewicht und Länge gelten bei 100 % Füllung. Mit üblichen 15 % Füllung landet ein Druck meist bei etwa 30–50 % davon, je nach Wandstärke.</p>
+
+      <div class="grid2">
+        <div class="field"><label class="label" for="layerH">Schichthöhe</label>
+          <select id="layerH">
+            <option value="0.08">0,08 mm · extra fein</option>
+            <option value="0.12">0,12 mm · fein</option>
+            <option value="0.16">0,16 mm · optimal</option>
+            <option value="0.2" selected>0,20 mm · Standard</option>
+            <option value="0.24">0,24 mm · Entwurf</option>
+            <option value="0.28">0,28 mm · schnell</option>
+          </select></div>
+        <div class="field"><label class="label" for="walls">Wände</label>
+          <select id="walls">
+            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          </select></div>
+      </div>
+      <div class="range">
+        <div class="range-head"><label for="infill">Füllung</label><output id="infillOut">15 %</output></div>
+        <input type="range" id="infill" min="0" max="100" step="5" value="15">
+      </div>
+      <label class="switch"><span>Stützstrukturen<small id="supportHint">Unter Überhängen steiler als 45°</small></span><input type="checkbox" id="optSupport"></label>
+      <div class="field">
+        <label class="label" for="price">Filamentpreis (€ pro kg)</label>
+        <input class="num" type="number" id="price" min="0" max="1000" step="0.5" value="20" inputmode="decimal">
+      </div>
+
+      <div class="range">
+        <div class="range-head"><label for="layerSlider">Schichtvorschau</label><output id="layerOut">alle Schichten</output></div>
+        <input type="range" id="layerSlider" min="1" max="100" step="1" value="100">
+      </div>
+      <p class="sr-only" id="estLive" aria-live="polite"></p>
+      <p class="note">Grobe Schätzung aus Form, Druckerprofil und Einstellungen, etwa ±30 %. Den genauen Wert liefert dein Slicer. Die Schichtvorschau zeigt, wie weit der Druck nach einer bestimmten Zeit ist.</p>
     </section>
   </aside>
 </div>
@@ -345,14 +421,14 @@ function program(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, shad
 let meshProg, lineProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf;
 const MESH_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
-uniform mat4 uVP; uniform float uScale;
+uniform mat4 uVP; uniform float uScale; uniform mat3 uRot; uniform vec3 uOff;
 out vec3 vNor; out vec3 vPos; out vec3 vBar;
-void main(){ vec3 p = aPos * uScale; vPos = p; vNor = aNor; int k = gl_VertexID % 3; vBar = vec3(k == 0, k == 1, k == 2); gl_Position = uVP * vec4(p, 1.0); }`;
+void main(){ vec3 p = (uRot * aPos + uOff) * uScale; vPos = p; vNor = uRot * aNor; int k = gl_VertexID % 3; vBar = vec3(k == 0, k == 1, k == 2); gl_Position = uVP * vec4(p, 1.0); }`;
 const MESH_FS = `#version 300 es
 precision highp float;
 in vec3 vNor; in vec3 vPos; in vec3 vBar;
 uniform vec3 uColor; uniform vec3 uEye; uniform float uGloss; uniform float uClip;
-uniform int uWire; uniform int uOver; uniform int uOut;
+uniform int uWire; uniform int uOver; uniform int uOut; uniform float uLayerH; uniform vec3 uAccent;
 out vec4 o;
 void main(){
   if (vPos.z > uClip) discard;
@@ -374,6 +450,13 @@ void main(){
   float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.18;
   vec3 c = base * (amb + 0.62 * d1 + 0.38 * d2) + spec + rim;
   if (back && uClip < 1e8) c = vec3(0.52,0.58,0.68) * (0.35 + 0.45 * d2);   /* Schnittfläche (nur bei aktivem Schnitt) */
+  if (uLayerH > 0.0) {   /* Druckvorschau: Schichtlinien, oberste Schicht hervorgehoben */
+    float t = vPos.z / uLayerH; float fw = fwidth(t);
+    float d = min(fract(t), 1.0 - fract(t));
+    float line = (1.0 - smoothstep(0.0, fw * 1.5, d)) * (1.0 - smoothstep(0.12, 0.45, fw));
+    c *= 1.0 - 0.28 * line;
+    if (uClip < 1e8 && vPos.z > uClip - uLayerH) c = mix(c, uAccent, back ? 0.55 : 0.4);
+  }
   if (uWire == 1) {
     vec3 w = fwidth(vBar); vec3 a = smoothstep(vec3(0.0), w * 1.2, vBar);
     float e = 1.0 - min(min(a.x, a.y), a.z);
@@ -416,8 +499,9 @@ const BG = { dark: [0.078, 0.09, 0.11], grey: [0.30, 0.32, 0.35], light: [0.86, 
 const state = {
   mesh: null,           // { pos, triCount, vid, uniqueVerts, manifold, fmt, size, name, header, faceN, smoothN }
   color: [0.95, 0.65, 0.25], gloss: 0.4, bg: "dark",
-  wire: false, smooth: false, overhang: false, bed: true, ortho: false, clip: 1,
-  scale: 1, printer: [256, 256, 256], density: 1.24,
+  wire: false, smooth: false, overhang: false, bed: true, ortho: false, clipZ: Infinity, layerPreview: false,
+  rot: [0, 0, 0], live: { R: [1,0,0, 0,1,0, 0,0,1], off: [0, 0, 0] },
+  scale: 1, printer: [256, 256, 256],
   cam: { theta: -Math.PI / 4, phi: 0.5, dist: 200, target: [0, 0, 20] },
   spin: false, dirty: true
 };
@@ -427,8 +511,15 @@ try { const s = JSON.parse(localStorage.getItem("modellblick") || "{}");
   if (BG[s.bg]) state.bg = s.bg;
   if (typeof s.printer === "string") { $("printer").value = s.printer; if (!$("printer").value) $("printer").selectedIndex = 0; }
   if (typeof s.material === "string") { $("material").value = s.material; if (!$("material").value) $("material").selectedIndex = 0; }
+  for (const id of ["layerH", "walls"]) if (typeof s[id] === "string") { const el = $(id), old = el.value; el.value = s[id]; if (!el.value) el.value = old; }
+  if (Number.isFinite(s.infill) && s.infill >= 0 && s.infill <= 100) $("infill").value = s.infill;
+  if (typeof s.support === "boolean") $("optSupport").checked = s.support;
+  if (Number.isFinite(s.price) && s.price >= 0 && s.price <= 1000) $("price").value = s.price;
 } catch (_) {}
-function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ color: state.color, gloss: state.gloss, bg: state.bg, printer: $("printer").value, material: $("material").value })); } catch (_) {} }
+$("infillOut").textContent = $("infill").value + " %";
+function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ color: state.color, gloss: state.gloss, bg: state.bg,
+  printer: $("printer").value, material: $("material").value, layerH: $("layerH").value, walls: $("walls").value,
+  infill: +$("infill").value, support: $("optSupport").checked, price: parseFloat($("price").value) || 0 })); } catch (_) {} }
 
 /* ---------------- Parser ---------------- */
 class ViewerError extends Error {}
@@ -809,8 +900,10 @@ function draw() {
   if (m) {
     gl.useProgram(meshProg.p); const u = meshProg.u;
     gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uScale, state.scale);
+    gl.uniformMatrix3fv(u.uRot, true, state.live.R); gl.uniform3fv(u.uOff, state.live.off);
     gl.uniform3fv(u.uColor, srgbToLin(state.color)); gl.uniform3fv(u.uEye, e); gl.uniform1f(u.uGloss, state.gloss);
-    const top = m.max[2] * state.scale; gl.uniform1f(u.uClip, state.clip >= 1 ? 1e9 : top * state.clip);
+    gl.uniform1f(u.uClip, Number.isFinite(state.clipZ) ? state.clipZ : 1e9);
+    gl.uniform1f(u.uLayerH, state.layerPreview ? est.layerH * 1 : 0); gl.uniform3fv(u.uAccent, [0.95, 0.65, 0.25]);
     gl.uniform1i(u.uWire, state.wire ? 1 : 0); gl.uniform1i(u.uOver, state.overhang ? 1 : 0); gl.uniform1i(u.uOut, (state.bed && !fitsBed()) ? 1 : 0);
     gl.bindVertexArray(meshVAO); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3);
   }
@@ -894,8 +987,9 @@ async function loadBuffer(buf, name, size) {
     placeOnBed(parsed.pos);
     const mesh = prepareMesh(parsed, name, size);
     stats(mesh);
-    state.mesh = mesh; state.scale = 1; $("scale").value = 100; state.clip = 1; $("clip").value = 1000;
-    uploadMesh(); updateInfo(); fitView("iso");
+    initOrientation(mesh);   // braucht eine Kopie der Punkte – bei Speichermangel scheitert es hier, bevor das alte Modell ersetzt wird
+    state.mesh = mesh; state.scale = 1; $("scale").value = 100;
+    uploadMesh(); resetLayerView(); updateInfo(); fitView("iso");
   } catch (err) {
     console.warn(err);
     showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
@@ -967,8 +1061,7 @@ function updateInfo() {
   if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = (m.fmt === "3MF" ? "" : "Dateikopf: ") + m.header.slice(0, 120); } else hn.hidden = true;
   const ok = fitsBed(); const chip = $("fit-chip");
   chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
-  const g = vol * state.density; $("weight").textContent = fmtNum(g, g < 10 ? 1 : 0) + " g";
-  const len = vol / (Math.PI * 0.0875 * 0.0875) / 100; $("filament").textContent = fmtNum(len, len < 10 ? 2 : 1) + " m";
+  updateEstimate();
   $("scaleOut").textContent = fmtNum(state.scale * 100, state.scale * 100 % 1 ? 1 : 0) + " %";
   state.dirty = true;
 }
@@ -1004,27 +1097,264 @@ function setBg(bg) { state.bg = bg; document.querySelectorAll("#bgSeg .btn").for
 const bindSwitch = (id, key, after) => $(id).addEventListener("change", (e) => { state[key] = e.target.checked; if (after) after(); state.dirty = true; });
 bindSwitch("optWire", "wire"); bindSwitch("optSmooth", "smooth", uploadNormals); bindSwitch("optOverhang", "overhang");
 bindSwitch("optBed", "bed"); bindSwitch("optOrtho", "ortho");
-$("clip").addEventListener("input", (e) => { state.clip = e.target.value / 1000; const m = state.mesh;
-  $("clipOut").textContent = state.clip >= 1 || !m ? "aus" : fmtNum(m.max[2] * state.scale * state.clip, 1) + " mm"; state.dirty = true; });
+$("clip").addEventListener("input", (e) => { const m = state.mesh; const f = e.target.value / 1000;
+  state.clipZ = f >= 1 || !m ? Infinity : m.max[2] * state.scale * f; state.layerPreview = false;
+  $("clipOut").textContent = Number.isFinite(state.clipZ) ? fmtNum(state.clipZ, 1) + " mm" : "aus";
+  $("layerSlider").value = $("layerSlider").max; $("layerOut").textContent = "alle Schichten"; state.dirty = true; });
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => fitView(b.dataset.view)));
 $("zoomIn").addEventListener("click", () => zoom(0.8)); $("zoomOut").addEventListener("click", () => zoom(1.25)); $("fit").addEventListener("click", () => fitView());
 $("spin").addEventListener("click", () => { state.spin = !state.spin; $("spin").setAttribute("aria-pressed", String(state.spin)); hideHint(); });
 
-// Druck
-function readPrinter() { state.printer = $("printer").value.split(",").map(Number); buildBed(); updateInfo(); persist(); }
+// Druck: Drucker- und Materialprofile
+// Geschwindigkeiten in mm/s, Beschleunigung in mm/s², Fluss in mm³/s, Zeiten in s – angelehnt an die Standardprofile der jeweiligen Slicer
+const PRINTERS = {
+  bambu:     { bed: [256, 256, 256], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 32, minLayer: 5, prep: 300 },
+  bambuA1:   { bed: [256, 256, 256], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 28, minLayer: 5, prep: 270 },
+  bambuMini: { bed: [180, 180, 180], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 28, minLayer: 5, prep: 240 },
+  mk4:       { bed: [250, 210, 220], outer: 150, inner: 200, infill: 200, skin: 170, support: 150, first: 30, accel: 4000,  accelOuter: 2500, flow: 20, minLayer: 10, prep: 180 },
+  mk3:       { bed: [250, 210, 210], outer: 25,  inner: 45,  infill: 80,  skin: 40,  support: 50,  first: 20, accel: 1000,  accelOuter: 800,  flow: 11, minLayer: 15, prep: 210 },
+  mini:      { bed: [180, 180, 180], outer: 25,  inner: 40,  infill: 80,  skin: 40,  support: 50,  first: 20, accel: 1250,  accelOuter: 1000, flow: 10, minLayer: 15, prep: 180 },
+  ender3:    { bed: [220, 220, 250], outer: 25,  inner: 50,  infill: 50,  skin: 25,  support: 50,  first: 20, accel: 500,   accelOuter: 500,  flow: 8,  minLayer: 10, prep: 180 },
+  ender5p:   { bed: [300, 300, 400], outer: 25,  inner: 50,  infill: 50,  skin: 25,  support: 50,  first: 20, accel: 500,   accelOuter: 500,  flow: 8,  minLayer: 10, prep: 300 },
+  k1:        { bed: [220, 220, 250], outer: 200, inner: 300, infill: 270, skin: 200, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 26, minLayer: 5, prep: 180 },
+  voron:     { bed: [350, 350, 340], outer: 120, inner: 200, infill: 250, skin: 150, support: 120, first: 40, accel: 5000,  accelOuter: 3000, flow: 24, minLayer: 6, prep: 420 }
+};
+const MATERIALS = {
+  pla:  { name: "PLA",   density: 1.24, flow: 21,  maxSpeed: Infinity },
+  petg: { name: "PETG",  density: 1.27, flow: 13,  maxSpeed: Infinity },
+  abs:  { name: "ABS",   density: 1.04, flow: 16,  maxSpeed: Infinity },
+  asa:  { name: "ASA",   density: 1.07, flow: 16,  maxSpeed: Infinity },
+  tpu:  { name: "TPU",   density: 1.21, flow: 3.6, maxSpeed: 40 },
+  pa:   { name: "Nylon", density: 1.14, flow: 12,  maxSpeed: Infinity }
+};
+const LW = 0.42, LW_INFILL = 0.45, TOP_MM = 1.0, BOTTOM_MM = 0.6, SUPPORT_DENSITY = 0.15;
+const est = { layerH: 0.2, layers: 0, cum: null, profile: null };
+
+function readPrinter() {
+  const pr = PRINTERS[$("printer").value] || PRINTERS.bambu;
+  state.printer = pr.bed.slice(); buildBed(); updateInfo(); persist();
+}
 $("printer").addEventListener("change", readPrinter);
-$("material").addEventListener("change", () => { state.density = +$("material").value; updateInfo(); persist(); });
+for (const id of ["material", "layerH", "walls", "optSupport"]) $(id).addEventListener("change", () => { updateEstimate(); persist(); });
+$("infill").addEventListener("input", () => { $("infillOut").textContent = $("infill").value + " %"; updateEstimate(); });
+$("infill").addEventListener("change", persist);
+$("price").addEventListener("input", () => { updateEstimate(); persist(); });
+
+/* Querschnitts-Profil: Fläche und Umfang des Modells in vielen Höhen (unskaliert), dazu Überhänge für Stützen.
+   Grundlage für Schichtanzahl, Wände, Füllung und Druckzeit. */
+function computeProfile(m) {
+  const p = m.pos, H = Math.max(1e-6, m.max[2] - m.min[2]), z0 = m.min[2];
+  const K = Math.max(2, Math.min(400, Math.ceil(H / 0.1))), dz = H / K;
+  const A = new Float64Array(K), P = new Float64Array(K);
+  const ohZ = [], ohA = [];
+  for (let i = 0; i < p.length; i += 9) {
+    const ax = p[i], ay = p[i+1], az = p[i+2] - z0, bx = p[i+3], by = p[i+4], bz = p[i+5] - z0, cx = p[i+6], cy = p[i+7], cz = p[i+8] - z0;
+    const ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
+    const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx; const nl = Math.hypot(nx, ny, nz); if (nl === 0) continue;
+    if (nz / nl < -0.7071) { const zc = (az + bz + cz) / 3; if (zc > H * 1e-4) { ohZ.push(zc); ohA.push(-nz / 2); } }   // projizierte Fläche; 0,3-mm-Grenze erst skaliert in estimate()
+    const zmin = Math.min(az, bz, cz), zmax = Math.max(az, bz, cz);
+    let k0 = Math.max(0, Math.ceil(zmin / dz - 0.5)), k1 = Math.min(K - 1, Math.floor(zmax / dz - 0.5));
+    for (let k = k0; k <= k1; k++) {
+      const z = (k + 0.5) * dz + dz * 1e-4; const pts = [];
+      const cut = (x1, y1, z1, x2, y2, z2) => { if ((z1 - z) * (z2 - z) < 0) { const t = (z - z1) / (z2 - z1); pts.push(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t); } };
+      cut(ax, ay, az, bx, by, bz); cut(bx, by, bz, cx, cy, cz); cut(cx, cy, cz, ax, ay, az);
+      if (pts.length < 4) continue;
+      let [px, py, qx, qy] = pts;
+      if ((qx - px) * (-ny) + (qy - py) * nx < 0) { [px, py, qx, qy] = [qx, qy, px, py]; }   // Außenkontur gegen den Uhrzeigersinn
+      A[k] += (px * qy - py * qx) / 2; P[k] += Math.hypot(qx - px, qy - py);
+    }
+  }
+  for (let k = 0; k < K; k++) A[k] = Math.abs(A[k]);
+  // Überhänge nach Höhe sortiert; Suffixsumme = Stützfläche oberhalb einer Höhe
+  const order = ohZ.map((_, i) => i).sort((a, b) => ohZ[a] - ohZ[b]);
+  const oz = new Float64Array(order.length), suffix = new Float64Array(order.length + 1);
+  order.forEach((j, i) => { oz[i] = ohZ[j]; });
+  for (let i = order.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + ohA[order[i]];
+  return { H, K, A, P, oz, suffix, overhang: suffix[0] };
+}
+function supportAreaAbove(pr, z) {   // unskaliert
+  let lo = 0, hi = pr.oz.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (pr.oz[mid] <= z) lo = mid + 1; else hi = mid; }
+  return pr.suffix[lo];
+}
+function secPerMm(v, a, seg) {   // Trapez-Bewegungsprofil: Beschleunigen und Bremsen je Liniensegment
+  return seg >= v * v / a ? 1 / v + v / (a * seg) : 2 * Math.sqrt(seg / a) / seg;
+}
+
+function estimate() {
+  const m = state.mesh; if (!m) return null;
+  if (!est.profile) est.profile = computeProfile(m);
+  const pf = est.profile, s = state.scale;
+  const pr = PRINTERS[$("printer").value] || PRINTERS.bambu, mat = MATERIALS[$("material").value] || MATERIALS.pla;
+  const lh = +$("layerH").value || 0.2, walls = +$("walls").value || 2, inf = (+$("infill").value || 0) / 100, sup = $("optSupport").checked;
+  const H = pf.H * s, N = Math.max(1, Math.round(H / lh));
+  const nTop = Math.max(3, Math.ceil(TOP_MM / lh)), nBot = Math.max(3, Math.ceil(BOTTOM_MM / lh));
+  const area = (i) => { if (i < 0 || i >= N) return 0; const k = Math.min(pf.K - 1, Math.floor((i + 0.5) / N * pf.K)); return pf.A[k] * s * s; };
+  const perim = (i) => { const k = Math.min(pf.K - 1, Math.floor((i + 0.5) / N * pf.K)); return pf.P[k] * s; };
+  const vFlow = Math.min(pr.flow, mat.flow) / (LW * lh);
+  const cap = (v) => Math.min(v, vFlow, mat.maxSpeed);
+  const bedArea = pr.bed[0] * pr.bed[1];
+  let t = 0, vol = 0; const cum = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const Ar = area(i), P = perim(i), z = (i + 0.5) * lh;
+    let supA = sup ? Math.min(supportAreaAbove(pf, Math.max(z, 0.3) / s) * s * s, bedArea) : 0;
+    if (Ar <= 0 && supA <= 0) { cum[i] = t; continue; }
+    const wallLen = Ar > 0 ? Math.min(P * walls, Ar / LW) : 0;
+    const outerLen = Math.min(P, wallLen), innerLen = wallLen - outerLen;
+    const Ai = Math.max(0, Ar - wallLen * LW);
+    const skin = Math.min(Ai, Math.max(0, Ar - area(i + nTop)) + Math.max(0, Ar - area(i - nBot)));
+    const skinLen = skin / LW, infLen = (Ai - skin) * inf / LW_INFILL, supLen = supA * SUPPORT_DENSITY / LW;
+    const d = Math.min(300, Math.max(2, Math.sqrt(Math.max(Ar, supA)))), segW = Math.min(300, Math.max(1, Math.min(d, P / 4)));
+    const first = i === 0;
+    const sp = (v) => cap(first ? Math.min(v, pr.first) : v);
+    const acc = first ? pr.accel / 2 : pr.accel, accO = first ? pr.accelOuter / 2 : pr.accelOuter;
+    let lt = outerLen * secPerMm(sp(pr.outer), accO, segW) + innerLen * secPerMm(sp(pr.inner), acc, segW)
+           + skinLen * secPerMm(sp(pr.skin), acc, d * 0.8) + infLen * secPerMm(sp(pr.infill), acc, d * 0.8)
+           + supLen * secPerMm(sp(pr.support), acc, d * 0.5);
+    lt += 0.7 + (sup && supA > 0 ? 0.6 : 0);   // Schichtwechsel, Fahrwege, Rückzüge
+    t += Math.max(lt, pr.minLayer);
+    vol += ((outerLen + innerLen + skinLen + supLen) * LW + infLen * LW_INFILL) * lh;
+    cum[i] = t;
+  }
+  for (let i = 0; i < N; i++) cum[i] += pr.prep;   // Zeit ab Druckstart inkl. Vorbereitung
+  const prevH = est.layerH; est.layerH = lh; est.layers = N; est.cum = cum; est.prevLayerH = prevH;
+  const grams = vol / 1000 * mat.density, price = Math.max(0, parseFloat(String($("price").value).replace(",", ".")) || 0);
+  return { seconds: t + pr.prep, prep: pr.prep, layers: N, lh, grams, meters: vol / (Math.PI * 0.875 * 0.875) / 1000, cost: grams / 1000 * price, price,
+    overhangCm2: supportAreaAbove(pf, 0.3 / s) * s * s / 100, mat };
+}
+function fmtDuration(sec) {
+  const min = Math.max(1, Math.round(sec / 60)); if (min < 60) return min + " min";
+  const h = Math.floor(min / 60), r = min % 60; return h + " h" + (r ? " " + r + " min" : "");
+}
+function updateEstimate() {
+  const r = estimate(); if (!r) return;
+  $("estTime").textContent = "≈ " + fmtDuration(r.seconds);
+  $("estPrep").textContent = "inkl. ca. " + fmtDuration(r.prep) + " Aufheizen und Kalibrieren";
+  $("estWeight").textContent = fmtNum(r.grams, r.grams < 10 ? 1 : 0) + " g";
+  $("estLen").textContent = fmtNum(r.meters, r.meters < 10 ? 2 : 1) + " m " + r.mat.name;
+  $("estCost").textContent = fmtNum(r.cost, 2) + " €";
+  $("estCostNote").textContent = "bei " + fmtNum(r.price, r.price % 1 ? 2 : 0) + " €/kg";
+  $("estLayers").textContent = fmtInt(r.layers);
+  $("estLayerH").textContent = "à " + fmtNum(r.lh, 2) + " mm";
+  $("supportHint").textContent = r.overhangCm2 >= 0.5 ? "Empfohlen – " + fmtNum(r.overhangCm2, 1) + " cm² Überhänge über 45°" : "Keine nennenswerten Überhänge über 45°";
+  const ls = $("layerSlider"); const atMax = +ls.value >= +ls.max;
+  if (!atMax && state.layerPreview && Number.isFinite(state.clipZ) && est.prevLayerH !== r.lh) ls.value = Math.max(1, Math.round(state.clipZ / r.lh));   // Höhe halten
+  ls.max = r.layers; if (atMax || +ls.value > r.layers) ls.value = r.layers;
+  updateLayerView(); announceEstimate(r);
+}
+
+let announceTimer;
+function announceEstimate(r) { clearTimeout(announceTimer);   // Screenreader: erst nach einer kurzen Pause ansagen
+  announceTimer = setTimeout(() => { $("estLive").textContent = "Geschätzte Druckzeit " + fmtDuration(r.seconds) + ", " + fmtNum(r.grams, 0) + " Gramm Filament"; }, 900); }
+
+// Schichtvorschau
+function updateLayerView() {
+  const ls = $("layerSlider"), n = +ls.value, N = est.layers;
+  if (!state.mesh || !N || n >= N) {
+    if (state.layerPreview) { state.layerPreview = false; state.clipZ = Infinity; }
+    $("layerOut").textContent = "alle Schichten"; state.dirty = true; return;
+  }
+  state.layerPreview = true; state.clipZ = n * est.layerH;
+  $("clip").value = 1000; $("clipOut").textContent = "aus";
+  const tl = est.cum ? est.cum[Math.max(0, n - 1)] : 0;
+  $("layerOut").textContent = "Schicht " + fmtInt(n) + " / " + fmtInt(N) + " · " + fmtNum(state.clipZ, 2) + " mm · nach ≈ " + fmtDuration(tl);
+  state.dirty = true;
+}
+$("layerSlider").addEventListener("input", updateLayerView);
+function resetLayerView() {
+  state.clipZ = Infinity; state.layerPreview = false; $("clip").value = 1000; $("clipOut").textContent = "aus";
+  $("layerSlider").value = $("layerSlider").max; $("layerOut").textContent = "alle Schichten";
+}
+
+// Größe
 function setScale(pct) { if (!Number.isFinite(pct) || pct <= 0) return; pct = Math.min(10000, Math.max(1, pct));
-  state.scale = pct / 100; $("scale").value = Math.round(pct * 10) / 10; updateInfo(); fitView(); }
+  state.scale = pct / 100; $("scale").value = Math.round(pct * 10) / 10; resetLayerView(); updateInfo(); fitView(); }
 $("scale").addEventListener("change", (e) => { const v = parseFloat(String(e.target.value).replace(",", ".")); if (Number.isFinite(v) && v > 0) setScale(v); else e.target.value = state.scale * 100; });
 document.querySelectorAll("[data-scale]").forEach(b => b.addEventListener("click", () => setScale(+b.dataset.scale)));
-document.querySelectorAll("[data-rot]").forEach(b => b.addEventListener("click", () => rotate(b.dataset.rot)));
-function rotate(axis) {
-  const m = state.mesh; if (!m) return; const p = m.pos;
-  for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
-    if (axis === "x") { p[i+1] = -z; p[i+2] = y; } else if (axis === "y") { p[i] = z; p[i+2] = -x; } else { p[i] = -y; p[i+1] = x; } }
-  placeOnBed(p); stats(m); uploadMesh(); updateInfo(); fitView();
+
+/* Drehen: Ausrichtung = Rz · Ry · Rx · Basis (Basis kommt von „Flach hinlegen“). Die Originalpunkte bleiben erhalten,
+   damit wiederholtes Drehen keine Rundungsfehler aufsummiert. */
+const I3 = [1,0,0, 0,1,0, 0,0,1];
+const mul3 = (a, b) => { const r = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j]; return r; };
+function eulerMatrix([rx, ry, rz]) {
+  const [a, b, c] = [rx, ry, rz].map(d => d * Math.PI / 180);
+  const X = [1,0,0, 0,Math.cos(a),-Math.sin(a), 0,Math.sin(a),Math.cos(a)];
+  const Y = [Math.cos(b),0,Math.sin(b), 0,1,0, -Math.sin(b),0,Math.cos(b)];
+  const Z = [Math.cos(c),-Math.sin(c),0, Math.sin(c),Math.cos(c),0, 0,0,1];
+  return mul3(Z, mul3(Y, X));
 }
+function initOrientation(m) { m.orig = m.pos.slice(); m.base = I3.slice(); m.R = I3.slice(); state.rot = [0, 0, 0];
+  state.live = { R: I3.slice(), off: [0, 0, 0] }; est.profile = null; syncRotUI(); }
+const transpose3 = (a) => [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]];
+/* Endgültig: Ausrichtung in die Punkte übernehmen, Maße, Normalen und Schätzung neu berechnen */
+function applyOrientation() {
+  const m = state.mesh; if (!m || !m.orig) return;
+  cancelAnimationFrame(rotFrame); rotFrame = 0;
+  const R = mul3(eulerMatrix(state.rot), m.base), o = m.orig, p = m.pos;
+  for (let i = 0; i < o.length; i += 3) { const x = o[i], y = o[i+1], z = o[i+2];
+    p[i] = R[0]*x + R[1]*y + R[2]*z; p[i+1] = R[3]*x + R[4]*y + R[5]*z; p[i+2] = R[6]*x + R[7]*y + R[8]*z; }
+  placeOnBed(p); stats(m); est.profile = null; m.R = R;
+  state.live = { R: I3.slice(), off: [0, 0, 0] };
+  m.faceN = faceNormals(p); m.smoothN = null;
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, p, gl.DYNAMIC_DRAW); uploadNormals();
+  resetLayerView(); updateInfo();
+  const s = state.scale; state.cam.target = [(m.min[0] + m.max[0]) / 2 * s, (m.min[1] + m.max[1]) / 2 * s, (m.min[2] + m.max[2]) / 2 * s];   // Zoom und Blickwinkel bleiben
+  state.dirty = true;
+}
+/* Live beim Ziehen: nur eine Drehmatrix für den Shader und die neue Lage auf dem Bett – die Punkte bleiben unverändert */
+let rotFrame = 0;
+function previewOrientation() {
+  if (rotFrame) return;
+  rotFrame = requestAnimationFrame(() => {
+    rotFrame = 0; const m = state.mesh; if (!m || !m.orig) return;
+    const D = mul3(mul3(eulerMatrix(state.rot), m.base), transpose3(m.R)), p = m.pos;
+    let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
+    for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
+      const X = D[0]*x + D[1]*y + D[2]*z, Y = D[3]*x + D[4]*y + D[5]*z, Z = D[6]*x + D[7]*y + D[8]*z;
+      if (X < mnx) mnx = X; if (X > mxx) mxx = X; if (Y < mny) mny = Y; if (Y > mxy) mxy = Y; if (Z < mnz) mnz = Z; if (Z > mxz) mxz = Z; }
+    state.live = { R: D, off: [-(mnx + mxx) / 2, -(mny + mxy) / 2, -mnz] };
+    const s = state.scale, f = (v) => fmtNum(v, v < 100 ? 2 : 1);
+    $("dimX").textContent = f((mxx - mnx) * s); $("dimY").textContent = f((mxy - mny) * s); $("dimZ").textContent = f((mxz - mnz) * s);
+    state.dirty = true;
+  });
+}
+function syncRotUI() { ["X", "Y", "Z"].forEach((a, i) => { $("rot" + a).value = state.rot[i]; $("rot" + a + "Out").value = Math.round(state.rot[i] * 10) / 10;
+  $("rot" + a).setAttribute("aria-valuetext", Math.round(state.rot[i]) + " Grad"); }); }
+const wrapDeg = (d) => { d = ((d + 180) % 360 + 360) % 360 - 180; return d === -180 ? 180 : d; };
+["X", "Y", "Z"].forEach((a, i) => {
+  const el = $("rot" + a);
+  el.addEventListener("input", () => { state.rot[i] = +el.value; $("rot" + a + "Out").value = el.value; el.setAttribute("aria-valuetext", el.value + " Grad"); previewOrientation(); });
+  el.addEventListener("change", () => { state.rot[i] = +el.value; applyOrientation(); });
+  const num = $("rot" + a + "Out");
+  num.addEventListener("change", () => { const v = parseFloat(String(num.value).replace(",", "."));
+    if (!Number.isFinite(v)) { num.value = state.rot[i]; return; }
+    state.rot[i] = wrapDeg(v); syncRotUI(); applyOrientation(); });
+});
+document.querySelectorAll("[data-rot90]").forEach(b => b.addEventListener("click", () => {
+  const i = "xyz".indexOf(b.dataset.rot90); state.rot[i] = wrapDeg(state.rot[i] + 90); syncRotUI(); applyOrientation(); }));
+$("rotReset").addEventListener("click", () => { const m = state.mesh; if (!m) return; m.base = I3.slice(); state.rot = [0, 0, 0]; syncRotUI(); applyOrientation(); });
+$("layFlat").addEventListener("click", () => {
+  const m = state.mesh; if (!m) return; const p = m.pos;
+  // Flächen nach Normalenrichtung bündeln (≈ 2°) und die größte ebene Fläche nach unten drehen
+  const bins = new Map();
+  for (let i = 0; i < p.length; i += 9) {
+    const ux = p[i+3]-p[i], uy = p[i+4]-p[i+1], uz = p[i+5]-p[i+2], vx = p[i+6]-p[i], vy = p[i+7]-p[i+1], vz = p[i+8]-p[i+2];
+    const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, l = Math.hypot(nx, ny, nz); if (l === 0) continue;
+    const key = Math.round(nx / l * 30) + "," + Math.round(ny / l * 30) + "," + Math.round(nz / l * 30);
+    const b = bins.get(key); if (b) { b[0] += nx; b[1] += ny; b[2] += nz; b[3] += l; } else bins.set(key, [nx, ny, nz, l]);
+  }
+  let best = null; for (const b of bins.values()) if (!best || b[3] > best[3]) best = b;
+  if (!best) return;
+  const n = norm([best[0], best[1], best[2]]), target = [0, 0, -1];
+  const c = dot(n, target); let Ralign;
+  if (c > 0.999999) Ralign = I3.slice();
+  else if (c < -0.999999) Ralign = [1,0,0, 0,-1,0, 0,0,-1];   // 180° um X
+  else { const v = cross(n, target), k = 1 / (1 + c);
+    Ralign = [v[0]*v[0]*k + c, v[0]*v[1]*k - v[2], v[0]*v[2]*k + v[1],
+              v[1]*v[0]*k + v[2], v[1]*v[1]*k + c, v[1]*v[2]*k - v[0],
+              v[2]*v[0]*k - v[1], v[2]*v[1]*k + v[0], v[2]*v[2]*k + c]; }
+  m.base = mul3(Ralign, mul3(eulerMatrix(state.rot), m.base)); state.rot = [0, 0, 0]; syncRotUI(); applyOrientation();
+  showToast("Größte ebene Fläche liegt jetzt auf dem Druckbett.", "info");
+});
 
 // Screenshot (nur in der Android-App, dort wird das Bild in der Galerie gespeichert)
 if (window.Android && typeof window.Android.saveImage === "function") {
@@ -1054,11 +1384,11 @@ function demoKnot() {
 }
 
 /* ---------------- Start ---------------- */
-readPrinter(); state.density = +$("material").value; setColor(rgbToHex(state.color)); setBg(state.bg);
+readPrinter(); setColor(rgbToHex(state.color)); setBg(state.bg);
 (function loadDemo() {
   const pos = demoKnot(); placeOnBed(pos);
   const mesh = prepareMesh({ pos, fmt: "Beispiel", header: "" }, "Beispielmodell", 0); stats(mesh);
-  state.mesh = mesh; uploadMesh(); updateInfo();
+  state.mesh = mesh; initOrientation(mesh); uploadMesh(); updateInfo();
   $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen: STL, 3MF, OBJ oder PLY";
   resize(); fitView("iso");
 })();
