@@ -41,7 +41,13 @@ jobs:
             echo "::error::Secrets KEYSTORE_BASE64 und KEYSTORE_PASSWORD fehlen. Anleitung: README, Abschnitt 'Selbst bauen'."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          # Leerzeichen und Zeilenumbrüche entfernen, die beim Kopieren (z. B. am Handy) mitkommen können
+          printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | base64 -d > android/app/release.keystore || {
+            echo "::error::KEYSTORE_BASE64 ist kein gültiger Base64-Text – bitte den Wert noch einmal vollständig kopieren."; exit 1; }
+          PW=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d ' \r\n\t')
+          echo "::notice::Schlüsseldatei: $(wc -c < android/app/release.keystore) Bytes, Prüfsumme $(sha256sum android/app/release.keystore | cut -c1-16) (erwartet 2b6c95e00aad4fc3), Passwortlänge ${#PW} (erwartet 32)"
+          keytool -list -keystore android/app/release.keystore -storepass "$PW" -alias modellblick > /dev/null || {
+            echo "::error::Passwort und Schlüssel passen nicht zusammen. Prüfe die Secrets KEYSTORE_PASSWORD und KEYSTORE_BASE64."; exit 1; }
 
       - name: APK bauen
         working-directory: android

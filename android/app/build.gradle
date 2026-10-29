@@ -17,7 +17,7 @@ android {
     // Signierung nur, wenn Schlüssel und Passwort vorhanden sind (auf GitHub kommen beide aus den Secrets).
     // Ohne Schlüssel entsteht eine unsignierte Release-APK; zum lokalen Testen "assembleDebug" verwenden.
     def keystoreFile = file("release.keystore")
-    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")?.replaceAll("\\s", "")
     def canSign = keystoreFile.exists() && keystorePassword
 
     signingConfigs {
@@ -26,7 +26,7 @@ android {
                 storeFile keystoreFile
                 storePassword keystorePassword
                 keyAlias System.getenv("KEY_ALIAS") ?: "modellblick"
-                keyPassword System.getenv("KEY_PASSWORD") ?: keystorePassword
+                keyPassword System.getenv("KEY_PASSWORD")?.replaceAll("\\s", "") ?: keystorePassword
             }
         }
     }
