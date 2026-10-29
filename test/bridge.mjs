@@ -1,0 +1,23 @@
+// Testet den Weg der Android-App (loadModelUrl über HTTP) und die Wiederherstellung nach WebGL-Kontextverlust.
+import { chromium } from "/opt/npm-tools/node_modules/playwright/index.mjs";
+import http from "node:http"; import { readFileSync } from "node:fs";
+const srv = http.createServer((q, s) => { try { const f = q.url === "/" ? "android/app/src/main/assets/index.html" : q.url.startsWith("/shared/") ? "test/" + q.url.slice(8) : null;
+  if (!f) throw 0; const data = readFileSync(f); s.writeHead(200); s.end(data); } catch { s.writeHead(404); s.end(); } }).listen(8765);
+const b = await chromium.launch({ args: ["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const p = await b.newPage({ viewport: { width: 412, height: 870 } }); const errs = [];
+p.on("pageerror", e => errs.push(e.message)); p.on("requestfailed", r => errs.push("req " + r.url()));
+await p.goto("http://127.0.0.1:8765/"); await p.waitForTimeout(500);
+const r = {};
+await p.evaluate(() => window.loadModelUrl("geteilt.stl", "/shared/cube20.stl")); await p.waitForTimeout(500);
+r.url = await p.evaluate(() => [fileName.textContent, tris.textContent, manifold.textContent, loading.hidden]);
+await p.evaluate(() => window.loadModelUrl("fehlt.stl", "/shared/nope.stl")); await p.waitForTimeout(300);
+r.missing = await p.evaluate(() => [toast.hidden ? null : toastText.textContent, loading.hidden]);
+await p.evaluate(() => window.loadModelBase64("kaputt.stl", "###")); await p.waitForTimeout(200);
+r.badb64 = await p.evaluate(() => [toastText.textContent, loading.hidden]);
+const px = () => p.evaluate(() => { const c = document.getElementById("gl"); const g = c.getContext("webgl2"); __viewer.draw(); const a = new Uint8Array(4); g.readPixels(c.width >> 1, c.height >> 1, 1, 1, g.RGBA, g.UNSIGNED_BYTE, a); return Array.from(a); });
+r.before = await px();
+await p.evaluate(() => { const ext = document.getElementById("gl").getContext("webgl2").getExtension("WEBGL_lose_context"); window.__ext = ext; ext.loseContext(); });
+await p.waitForTimeout(300);
+await p.evaluate(() => window.__ext.restoreContext()); await p.waitForTimeout(500);
+r.after = await px();
+r.errs = errs; console.log(JSON.stringify(r)); await b.close(); srv.close();

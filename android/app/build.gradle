@@ -1,0 +1,45 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "at.modellblick"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "at.modellblick"
+        minSdk 26
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
+        versionName "1.0." + (System.getenv("VERSION_CODE") ?: "0")
+    }
+
+    // Signierung nur, wenn Schlüssel und Passwort vorhanden sind (auf GitHub kommen beide aus den Secrets).
+    // Ohne Schlüssel entsteht eine unsignierte Release-APK; zum lokalen Testen "assembleDebug" verwenden.
+    def keystoreFile = file("release.keystore")
+    def keystorePassword = System.getenv("KEYSTORE_PASSWORD")
+    def canSign = keystoreFile.exists() && keystorePassword
+
+    signingConfigs {
+        if (canSign) {
+            release {
+                storeFile keystoreFile
+                storePassword keystorePassword
+                keyAlias System.getenv("KEY_ALIAS") ?: "modellblick"
+                keyPassword System.getenv("KEY_PASSWORD") ?: keystorePassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (canSign) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

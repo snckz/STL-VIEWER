@@ -1,0 +1,10 @@
+import { chromium } from "/opt/npm-tools/node_modules/playwright/index.mjs";
+const b = await chromium.launch({ args: ["--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const p = await b.newPage({ viewport: { width: 412, height: 870 }, deviceScaleFactor: 1.5 });
+const errs=[]; p.on("pageerror", e=>errs.push(e.message));
+await p.goto("file://" + process.cwd() + "/dist/index.html"); await p.waitForTimeout(600);
+await p.evaluate(() => { const s = __viewer.state; s.overhang = true; s.smooth = true; s.clip = 1; s.cam.phi = -0.35; s.dirty = true; });
+await p.click("#tab-view"); await p.check("#optSmooth", {force:true});
+await p.waitForTimeout(300); await p.screenshot({ path: process.argv[2] + "/08_overhang_clip.png" });
+console.log(errs);
+await b.close();

@@ -1,0 +1,76 @@
+name: APK bauen
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Viewer in die App kopieren
+        run: node web/build.mjs android/app/src/main/assets/index.html --offline
+
+      - name: Signaturschlüssel aus den Secrets holen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Secrets KEYSTORE_BASE64 und KEYSTORE_PASSWORD fehlen. Anleitung: README, Abschnitt 'Eigene Builds'."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+
+      - name: APK bauen
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+
+      - name: Signatur prüfen
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Schlüsseldatei entfernen
+        if: always()
+        run: rm -f android/app/release.keystore
+
+      - name: APK umbenennen
+        run: cp android/app/build/outputs/apk/release/app-release.apk Modellblick-${{ github.run_number }}.apk
+
+      - name: Als Download speichern (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Modellblick-APK
+          path: Modellblick-${{ github.run_number }}.apk
+
+      - name: Release mit APK veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Modellblick 1.0.${{ github.run_number }}
+          make_latest: true
+          body: |
+            **Installieren:** `Modellblick-${{ github.run_number }}.apk` am Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob der Browser Apps installieren darf – erlauben.
+            Ältere Versionen werden dabei automatisch aktualisiert. Voraussetzung: Android 8.0 oder neuer.
+          files: Modellblick-${{ github.run_number }}.apk

@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14171c">
+<title>Modellblick</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: Vollbild-Viewport wie ein Slicer; Bedienung im Bottom-Sheet (Handy) bzw. rechter Seitenleiste (ab 900px). Bewusst nur dunkles Thema – das Modell ist der Star. */
+:root{
+  --bg:#14171c;          /* Graphit, leicht blau */
+  --bg-2:#1b1f26;
+  --surface:#20252d;
+  --line:#313844;
+  --fg:#e8ebf0;
+  --muted:#8e97a6;
+  --accent:#f2a541;      /* Filament-Bernstein */
+  --accent-ink:#1a1206;
+  --ok:#5cc98a;
+  --warn:#f0c04a;
+  --bad:#ef6a5b;
+  --font-display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r:12px;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{position:relative;height:100%;display:flex;flex-direction:column}
+.stage{position:relative;flex:1;min-height:0}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+
+/* Kopfzeile */
+.top{position:absolute;z-index:5;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;
+  padding-top:10px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));pointer-events:none}
+.top > *{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand svg{flex:none}
+.file{min-width:0;flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px)}
+.file-name{max-width:100%;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;white-space:nowrap;transition:background .15s, border-color .15s, transform .1s}
+.btn:hover{border-color:#4a5363}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-primary:hover{background:#f5b45f;border-color:#f5b45f}
+.btn svg{width:18px;height:18px}
+
+/* Ansichts-Leiste */
+.tools{position:absolute;z-index:4;right:max(12px, calc(env(safe-area-inset-right,0px) + 8px));top:72px;display:flex;flex-direction:column;gap:6px}
+.tool{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(8px);display:grid;place-items:center;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:600;transition:border-color .15s, background .15s}
+.tool:hover{border-color:#4a5363}
+.tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tool svg{width:20px;height:20px}
+.tools hr{border:0;height:1px;background:var(--line);margin:2px 6px}
+
+.hint{position:absolute;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:66px;bottom:14px;width:fit-content;max-width:calc(100% - 82px);font-size:12px;line-height:1.4;color:var(--muted);background:color-mix(in srgb,var(--bg) 80%,transparent);padding:6px 12px;border-radius:10px;transition:opacity .4s}
+.hint.gone{opacity:0;pointer-events:none}
+
+/* Panel */
+.panel{position:relative;z-index:6;background:var(--bg-2);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:46%;transition:max-height .25s ease;
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+.panel.collapsed{max-height:52px}
+.handle{display:flex;align-items:center;gap:4px;padding:6px max(10px, 0px) 0;}
+.tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 6px}
+.tab{flex:1;min-width:64px;height:40px;border:0;background:none;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
+.tab[aria-selected="true"]{color:var(--fg)}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:30%;right:30%;bottom:2px;height:3px;border-radius:3px;background:var(--accent)}
+.collapse{width:40px;height:40px;border:0;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;margin-right:6px}
+.collapse svg{transition:transform .25s}
+.panel.collapsed .collapse svg{transform:rotate(180deg)}
+.pane{overflow-y:auto;padding:12px 16px 16px;display:grid;gap:14px;align-content:start}
+.pane[hidden]{display:none!important}
+
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.dims{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dim{background:var(--surface);border-radius:10px;padding:10px;display:grid;gap:2px}
+.dim b{font-family:var(--font-mono);font-size:11px;font-weight:600}
+.dim .x{color:#ef6a5b}.dim .y{color:#5cc98a}.dim .z{color:#5fa8f5}
+.dim span{font-family:var(--font-mono);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dim small{color:var(--muted);font-size:11px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:0;border-top:1px solid var(--line)}
+.kv > div{display:contents}
+.kv dt,.kv dd{margin:0;padding:9px 0;border-bottom:1px solid var(--line)}
+.kv dt{color:var(--muted)}
+.kv dd{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:12px;font-family:var(--font-body);font-weight:600}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.chip.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.chip.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.chip.na{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px}
+.sw{aspect-ratio:1;max-width:100%;border-radius:50%;border:2px solid var(--line);cursor:pointer;position:relative;padding:0}
+.sw[aria-checked="true"]{border-color:var(--fg);box-shadow:0 0 0 2px var(--bg-2) inset}
+.sw.custom{display:grid;place-items:center;background:conic-gradient(#ef6a5b,#f0c04a,#5cc98a,#5fa8f5,#b07cf0,#ef6a5b)}
+.sw.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row > label{flex:1;min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.range{display:grid;gap:6px}
+.range-head{display:flex;justify-content:space-between;align-items:baseline}
+.range-head output{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+
+.switches{display:grid;gap:2px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.switch small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.switch input{appearance:none;width:42px;height:24px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--fg);transition:transform .2s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(18px);background:var(--accent-ink)}
+
+select,.num{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:grid;gap:6px;min-width:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg .btn{min-height:36px;padding:0 12px;font-size:13px;flex:1}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--surface);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.stat span{font-family:var(--font-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.stat small{color:var(--muted);font-size:11px}
+.note{color:var(--muted);font-size:12px;line-height:1.5;margin:0}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 80%,transparent);backdrop-filter:blur(4px);padding:24px}
+.overlay .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:340px;text-align:center;display:grid;gap:10px}
+.drop .box{border:2px dashed var(--accent);background:transparent;font-family:var(--font-display);font-size:20px}
+.spinner{width:34px;height:34px;margin:0 auto;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:absolute;z-index:30;left:50%;top:70px;transform:translateX(-50%);max-width:min(420px, calc(100% - 32px));background:var(--surface);border:1px solid var(--bad);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.info{border-color:var(--ok)}
+.toast p{margin:0;line-height:1.45}
+.toast button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px}
+
+@media (min-width:900px){
+  .app{flex-direction:row}
+  .panel{width:360px;max-height:none!important;border-top:0;border-left:1px solid var(--line);padding-top:60px}
+  .collapse{display:none}
+  .tools{top:76px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="stage" id="stage">
+    <canvas id="gl" aria-label="3D-Ansicht des Modells. Ziehen zum Drehen, mit zwei Fingern zoomen und verschieben."></canvas>
+
+    <header class="top">
+      <div class="brand" aria-label="Modellblick">
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2 23 7.5v11L13 24 3 18.5v-11z" fill="none" stroke="#f2a541" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 13 13l10-5.5M13 13v11" fill="none" stroke="#f2a541" stroke-width="2" stroke-linejoin="round" opacity=".55"/></svg>
+      </div>
+      <div class="file">
+        <span class="file-name" id="fileName">Beispielmodell</span>
+        <span class="file-meta" id="fileMeta">Öffne eine STL- oder OBJ-Datei</span>
+      </div>
+      <label class="btn btn-primary" for="fileInput" role="button" tabindex="0" id="openBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        Öffnen
+      </label>
+      <input type="file" id="fileInput" accept=".stl,.obj,model/stl,application/sla,application/vnd.ms-pki.stl,application/octet-stream" hidden>
+    </header>
+
+    <nav class="tools" aria-label="Ansicht">
+      <button class="tool" data-view="iso" title="Schrägansicht">3D</button>
+      <button class="tool" data-view="front" title="Vorderansicht">V</button>
+      <button class="tool" data-view="top" title="Draufsicht">O</button>
+      <button class="tool" data-view="side" title="Seitenansicht">S</button>
+      <hr>
+      <button class="tool" id="zoomIn" title="Hineinzoomen" aria-label="Hineinzoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="tool" id="zoomOut" title="Herauszoomen" aria-label="Herauszoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <button class="tool" id="fit" title="Modell einpassen" aria-label="Modell einpassen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="tool" id="spin" title="Automatisch drehen" aria-label="Automatisch drehen" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <button class="tool" id="shot" title="Bild speichern" aria-label="Bild speichern" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    </nav>
+
+    <div class="hint" id="hint">Ziehen dreht · zwei Finger zoomen und schieben · Doppeltipp passt ein</div>
+
+    <div class="overlay drop" id="dropOverlay" hidden><div class="box">Datei hier ablegen</div></div>
+    <div class="overlay" id="loading" hidden><div class="box"><div class="spinner"></div><div id="loadingText">Modell wird geladen …</div></div></div>
+    <div class="toast" id="toast" role="alert" hidden><p id="toastText"></p><button id="toastClose" aria-label="Meldung schließen">×</button></div>
+  </div>
+
+  <aside class="panel" id="panel">
+    <div class="handle">
+      <div class="tabs" role="tablist" aria-label="Werkzeuge">
+        <button class="tab" role="tab" id="tab-info" aria-controls="pane-info" aria-selected="true">Info</button>
+        <button class="tab" role="tab" id="tab-color" aria-controls="pane-color" aria-selected="false">Farbe</button>
+        <button class="tab" role="tab" id="tab-view" aria-controls="pane-view" aria-selected="false">Ansicht</button>
+        <button class="tab" role="tab" id="tab-print" aria-controls="pane-print" aria-selected="false">Druck</button>
+      </div>
+      <button class="collapse" id="collapse" aria-label="Bereich ein-/ausklappen" aria-expanded="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+
+    <section class="pane" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
+      <div class="label">Abmessungen</div>
+      <div class="dims">
+        <div class="dim"><b class="x">X · Breite</b><span id="dimX">–</span><small>mm</small></div>
+        <div class="dim"><b class="y">Y · Tiefe</b><span id="dimY">–</span><small>mm</small></div>
+        <div class="dim"><b class="z">Z · Höhe</b><span id="dimZ">–</span><small>mm</small></div>
+      </div>
+      <dl class="kv">
+        <div><dt>Volumen</dt><dd id="vol">–</dd></div>
+        <div><dt>Oberfläche</dt><dd id="area">–</dd></div>
+        <div><dt>Dreiecke</dt><dd id="tris">–</dd></div>
+        <div><dt>Punkte (eindeutig)</dt><dd id="verts">–</dd></div>
+        <div><dt>Geschlossenes Netz</dt><dd id="manifold">–</dd></div>
+        <div><dt>Format</dt><dd id="fmt">–</dd></div>
+        <div><dt>Dateigröße</dt><dd id="fsize">–</dd></div>
+      </dl>
+      <p class="note" id="headerNote" hidden></p>
+    </section>
+
+    <section class="pane" id="pane-color" role="tabpanel" aria-labelledby="tab-color" hidden>
+      <div class="label">Filamentfarbe</div>
+      <div class="swatches" id="swatches" role="radiogroup" aria-label="Farbe"></div>
+      <div class="range">
+        <div class="range-head"><label for="gloss">Glanz</label><output id="glossOut">40 %</output></div>
+        <input type="range" id="gloss" min="0" max="100" value="40">
+      </div>
+      <div class="label">Hintergrund</div>
+      <div class="seg" id="bgSeg">
+        <button class="btn" data-bg="dark" aria-pressed="true">Dunkel</button>
+        <button class="btn" data-bg="grey" aria-pressed="false">Grau</button>
+        <button class="btn" data-bg="light" aria-pressed="false">Hell</button>
+      </div>
+    </section>
+
+    <section class="pane" id="pane-view" role="tabpanel" aria-labelledby="tab-view" hidden>
+      <div class="switches">
+        <label class="switch"><span>Drahtgitter<small>Dreiecke des Netzes einblenden</small></span><input type="checkbox" id="optWire"></label>
+        <label class="switch"><span>Glatte Schattierung<small>Rundungen weicher darstellen</small></span><input type="checkbox" id="optSmooth"></label>
+        <label class="switch"><span>Überhänge markieren<small>Flächen steiler als 45° rot – brauchen Stützen</small></span><input type="checkbox" id="optOverhang"></label>
+        <label class="switch"><span>Druckbett anzeigen<small>Raster in 10-mm-Schritten</small></span><input type="checkbox" id="optBed" checked></label>
+        <label class="switch"><span>Orthografisch<small>Ohne Perspektive, gut zum Vergleichen</small></span><input type="checkbox" id="optOrtho"></label>
+      </div>
+      <div class="range">
+        <div class="range-head"><label for="clip">Schnittansicht (Höhe)</label><output id="clipOut">aus</output></div>
+        <input type="range" id="clip" min="0" max="1000" value="1000">
+      </div>
+    </section>
+
+    <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
+      <div class="grid2">
+        <div class="field"><label class="label" for="printer">Drucker</label>
+          <select id="printer">
+            <option value="256,256,256">Bambu X1 / P1 / A1</option>
+            <option value="180,180,180">Bambu A1 mini</option>
+            <option value="250,210,220">Prusa MK4 / MK3</option>
+            <option value="180,180,180">Prusa Mini</option>
+            <option value="220,220,250">Creality Ender 3</option>
+            <option value="300,300,400">Creality Ender 5 Plus</option>
+            <option value="235,235,270">Creality K1</option>
+            <option value="350,350,350">Voron 2.4 (350)</option>
+          </select></div>
+        <div class="field"><label class="label" for="material">Material</label>
+          <select id="material">
+            <option value="1.24">PLA · 1,24 g/cm³</option>
+            <option value="1.27">PETG · 1,27 g/cm³</option>
+            <option value="1.04">ABS · 1,04 g/cm³</option>
+            <option value="1.07">ASA · 1,07 g/cm³</option>
+            <option value="1.21">TPU · 1,21 g/cm³</option>
+            <option value="1.14">Nylon · 1,14 g/cm³</option>
+            <option value="1.15">Resin · 1,15 g/cm³</option>
+          </select></div>
+      </div>
+      <div class="field">
+        <div class="range-head"><label class="label" for="scale">Skalierung</label><output id="scaleOut">100 %</output></div>
+        <div class="row"><input class="num" type="number" id="scale" min="1" max="10000" step="1" value="100" inputmode="decimal" aria-describedby="scaleOut" style="flex:1"></div>
+        <div class="seg">
+          <button class="btn" data-scale="50">50 %</button>
+          <button class="btn" data-scale="100">100 %</button>
+          <button class="btn" data-scale="200">200 %</button>
+          <button class="btn" data-scale="2540" title="Modell wurde in Zoll exportiert">Zoll → mm</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Ausrichtung</span>
+        <div class="seg">
+          <button class="btn" data-rot="x">X 90°</button>
+          <button class="btn" data-rot="y">Y 90°</button>
+          <button class="btn" data-rot="z">Z 90°</button>
+        </div>
+      </div>
+      <div class="row"><span>Passt aufs Druckbett</span><span id="fit-chip" class="chip na">–</span></div>
+      <div class="big">
+        <div class="stat"><small>Gewicht (massiv)</small><span id="weight">–</span></div>
+        <div class="stat"><small>Filament Ø 1,75 mm</small><span id="filament">–</span></div>
+      </div>
+      <p class="note">Gewicht und Länge gelten bei 100 % Füllung. Mit üblichen 15 % Füllung landet ein Druck meist bei etwa 30–50 % davon, je nach Wandstärke.</p>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const canvas = $("gl");
+let toastTimer;
+const fmtNum = (v, d = 1) => Number.isFinite(v) ? v.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–";
+const fmtInt = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("de-DE") : "–";
+const fmtBytes = (b) => !Number.isFinite(b) ? "–" : b < 1024 ? b + " B" : b < 1048576 ? fmtNum(b / 1024, 1) + " KB" : fmtNum(b / 1048576, 1) + " MB";
+
+/* ---------------- Mathe ---------------- */
+const M = {
+  persp(fovy, asp, n, f) { const t = 1 / Math.tan(fovy / 2), nf = 1 / (n - f);
+    return new Float32Array([t / asp,0,0,0, 0,t,0,0, 0,0,(f + n) * nf,-1, 0,0,2 * f * n * nf,0]); },
+  ortho(w, h, n, f) { const nf = 1 / (n - f);
+    return new Float32Array([1 / w,0,0,0, 0,1 / h,0,0, 0,0,2 * nf,0, 0,0,(f + n) * nf,1]); },
+  lookAt(e, c, u) {
+    let z = norm(sub(e, c)), x = norm(cross(u, z)); const y = cross(z, x);
+    return new Float32Array([x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,e),-dot(y,e),-dot(z,e),1]);
+  },
+  mul(a, b) { const o = new Float32Array(16);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; }
+    return o; }
+};
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]}
+function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l]}
+
+/* ---------------- WebGL ---------------- */
+const gl = canvas.getContext("webgl2", { antialias: true });
+if (!gl) { showToast("Dein Gerät unterstützt kein WebGL 2. Aktualisiere Android System WebView bzw. Chrome und versuche es erneut."); return; }
+
+function shader(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function program(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, shader(gl.VERTEX_SHADER, vs)); gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
+  return { p, u }; }
+
+let meshProg, lineProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf;
+const MESH_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
+uniform mat4 uVP; uniform float uScale;
+out vec3 vNor; out vec3 vPos; out vec3 vBar;
+void main(){ vec3 p = aPos * uScale; vPos = p; vNor = aNor; int k = gl_VertexID % 3; vBar = vec3(k == 0, k == 1, k == 2); gl_Position = uVP * vec4(p, 1.0); }`;
+const MESH_FS = `#version 300 es
+precision highp float;
+in vec3 vNor; in vec3 vPos; in vec3 vBar;
+uniform vec3 uColor; uniform vec3 uEye; uniform float uGloss; uniform float uClip;
+uniform int uWire; uniform int uOver; uniform int uOut;
+out vec4 o;
+void main(){
+  if (vPos.z > uClip) discard;
+  vec3 n = normalize(vNor);
+  vec3 V = normalize(uEye - vPos);
+  bool back = !gl_FrontFacing;
+  if (back) n = -n;
+  vec3 base = uColor;
+  if (uOver == 1 && n.z < -0.7071 && vPos.z > 0.3) base = mix(base, vec3(0.94,0.27,0.22), 0.85);
+  if (uOut == 1) base = mix(base, vec3(0.94,0.35,0.3), 0.35);
+  vec3 L1 = normalize(vec3(0.45, -0.6, 0.85));
+  vec3 L2 = normalize(V + vec3(0.0, 0.0, 0.25));
+  float d1 = max(dot(n, L1), 0.0), d2 = max(dot(n, L2), 0.0);
+  float hemi = 0.5 + 0.5 * n.z;
+  vec3 amb = mix(vec3(0.20,0.21,0.24), vec3(0.42,0.43,0.46), hemi);
+  vec3 H = normalize(L1 + V);
+  float shin = mix(8.0, 96.0, uGloss);
+  float spec = pow(max(dot(n, H), 0.0), shin) * mix(0.05, 0.65, uGloss);
+  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.18;
+  vec3 c = base * (amb + 0.62 * d1 + 0.38 * d2) + spec + rim;
+  if (back && uClip < 1e8) c = vec3(0.52,0.58,0.68) * (0.35 + 0.45 * d2);   /* Schnittfläche (nur bei aktivem Schnitt) */
+  if (uWire == 1) {
+    vec3 w = fwidth(vBar); vec3 a = smoothstep(vec3(0.0), w * 1.2, vBar);
+    float e = 1.0 - min(min(a.x, a.y), a.z);
+    c = mix(c, c * 0.25, e * 0.85);
+  }
+  o = vec4(pow(c, vec3(1.0/1.12)), 1.0);
+}`;
+
+const LINE_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec4 aCol;
+uniform mat4 uVP; out vec4 vCol;
+void main(){ vCol = aCol; gl_Position = uVP * vec4(aPos, 1.0); }`;
+const LINE_FS = `#version 300 es
+precision mediump float; in vec4 vCol; out vec4 o; void main(){ o = vCol; }`;
+
+/* Alle GPU-Ressourcen anlegen – auch erneut nach Kontextverlust (Android verwirft ihn gern im Hintergrund) */
+function initGL() {
+  meshProg = program(MESH_VS, MESH_FS); lineProg = program(LINE_VS, LINE_FS);
+  meshVAO = gl.createVertexArray(); bufPos = gl.createBuffer(); bufNor = gl.createBuffer();
+  gl.bindVertexArray(meshVAO);
+  [[bufPos,0],[bufNor,1]].forEach(([b,l]) => { gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0); });
+  gl.bindVertexArray(null);
+  bedVAO = gl.createVertexArray(); bedBuf = gl.createBuffer();
+  gl.bindVertexArray(bedVAO); gl.bindBuffer(gl.ARRAY_BUFFER, bedBuf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 28, 12);
+  gl.bindVertexArray(null);
+}
+initGL();
+let bedLineCount = 0, bedFillStart = 0, glLost = false;
+canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); glLost = true; });
+canvas.addEventListener("webglcontextrestored", () => {
+  glLost = false; initGL(); buildBed();
+  if (state.mesh) { gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, state.mesh.pos, gl.STATIC_DRAW); uploadNormals(); }
+  state.dirty = true;
+});
+
+/* ---------------- Zustand ---------------- */
+const BG = { dark: [0.078, 0.09, 0.11], grey: [0.30, 0.32, 0.35], light: [0.86, 0.87, 0.89] };
+const state = {
+  mesh: null,           // { pos, triCount, vid, uniqueVerts, manifold, fmt, size, name, header, faceN, smoothN }
+  color: [0.95, 0.65, 0.25], gloss: 0.4, bg: "dark",
+  wire: false, smooth: false, overhang: false, bed: true, ortho: false, clip: 1,
+  scale: 1, printer: [256, 256, 256], density: 1.24,
+  cam: { theta: -Math.PI / 4, phi: 0.5, dist: 200, target: [0, 0, 20] },
+  spin: false, dirty: true
+};
+try { const s = JSON.parse(localStorage.getItem("modellblick") || "{}");
+  if (Array.isArray(s.color) && s.color.length === 3) state.color = s.color;
+  if (typeof s.gloss === "number") state.gloss = s.gloss;
+  if (BG[s.bg]) state.bg = s.bg;
+  if (typeof s.printer === "string") { $("printer").value = s.printer; if (!$("printer").value) $("printer").selectedIndex = 0; }
+  if (typeof s.material === "string") { $("material").value = s.material; if (!$("material").value) $("material").selectedIndex = 0; }
+} catch (_) {}
+function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ color: state.color, gloss: state.gloss, bg: state.bg, printer: $("printer").value, material: $("material").value })); } catch (_) {} }
+
+/* ---------------- Parser ---------------- */
+class ViewerError extends Error {}
+function parseSTL(buf) {
+  const dv = new DataView(buf);
+  if (buf.byteLength >= 84) {
+    const n = dv.getUint32(80, true);
+    const headTxt = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(buf.byteLength, 1024)));
+    const looksAscii = /^\s*solid/i.test(headTxt) && /facet/i.test(headTxt);
+    if (n > 0 && 84 + n * 50 <= buf.byteLength && (!looksAscii || 84 + n * 50 === buf.byteLength)) {
+      const pos = new Float32Array(n * 9);
+      for (let i = 0, o = 84; i < n; i++, o += 50) for (let k = 0; k < 9; k++) pos[i * 9 + k] = dv.getFloat32(o + 12 + k * 4, true);
+      let header = ""; for (let i = 0; i < 80; i++) { const c = dv.getUint8(i); if (c === 0) break; header += String.fromCharCode(c); }
+      return { pos, fmt: "STL binär", header: header.trim() };
+    }
+  }
+  const text = new TextDecoder().decode(buf);
+  if (!/^\s*solid/i.test(text) || !/vertex/i.test(text)) throw new ViewerError("Die Datei ist keine gültige STL-Datei (weder binär noch ASCII lesbar).");
+  const re = /vertex\s+([-+\d.eE]+)\s+([-+\d.eE]+)\s+([-+\d.eE]+)/g; const out = []; let m;
+  while ((m = re.exec(text))) out.push(+m[1], +m[2], +m[3]);
+  const usable = out.length - (out.length % 9);
+  const name = (text.match(/^\s*solid[ \t]*([^\r\n]*)/i) || [])[1] || "";
+  return { pos: new Float32Array(out.slice(0, usable)), fmt: "STL ASCII", header: name.trim() };
+}
+function parseOBJ(buf) {
+  const text = new TextDecoder().decode(buf); const v = []; const tris = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (/^v\s/.test(line)) { const p = line.split(/\s+/); v.push([+p[1], +p[2], +p[3]]); }
+    else if (/^f\s/.test(line)) {
+      const idx = line.split(/\s+/).slice(1).map(t => { const i = parseInt(t, 10); return i < 0 ? v.length + i : i - 1; });
+      for (let k = 1; k + 1 < idx.length; k++) tris.push(idx[0], idx[k], idx[k + 1]);
+    }
+  }
+  const pos = new Float32Array(tris.length * 3);
+  for (let i = 0; i < tris.length; i++) { const p = v[tris[i]]; if (!p) throw new ViewerError("OBJ-Datei verweist auf einen nicht vorhandenen Punkt."); // Y-up → Z-up
+    pos[i * 3] = p[0]; pos[i * 3 + 1] = -p[2]; pos[i * 3 + 2] = p[1]; }
+  return { pos, fmt: "OBJ", header: "" };
+}
+
+/* ---------------- Netz vorbereiten ---------------- */
+const MAX_TOPO = 2_000_000;
+function prepareMesh(parsed, name, size) {
+  const pos = parsed.pos; const triCount = pos.length / 9;
+  if (!triCount) throw new ViewerError("Die Datei enthält keine Dreiecke.");
+  for (let i = 0; i < pos.length; i++) if (!Number.isFinite(pos[i])) pos[i] = 0;
+  const mesh = { pos, triCount, fmt: parsed.fmt, header: parsed.header, name, size, vid: null, uniqueVerts: NaN, manifold: null };
+  if (triCount <= MAX_TOPO) {
+    // Punkte zusammenführen (0,1 µm Raster) – offene Adressierung auf typisierten Arrays, schnell auch bei Millionen Dreiecken
+    const nV = triCount * 3; const vid = new Int32Array(nV);
+    let cap = 1; while (cap < nV * 2) cap <<= 1; const mask = cap - 1;
+    const slot = new Int32Array(cap).fill(-1); const first = new Int32Array(nV); let next = 0;
+    for (let i = 0; i < nV; i++) {
+      const x = Math.round(pos[i*3] * 1e4), y = Math.round(pos[i*3+1] * 1e4), z = Math.round(pos[i*3+2] * 1e4);
+      let h = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & mask;
+      for (;;) { const id = slot[h];
+        if (id < 0) { slot[h] = next; first[next] = i; vid[i] = next++; break; }
+        const f = first[id] * 3;
+        if (Math.round(pos[f] * 1e4) === x && Math.round(pos[f+1] * 1e4) === y && Math.round(pos[f+2] * 1e4) === z) { vid[i] = id; break; }
+        h = (h + 1) & mask; }
+    }
+    mesh.vid = vid; mesh.uniqueVerts = next;
+    // Kanten zählen: jede Kante eines geschlossenen Netzes gehört zu genau zwei Dreiecken
+    let ecap = 1; while (ecap < triCount * 4) ecap <<= 1; const emask = ecap - 1;
+    const ea = new Int32Array(ecap).fill(-1), eb = new Int32Array(ecap), en = new Uint8Array(ecap); let degenerate = 0;
+    const addEdge = (p, r) => { const lo = p < r ? p : r, hi = p < r ? r : p;
+      let h = (Math.imul(lo, 0x9E3779B1) ^ Math.imul(hi, 0x85EBCA77)) & emask;
+      for (;;) { if (ea[h] < 0) { ea[h] = lo; eb[h] = hi; en[h] = 1; return; }
+        if (ea[h] === lo && eb[h] === hi) { if (en[h] < 255) en[h]++; return; }
+        h = (h + 1) & emask; } };
+    for (let t = 0; t < triCount; t++) {
+      const a = vid[t*3], b = vid[t*3+1], c = vid[t*3+2];
+      if (a === b || b === c || a === c) { degenerate++; continue; }
+      addEdge(a, b); addEdge(b, c); addEdge(c, a);
+    }
+    let open = 0, nonManifold = 0;
+    for (let i = 0; i < ecap; i++) { if (ea[i] < 0) continue; if (en[i] === 1) open++; else if (en[i] > 2) nonManifold++; }
+    mesh.manifold = { open, nonManifold, degenerate };
+  }
+  return mesh;
+}
+function placeOnBed(pos) {
+  let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let k = 0; k < 3; k++) { const v = pos[i + k]; if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v; }
+  const cx = (mn[0] + mx[0]) / 2, cy = (mn[1] + mx[1]) / 2, cz = mn[2];
+  for (let i = 0; i < pos.length; i += 3) { pos[i] -= cx; pos[i + 1] -= cy; pos[i + 2] -= cz; }
+}
+function stats(mesh) {
+  const p = mesh.pos; let vol = 0, area = 0;
+  let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < p.length; i += 9) {
+    const ax=p[i],ay=p[i+1],az=p[i+2],bx=p[i+3],by=p[i+4],bz=p[i+5],cx=p[i+6],cy=p[i+7],cz=p[i+8];
+    vol += (ax*(by*cz-bz*cy) - ay*(bx*cz-bz*cx) + az*(bx*cy-by*cx)) / 6;
+    const ux=bx-ax,uy=by-ay,uz=bz-az,vx=cx-ax,vy=cy-ay,vz=cz-az;
+    area += Math.hypot(uy*vz-uz*vy, uz*vx-ux*vz, ux*vy-uy*vx) / 2;
+  }
+  for (let i = 0; i < p.length; i += 3) for (let k = 0; k < 3; k++) { const v = p[i + k]; if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v; }
+  mesh.vol = Math.abs(vol); mesh.area = area; mesh.min = mn; mesh.max = mx;
+}
+function faceNormals(pos) {
+  const n = new Float32Array(pos.length);
+  for (let i = 0; i < pos.length; i += 9) {
+    const u = [pos[i+3]-pos[i], pos[i+4]-pos[i+1], pos[i+5]-pos[i+2]], v = [pos[i+6]-pos[i], pos[i+7]-pos[i+1], pos[i+8]-pos[i+2]];
+    const c = norm(cross(u, v));
+    for (let k = 0; k < 3; k++) { n[i + k*3] = c[0]; n[i + k*3 + 1] = c[1]; n[i + k*3 + 2] = c[2]; }
+  }
+  return n;
+}
+function smoothNormals(mesh, fn) {
+  if (!mesh.vid) return fn;
+  const acc = new Float32Array(mesh.uniqueVerts * 3), p = mesh.pos, vid = mesh.vid;
+  for (let t = 0; t < mesh.triCount; t++) {
+    const i = t * 9; const c = cross([p[i+3]-p[i],p[i+4]-p[i+1],p[i+5]-p[i+2]], [p[i+6]-p[i],p[i+7]-p[i+1],p[i+8]-p[i+2]]);
+    for (let k = 0; k < 3; k++) { const v = vid[t*3+k] * 3; acc[v] += c[0]; acc[v+1] += c[1]; acc[v+2] += c[2]; }
+  }
+  const out = new Float32Array(p.length), COS = Math.cos(40 * Math.PI / 180);
+  for (let i = 0; i < mesh.triCount * 3; i++) {
+    const v = vid[i] * 3; const a = norm([acc[v], acc[v+1], acc[v+2]]); const f = [fn[i*3], fn[i*3+1], fn[i*3+2]];
+    const use = dot(a, f) > COS ? a : f; out[i*3] = use[0]; out[i*3+1] = use[1]; out[i*3+2] = use[2];
+  }
+  return out;
+}
+function uploadMesh() {
+  const m = state.mesh;
+  m.faceN = faceNormals(m.pos); m.smoothN = null;
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, m.pos, gl.STATIC_DRAW);
+  uploadNormals();
+}
+function uploadNormals() {
+  const m = state.mesh; if (!m) return;
+  let n = m.faceN;
+  if (state.smooth) { if (!m.smoothN) m.smoothN = smoothNormals(m, m.faceN); n = m.smoothN; }
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufNor); gl.bufferData(gl.ARRAY_BUFFER, n, gl.STATIC_DRAW);
+  state.dirty = true;
+}
+
+/* ---------------- Druckbett ---------------- */
+function buildBed() {
+  const [bx, by] = state.printer; const hx = bx / 2, hy = by / 2; const v = [];
+  const light = state.bg === "light";
+  const minor = light ? [0, 0, 0, .10] : [1, 1, 1, .07], major = light ? [0, 0, 0, .22] : [1, 1, 1, .16], edge = [0.95, 0.65, 0.25, .9];
+  const L = (a, b, c) => v.push(...a, ...c, ...b, ...c);
+  for (let x = 0; x <= bx + 0.001; x += 10) L([x - hx, -hy, 0], [x - hx, hy, 0], (Math.round(x) % 50 === 0) ? major : minor);
+  for (let y = 0; y <= by + 0.001; y += 10) L([-hx, y - hy, 0], [hx, y - hy, 0], (Math.round(y) % 50 === 0) ? major : minor);
+  L([-hx,-hy,0],[hx,-hy,0],edge); L([hx,-hy,0],[hx,hy,0],edge); L([hx,hy,0],[-hx,hy,0],edge); L([-hx,hy,0],[-hx,-hy,0],edge);
+  const a = 18; L([-hx,-hy,0.05],[-hx+a,-hy,0.05],[.94,.42,.36,1]); L([-hx,-hy,0.05],[-hx,-hy+a,0.05],[.36,.79,.54,1]); L([-hx,-hy,0],[-hx,-hy,a],[.37,.66,.96,1]);
+  bedLineCount = v.length / 7;
+  const f = light ? [0, 0, 0, .05] : [1, 1, 1, .035];
+  const q = [[-hx,-hy],[hx,-hy],[hx,hy],[-hx,-hy],[hx,hy],[-hx,hy]];
+  for (const [x, y] of q) v.push(x, y, -0.05, ...f);
+  bedFillStart = bedLineCount;
+  gl.bindBuffer(gl.ARRAY_BUFFER, bedBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+  state.dirty = true;
+}
+
+/* ---------------- Kamera ---------------- */
+const FOV = 40 * Math.PI / 180;
+function modelRadius() { const m = state.mesh; if (!m) return 50; const s = state.scale;
+  return Math.max(1, Math.hypot(m.max[0] - m.min[0], m.max[1] - m.min[1], m.max[2] - m.min[2]) * s / 2); }
+function fitView(view) {
+  const m = state.mesh; const s = state.scale; const r = modelRadius();
+  const c = state.cam;
+  c.target = m ? [(m.min[0] + m.max[0]) / 2 * s, (m.min[1] + m.max[1]) / 2 * s, (m.min[2] + m.max[2]) / 2 * s] : [0, 0, 0];
+  const asp = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+  c.dist = r / Math.sin(FOV / 2) / Math.min(1, asp) * 1.08;
+  if (view === "front") { c.theta = -Math.PI / 2; c.phi = 0; }
+  else if (view === "top") { c.theta = -Math.PI / 2; c.phi = Math.PI / 2 - 0.001; }
+  else if (view === "side") { c.theta = 0; c.phi = 0; }
+  else if (view === "iso") { c.theta = -Math.PI / 4; c.phi = 0.55; }
+  state.dirty = true;
+}
+function eye() { const c = state.cam;
+  return [c.target[0] + c.dist * Math.cos(c.phi) * Math.cos(c.theta), c.target[1] + c.dist * Math.cos(c.phi) * Math.sin(c.theta), c.target[2] + c.dist * Math.sin(c.phi)]; }
+function clampCam() { const c = state.cam; const lim = Math.PI / 2 - 0.001; c.phi = Math.max(-lim, Math.min(lim, c.phi));
+  const r = modelRadius(); c.dist = Math.max(r * 0.35, Math.min(r * 60 + 2000, c.dist)); }
+
+/* ---------------- Rendern ---------------- */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; state.dirty = true; }
+}
+function frame(t) {
+  resize();
+  if (state.spin) { state.cam.theta += 0.006; state.dirty = true; }
+  if (state.dirty && !glLost) { draw(); state.dirty = false; }
+  requestAnimationFrame(frame);
+}
+function draw() {
+  const c = state.cam; const bg = BG[state.bg];
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  const asp = canvas.width / canvas.height; const e = eye();
+  const up = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
+  const far = c.dist + modelRadius() * 4 + 1200, near = Math.max(0.01, c.dist / 500);
+  const proj = state.ortho ? (() => { const h = c.dist * Math.tan(FOV / 2); return M.ortho(h * asp, h, near, far); })() : M.persp(FOV, asp, near, far);
+  const vp = M.mul(proj, M.lookAt(e, c.target, up));
+
+  gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+  const m = state.mesh;
+  if (m) {
+    gl.useProgram(meshProg.p); const u = meshProg.u;
+    gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uScale, state.scale);
+    gl.uniform3fv(u.uColor, srgbToLin(state.color)); gl.uniform3fv(u.uEye, e); gl.uniform1f(u.uGloss, state.gloss);
+    const top = m.max[2] * state.scale; gl.uniform1f(u.uClip, state.clip >= 1 ? 1e9 : top * state.clip);
+    gl.uniform1i(u.uWire, state.wire ? 1 : 0); gl.uniform1i(u.uOver, state.overhang ? 1 : 0); gl.uniform1i(u.uOut, (state.bed && !fitsBed()) ? 1 : 0);
+    gl.bindVertexArray(meshVAO); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3);
+  }
+  if (state.bed) {
+    gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    gl.bindVertexArray(bedVAO);
+    gl.drawArrays(gl.TRIANGLES, bedFillStart, 6);
+    gl.drawArrays(gl.LINES, 0, bedLineCount);
+    gl.depthMask(true); gl.disable(gl.BLEND);
+  }
+  gl.bindVertexArray(null);
+}
+function srgbToLin(c) { return c.map(v => Math.pow(v, 1.12)); }
+
+/* ---------------- Eingabe ---------------- */
+const pointers = new Map(); let lastTap = 0, pinch = null, moved = 0;
+canvas.addEventListener("pointerdown", (e) => {
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, btn: e.button, shift: e.shiftKey });
+  moved = 0; pinch = null; stopSpinOnTouch(); hideHint();
+});
+canvas.addEventListener("pointermove", (e) => {
+  const p = pointers.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+  const c = state.cam;
+  if (pointers.size === 1) {
+    if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
+    else { c.theta -= dx * 0.008; c.phi += dy * 0.008; }
+  } else if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (pinch) { if (d > 0 && pinch.d > 0) c.dist *= pinch.d / d; pan(mx - pinch.mx, my - pinch.my); }
+    pinch = { d, mx, my };
+  }
+  clampCam(); state.dirty = true;
+});
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId); pinch = null;
+  if (e.type === "pointerup" && moved < 8 && pointers.size === 0) {
+    const now = performance.now(); if (now - lastTap < 320) { fitView(); lastTap = 0; } else lastTap = now;
+  }
+}
+["pointerup", "pointercancel", "lostpointercapture"].forEach(t => canvas.addEventListener(t, endPointer));
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); state.cam.dist *= Math.exp(e.deltaY * 0.0012); clampCam(); state.dirty = true; hideHint(); }, { passive: false });
+function pan(dx, dy) {
+  const c = state.cam; const h = canvas.clientHeight || 1;
+  const k = 2 * c.dist * Math.tan(FOV / 2) / h;
+  const right = [-Math.sin(c.theta), Math.cos(c.theta), 0];
+  const fwd = [-Math.cos(c.phi) * Math.cos(c.theta), -Math.cos(c.phi) * Math.sin(c.theta), -Math.sin(c.phi)];
+  const upv = norm(cross(right, fwd));
+  for (let i = 0; i < 3; i++) c.target[i] += (-dx * right[i] + dy * upv[i]) * k;
+}
+function zoom(f) { state.cam.dist *= f; clampCam(); state.dirty = true; }
+window.addEventListener("keydown", (e) => {
+  if (e.target.closest && e.target.closest("input,select")) return;
+  if (e.key === "+" || e.key === "=") zoom(0.85); else if (e.key === "-") zoom(1.18);
+  else if (e.key === "f" || e.key === "0") fitView();
+});
+function stopSpinOnTouch() { if (state.spin) { state.spin = false; $("spin").setAttribute("aria-pressed", "false"); } }
+let hintTimer = setTimeout(hideHint, 7000);
+function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); }
+
+/* ---------------- Laden ---------------- */
+async function loadBuffer(buf, name, size) {
+  showLoading(true, "Modell wird gelesen …");
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    let parsed;
+    if (ext === "obj") parsed = parseOBJ(buf);
+    else { try { parsed = parseSTL(buf); } catch (e) { parsed = null; try { parsed = parseOBJ(buf); } catch (_) {} if (!parsed || !parsed.pos.length) throw e; } }
+    showLoading(true, "Netz wird analysiert …"); await new Promise(r => setTimeout(r, 16));
+    placeOnBed(parsed.pos);
+    const mesh = prepareMesh(parsed, name, size);
+    stats(mesh);
+    state.mesh = mesh; state.scale = 1; $("scale").value = 100; state.clip = 1; $("clip").value = 1000;
+    uploadMesh(); updateInfo(); fitView("iso");
+  } catch (err) {
+    console.warn(err);
+    showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
+  } finally { showLoading(false); }
+}
+async function loadFile(file) {
+  if (!file) return;
+  if (file.size > 300 * 1048576) { showToast("Die Datei ist größer als 300 MB und lässt sich am Handy nicht sicher anzeigen."); return; }
+  showLoading(true, "Datei wird geöffnet …");
+  try { await loadBuffer(await file.arrayBuffer(), file.name, file.size); }
+  catch (_) { showLoading(false); showToast("Die Datei konnte nicht geöffnet werden."); }
+}
+$("fileInput").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
+$("openBtn").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fileInput").click(); } });
+let dragDepth = 0;
+window.addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("dropOverlay").hidden = false; });
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("dropOverlay").hidden = true; } });
+window.addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("dropOverlay").hidden = true; loadFile(e.dataTransfer.files[0]); });
+
+/* Schnittstelle für die Android-App: Datei aus "Öffnen mit …" */
+// Die App stellt die Datei unter einer eigenen URL bereit; sie wird direkt gestreamt (kein Base64, kein Doppelkopieren).
+window.loadModelUrl = async (name, url) => {
+  showLoading(true, "Datei wird geöffnet …");
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const buf = await res.arrayBuffer();
+    await loadBuffer(buf, name || "modell.stl", buf.byteLength);
+  } catch (err) {
+    console.warn(err); showLoading(false);
+    showToast(err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die geteilte Datei konnte nicht gelesen werden.");
+  }
+};
+window.loadModelBase64 = (name, b64) => {
+  try { const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    loadBuffer(u8.buffer, name || "modell.stl", u8.length); }
+  catch (_) { showLoading(false); showToast("Die geteilte Datei konnte nicht gelesen werden."); }
+};
+window.setLoading = (on, text) => showLoading(!!on, text);
+window.showMessage = (t) => showToast(t);
+
+/* ---------------- UI ---------------- */
+function showLoading(on, text) { $("loading").hidden = !on; if (text) $("loadingText").textContent = text; }
+function showToast(text, kind) { const t = $("toast"); $("toastText").textContent = text; t.className = "toast" + (kind ? " " + kind : ""); t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 7000); }
+$("toastClose").addEventListener("click", () => ($("toast").hidden = true));
+
+function fitsBed() { const m = state.mesh; if (!m) return true; const s = state.scale; const [bx, by, bz] = state.printer;
+  return (m.max[0] - m.min[0]) * s <= bx + 1e-6 && (m.max[1] - m.min[1]) * s <= by + 1e-6 && (m.max[2] - m.min[2]) * s <= bz + 1e-6; }
+
+function updateInfo() {
+  const m = state.mesh; if (!m) return; const s = state.scale;
+  $("fileName").textContent = m.name;
+  $("fileMeta").textContent = m.fmt + " · " + fmtInt(m.triCount) + " Dreiecke" + (m.size ? " · " + fmtBytes(m.size) : "");
+  const dx = (m.max[0] - m.min[0]) * s, dy = (m.max[1] - m.min[1]) * s, dz = (m.max[2] - m.min[2]) * s;
+  $("dimX").textContent = fmtNum(dx, dx < 100 ? 2 : 1); $("dimY").textContent = fmtNum(dy, dy < 100 ? 2 : 1); $("dimZ").textContent = fmtNum(dz, dz < 100 ? 2 : 1);
+  const vol = m.vol * s * s * s / 1000; const area = m.area * s * s / 100;
+  $("vol").textContent = fmtNum(vol, vol < 10 ? 2 : 1) + " cm³";
+  $("area").textContent = fmtNum(area, area < 10 ? 2 : 1) + " cm²";
+  $("tris").textContent = fmtInt(m.triCount);
+  $("verts").textContent = Number.isFinite(m.uniqueVerts) ? fmtInt(m.uniqueVerts) : "nicht geprüft";
+  $("fmt").textContent = m.fmt; $("fsize").textContent = m.size ? fmtBytes(m.size) : "–";
+  const mf = $("manifold");
+  if (!m.manifold) mf.innerHTML = '<span class="chip na">zu groß zum Prüfen</span>';
+  else if (!m.manifold.open && !m.manifold.nonManifold) mf.innerHTML = '<span class="chip ok">Ja, geschlossen</span>';
+  else mf.innerHTML = `<span class="chip ${m.manifold.open ? "bad" : "warn"}">${m.manifold.open ? fmtInt(m.manifold.open) + " offene Kanten" : fmtInt(m.manifold.nonManifold) + " Mehrfachkanten"}</span>`;
+  const hn = $("headerNote");
+  if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = "Dateikopf: " + m.header.slice(0, 120); } else hn.hidden = true;
+  const ok = fitsBed(); const chip = $("fit-chip");
+  chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
+  const g = vol * state.density; $("weight").textContent = fmtNum(g, g < 10 ? 1 : 0) + " g";
+  const len = vol / (Math.PI * 0.0875 * 0.0875) / 100; $("filament").textContent = fmtNum(len, len < 10 ? 2 : 1) + " m";
+  $("scaleOut").textContent = fmtNum(state.scale * 100, state.scale * 100 % 1 ? 1 : 0) + " %";
+  state.dirty = true;
+}
+
+// Tabs
+const tabs = [...document.querySelectorAll(".tab")];
+function selectTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; $(x.getAttribute("aria-controls")).hidden = !on; });
+  $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true"); }
+tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t)); t.tabIndex = i ? -1 : 0;
+  t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n); } }); });
+$("collapse").addEventListener("click", () => { const c = $("panel").classList.toggle("collapsed"); $("collapse").setAttribute("aria-expanded", String(!c)); });
+new ResizeObserver(() => { state.dirty = true; }).observe($("stage"));
+
+// Farben
+const COLORS = [["Bernstein","#f2a541"],["Weiß","#eeeeea"],["Schwarz","#2b2d31"],["Grau","#8c9096"],["Rot","#d6403a"],["Orange","#ee7a2b"],["Gelb","#f2cf3c"],["Grün","#3fae5c"],["Blau","#2f6fd6"],["Türkis","#26a6a6"],["Lila","#8a55c9"],["Pink","#e66aa6"],["Holz","#b58553"],["Silber","#c5cbd3"]];
+const hexToRgb = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+const rgbToHex = (c) => "#" + c.map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("");
+const swWrap = $("swatches");
+COLORS.forEach(([name, hex]) => { const b = document.createElement("button"); b.className = "sw"; b.style.background = hex; b.setAttribute("role", "radio"); b.setAttribute("aria-label", name); b.title = name; b.dataset.hex = hex;
+  b.addEventListener("click", () => setColor(hex)); swWrap.appendChild(b); });
+const custom = document.createElement("label"); custom.className = "sw custom"; custom.title = "Eigene Farbe"; custom.setAttribute("aria-label", "Eigene Farbe wählen");
+custom.innerHTML = '<input type="color" id="customColor" aria-label="Eigene Farbe">'; swWrap.appendChild(custom);
+$("customColor").addEventListener("input", (e) => setColor(e.target.value));
+function setColor(hex) { state.color = hexToRgb(hex); const cur = rgbToHex(state.color);
+  swWrap.querySelectorAll(".sw[role=radio]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.hex === cur)));
+  $("customColor").value = cur; state.dirty = true; persist(); }
+$("gloss").value = Math.round(state.gloss * 100); $("glossOut").textContent = $("gloss").value + " %";
+$("gloss").addEventListener("input", (e) => { state.gloss = e.target.value / 100; $("glossOut").textContent = e.target.value + " %"; state.dirty = true; persist(); });
+document.querySelectorAll("#bgSeg .btn").forEach(b => b.addEventListener("click", () => setBg(b.dataset.bg)));
+function setBg(bg) { state.bg = bg; document.querySelectorAll("#bgSeg .btn").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.bg === bg))); buildBed(); persist(); }
+
+// Ansicht
+const bindSwitch = (id, key, after) => $(id).addEventListener("change", (e) => { state[key] = e.target.checked; if (after) after(); state.dirty = true; });
+bindSwitch("optWire", "wire"); bindSwitch("optSmooth", "smooth", uploadNormals); bindSwitch("optOverhang", "overhang");
+bindSwitch("optBed", "bed"); bindSwitch("optOrtho", "ortho");
+$("clip").addEventListener("input", (e) => { state.clip = e.target.value / 1000; const m = state.mesh;
+  $("clipOut").textContent = state.clip >= 1 || !m ? "aus" : fmtNum(m.max[2] * state.scale * state.clip, 1) + " mm"; state.dirty = true; });
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => fitView(b.dataset.view)));
+$("zoomIn").addEventListener("click", () => zoom(0.8)); $("zoomOut").addEventListener("click", () => zoom(1.25)); $("fit").addEventListener("click", () => fitView());
+$("spin").addEventListener("click", () => { state.spin = !state.spin; $("spin").setAttribute("aria-pressed", String(state.spin)); hideHint(); });
+
+// Druck
+function readPrinter() { state.printer = $("printer").value.split(",").map(Number); buildBed(); updateInfo(); persist(); }
+$("printer").addEventListener("change", readPrinter);
+$("material").addEventListener("change", () => { state.density = +$("material").value; updateInfo(); persist(); });
+function setScale(pct) { if (!Number.isFinite(pct) || pct <= 0) return; pct = Math.min(10000, Math.max(1, pct));
+  state.scale = pct / 100; $("scale").value = Math.round(pct * 10) / 10; updateInfo(); fitView(); }
+$("scale").addEventListener("change", (e) => { const v = parseFloat(String(e.target.value).replace(",", ".")); if (Number.isFinite(v) && v > 0) setScale(v); else e.target.value = state.scale * 100; });
+document.querySelectorAll("[data-scale]").forEach(b => b.addEventListener("click", () => setScale(+b.dataset.scale)));
+document.querySelectorAll("[data-rot]").forEach(b => b.addEventListener("click", () => rotate(b.dataset.rot)));
+function rotate(axis) {
+  const m = state.mesh; if (!m) return; const p = m.pos;
+  for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
+    if (axis === "x") { p[i+1] = -z; p[i+2] = y; } else if (axis === "y") { p[i] = z; p[i+2] = -x; } else { p[i] = -y; p[i+1] = x; } }
+  placeOnBed(p); stats(m); uploadMesh(); updateInfo(); fitView();
+}
+
+// Screenshot (nur in der Android-App, dort wird das Bild in der Galerie gespeichert)
+if (window.Android && typeof window.Android.saveImage === "function") {
+  $("shot").hidden = false;
+  $("shot").addEventListener("click", () => { draw(); const data = canvas.toDataURL("image/png").split(",")[1];
+    const base = (state.mesh ? state.mesh.name : "modell").replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_");
+    window.Android.saveImage(data, base + "_" + Date.now() + ".png"); });
+}
+
+/* ---------------- Beispielmodell: Torusknoten ---------------- */
+function demoKnot() {
+  const P = 2, Q = 3, segs = 360, ring = 28, R = 26, r = 9, tube = 7.5; const pts = [];
+  const curve = (t) => { const q = Q * t, p = P * t; const rr = R + r * Math.cos(q); return [rr * Math.cos(p), rr * Math.sin(p), r * Math.sin(q) * 1.6]; };
+  for (let i = 0; i < segs; i++) {
+    const t = i / segs * Math.PI * 2; const c = curve(t), n1 = curve(t + 0.001);
+    const T = norm(sub(n1, c)); let N = norm(cross(T, [0, 0, 1])); const B = cross(T, N);
+    const row = []; for (let j = 0; j < ring; j++) { const a = j / ring * Math.PI * 2;
+      row.push([c[0] + tube * (Math.cos(a) * N[0] + Math.sin(a) * B[0]), c[1] + tube * (Math.cos(a) * N[1] + Math.sin(a) * B[1]), c[2] + tube * (Math.cos(a) * N[2] + Math.sin(a) * B[2])]); }
+    pts.push(row);
+  }
+  const out = [];
+  for (let i = 0; i < segs; i++) for (let j = 0; j < ring; j++) {
+    const a = pts[i][j], b = pts[(i + 1) % segs][j], c = pts[(i + 1) % segs][(j + 1) % ring], d = pts[i][(j + 1) % ring];
+    out.push(...a, ...c, ...b, ...a, ...d, ...c);
+  }
+  return new Float32Array(out);
+}
+
+/* ---------------- Start ---------------- */
+readPrinter(); state.density = +$("material").value; setColor(rgbToHex(state.color)); setBg(state.bg);
+(function loadDemo() {
+  const pos = demoKnot(); placeOnBed(pos);
+  const mesh = prepareMesh({ pos, fmt: "Beispiel", header: "" }, "Beispielmodell", 0); stats(mesh);
+  state.mesh = mesh; uploadMesh(); updateInfo();
+  $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen, um deine STL zu laden";
+  resize(); fitView("iso");
+})();
+requestAnimationFrame(frame);
+window.__viewer = { state, loadBuffer, draw };
+})();
+</script>
+</body>
+</html>
