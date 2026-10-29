@@ -161,13 +161,13 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
       </div>
       <div class="file">
         <span class="file-name" id="fileName">Beispielmodell</span>
-        <span class="file-meta" id="fileMeta">Öffne eine STL- oder OBJ-Datei</span>
+        <span class="file-meta" id="fileMeta">Öffne STL, 3MF, OBJ oder PLY</span>
       </div>
       <label class="btn btn-primary" for="fileInput" role="button" tabindex="0" id="openBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         Öffnen
       </label>
-      <input type="file" id="fileInput" accept=".stl,.obj,model/stl,application/sla,application/vnd.ms-pki.stl,application/octet-stream" hidden>
+      <input type="file" id="fileInput" accept=".stl,.3mf,.obj,.ply,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/octet-stream" hidden>
     </header>
 
     <nav class="tools" aria-label="Ansicht">
@@ -469,6 +469,183 @@ function parseOBJ(buf) {
   return { pos, fmt: "OBJ", header: "" };
 }
 
+/* PLY (ASCII und binär, beide Byte-Reihenfolgen). Nur Dreiecks-/Polygonflächen; reine Punktwolken werden abgelehnt. */
+function parsePLY(buf) {
+  const u8 = new Uint8Array(buf);
+  const headTxt = new TextDecoder("latin1").decode(u8.subarray(0, Math.min(u8.length, 65536)));
+  const endM = /end_header\r?\n/.exec(headTxt);
+  if (!/^ply\r?\n/.test(headTxt) || !endM) throw new ViewerError("Die PLY-Datei hat keinen gültigen Kopf.");
+  const lines = headTxt.slice(0, endM.index).split(/\r?\n/);
+  let format = "", comment = ""; const elements = [];
+  for (const l of lines) {
+    const t = l.trim().split(/\s+/);
+    if (t[0] === "format") format = t[1];
+    else if (t[0] === "comment" && !comment) comment = l.trim().slice(8);
+    else if (t[0] === "element") elements.push({ name: t[1], count: parseInt(t[2], 10), props: [] });
+    else if (t[0] === "property" && elements.length) {
+      const el = elements[elements.length - 1];
+      if (t[1] === "list") el.props.push({ name: t[4], list: true, countType: t[2], type: t[3] });
+      else el.props.push({ name: t[2], type: t[1] });
+    }
+  }
+  const vEl = elements.find(e => e.name === "vertex"), fEl = elements.find(e => e.name === "face");
+  if (!vEl) throw new ViewerError("Die PLY-Datei enthält keine Punkte.");
+  if (!fEl || !fEl.count) throw new ViewerError("Die PLY-Datei ist eine reine Punktwolke ohne Flächen und lässt sich nicht als Modell anzeigen.");
+  const ix = vEl.props.findIndex(p => p.name === "x"), iy = vEl.props.findIndex(p => p.name === "y"), iz = vEl.props.findIndex(p => p.name === "z");
+  const fIdx = fEl.props.findIndex(p => p.list && (p.name === "vertex_indices" || p.name === "vertex_index"));
+  if (ix < 0 || iy < 0 || iz < 0 || fIdx < 0) throw new ViewerError("Die PLY-Datei hat kein lesbares Punkt- oder Flächenformat.");
+  const verts = new Float64Array(vEl.count * 3); const tris = [];
+  const addFace = (idx) => { for (let k = 1; k + 1 < idx.length; k++) tris.push(idx[0], idx[k], idx[k + 1]); };
+
+  if (format === "ascii") {
+    const body = new TextDecoder().decode(u8.subarray(endM.index + endM[0].length));
+    const tok = body.split(/\s+/).filter(Boolean); let p = 0;
+    for (const el of elements) for (let r = 0; r < el.count; r++) {
+      const vals = [];
+      for (const pr of el.props) { if (pr.list) { const n = +tok[p++]; vals.push(tok.slice(p, p + n).map(Number)); p += n; } else vals.push(+tok[p++]); }
+      if (el === vEl) { verts[r*3] = vals[ix]; verts[r*3+1] = vals[iy]; verts[r*3+2] = vals[iz]; }
+      else if (el === fEl) addFace(vals[fIdx]);
+    }
+  } else if (format === "binary_little_endian" || format === "binary_big_endian") {
+    const le = format === "binary_little_endian"; const dv = new DataView(buf); let o = endM.index + endM[0].length;
+    const SZ = { char:1, int8:1, uchar:1, uint8:1, short:2, int16:2, ushort:2, uint16:2, int:4, int32:4, uint:4, uint32:4, float:4, float32:4, double:8, float64:8 };
+    const read = (type) => { let v;
+      switch (type) {
+        case "char": case "int8": v = dv.getInt8(o); break; case "uchar": case "uint8": v = dv.getUint8(o); break;
+        case "short": case "int16": v = dv.getInt16(o, le); break; case "ushort": case "uint16": v = dv.getUint16(o, le); break;
+        case "int": case "int32": v = dv.getInt32(o, le); break; case "uint": case "uint32": v = dv.getUint32(o, le); break;
+        case "float": case "float32": v = dv.getFloat32(o, le); break; case "double": case "float64": v = dv.getFloat64(o, le); break;
+        default: throw new ViewerError("Die PLY-Datei verwendet einen unbekannten Datentyp (" + type + ").");
+      } o += SZ[type]; return v; };
+    try {
+      for (const el of elements) for (let r = 0; r < el.count; r++) {
+        if (el === vEl) { for (let k = 0; k < el.props.length; k++) { const pr = el.props[k];
+            if (pr.list) { const n = read(pr.countType); for (let j = 0; j < n; j++) read(pr.type); }
+            else { const v = read(pr.type); if (k === ix) verts[r*3] = v; else if (k === iy) verts[r*3+1] = v; else if (k === iz) verts[r*3+2] = v; } } }
+        else { for (let k = 0; k < el.props.length; k++) { const pr = el.props[k];
+            if (pr.list) { const n = read(pr.countType); const idx = new Array(n); for (let j = 0; j < n; j++) idx[j] = read(pr.type); if (el === fEl && k === fIdx) addFace(idx); }
+            else read(pr.type); } }
+      }
+    } catch (e) { if (e instanceof ViewerError) throw e; throw new ViewerError("Die PLY-Datei ist unvollständig oder beschädigt."); }
+  } else throw new ViewerError("Unbekanntes PLY-Format: " + (format || "fehlt") + ".");
+
+  const nV = vEl.count; const pos = new Float32Array(tris.length * 3);
+  for (let i = 0; i < tris.length; i++) { const v = tris[i];
+    if (!(v >= 0 && v < nV)) throw new ViewerError("Die PLY-Datei verweist auf einen nicht vorhandenen Punkt.");
+    pos[i*3] = verts[v*3]; pos[i*3+1] = verts[v*3+1]; pos[i*3+2] = verts[v*3+2]; }
+  return { pos, fmt: format === "ascii" ? "PLY ASCII" : "PLY binär", header: comment };
+}
+
+/* ZIP lesen (für 3MF): zentrales Verzeichnis + Deflate über die eingebaute DecompressionStream-API */
+async function readZip(buf) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new ViewerError("Die 3MF-Datei ist kein gültiges ZIP-Archiv.");
+  let count = dv.getUint16(eocd + 10, true), cdOff = dv.getUint32(eocd + 16, true);
+  if (cdOff === 0xffffffff || count === 0xffff) { // ZIP64
+    const loc = eocd - 20; if (loc < 0 || dv.getUint32(loc, true) !== 0x07064b50) throw new ViewerError("Das ZIP64-Archiv ist beschädigt.");
+    const z = Number(dv.getBigUint64(loc + 8, true)); count = Number(dv.getBigUint64(z + 32, true)); cdOff = Number(dv.getBigUint64(z + 48, true));
+  }
+  const entries = new Map(); let p = cdOff; const dec = new TextDecoder();
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true); let csize = dv.getUint32(p + 20, true), usize = dv.getUint32(p + 24, true);
+    const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true); let lho = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+    let x = p + 46 + nl; const xe = x + xl;   // ZIP64-Zusatzfeld
+    while (x + 4 <= xe) { const id = dv.getUint16(x, true), sz = dv.getUint16(x + 2, true);
+      if (id === 1) { let q = x + 4; if (usize === 0xffffffff) { usize = Number(dv.getBigUint64(q, true)); q += 8; } if (csize === 0xffffffff) { csize = Number(dv.getBigUint64(q, true)); q += 8; } if (lho === 0xffffffff) lho = Number(dv.getBigUint64(q, true)); }
+      x += 4 + sz; }
+    entries.set(name.replace(/^\/+/, "").toLowerCase(), { name, method, csize, usize, lho });
+    p += 46 + nl + xl + cl;
+  }
+  return {
+    names: [...entries.values()].map(e => e.name),
+    has: (n) => entries.has(n.replace(/^\/+/, "").toLowerCase()),
+    async text(n) {
+      const e = entries.get(n.replace(/^\/+/, "").toLowerCase()); if (!e) return null;
+      const start = e.lho + 30 + dv.getUint16(e.lho + 26, true) + dv.getUint16(e.lho + 28, true);
+      const data = u8.subarray(start, start + e.csize);
+      if (e.method === 0) return dec.decode(data);
+      if (e.method !== 8) throw new ViewerError("Die 3MF-Datei verwendet eine nicht unterstützte Kompression.");
+      if (typeof DecompressionStream === "undefined") throw new ViewerError("Dieses Gerät kann 3MF nicht entpacken. Bitte Android System WebView aktualisieren.");
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      return await new Response(stream).text();
+    }
+  };
+}
+
+/* 3MF: Modelle aus Bambu Studio, PrusaSlicer, OrcaSlicer, Cura, Fusion … inkl. Unterbaugruppen in eigenen Dateien (Production-Erweiterung) */
+async function parse3MF(buf) {
+  const zip = await readZip(buf);
+  let root = "3D/3dmodel.model";
+  const rels = await zip.text("_rels/.rels");
+  if (rels) { const m = /<Relationship\b[^>]*Type="[^"]*\/3dmodel"[^>]*>/i.exec(rels) || /<Relationship\b[^>]*Target="([^"]+\.model)"/i.exec(rels);
+    const t = m && /Target="([^"]+)"/i.exec(m[0]); if (t) root = t[1]; }
+  if (!zip.has(root)) { const alt = zip.names.find(n => /\.model$/i.test(n)); if (!alt) throw new ViewerError(zip.names.some(n => /\.gcode$/i.test(n)) ? "Diese 3MF enthält nur G-Code (geslicte Datei) und kein Modell." : "Die 3MF-Datei enthält kein 3D-Modell."); root = alt; }
+
+  const attrs = (s) => { const o = {}; const re = /([\w:.-]+)\s*=\s*"([^"]*)"/g; let m; while ((m = re.exec(s))) o[m[1]] = m[2]; return o; };
+  const UNITS = { micron: 0.001, millimeter: 1, centimeter: 10, inch: 25.4, foot: 304.8, meter: 1000 };
+  const files = new Map();   // Pfad → { objects: Map(id → obj), build: [], unit }
+  async function loadModel(path) {
+    const key = path.replace(/^\/+/, "").toLowerCase(); if (files.has(key)) return files.get(key);
+    const xml = await zip.text(path); if (xml == null) throw new ViewerError("In der 3MF fehlt die Datei " + path + ".");
+    const modelTag = /<(?:\w+:)?model\b([^>]*)>/.exec(xml); const unit = UNITS[(modelTag && attrs(modelTag[1]).unit) || "millimeter"] || 1;
+    const objects = new Map(); const reObj = /<(?:\w+:)?object\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?object>/g; let m;
+    while ((m = reObj.exec(xml))) {
+      const a = attrs(m[1]), body = m[2]; const obj = { id: a.id, vertices: null, tris: null, comps: [] };
+      const vStart = body.search(/<(?:\w+:)?vertices\b/);
+      if (vStart >= 0) {
+        const v = []; const reV = /<(?:\w+:)?vertex\b([^>]*)\/?>/g; reV.lastIndex = vStart; let vm;
+        const vEnd = body.search(/<\/(?:\w+:)?vertices>/);
+        while ((vm = reV.exec(body)) && (vEnd < 0 || vm.index < vEnd)) {
+          const s = vm[1]; const x = /\bx="([^"]*)"/.exec(s), y = /\by="([^"]*)"/.exec(s), z = /\bz="([^"]*)"/.exec(s);
+          v.push(x ? +x[1] : 0, y ? +y[1] : 0, z ? +z[1] : 0); }
+        const t = []; const reT = /<(?:\w+:)?triangle\b([^>]*)\/?>/g; let tm;
+        while ((tm = reT.exec(body))) { const s = tm[1];
+          const a1 = /\bv1="(\d+)"/.exec(s), a2 = /\bv2="(\d+)"/.exec(s), a3 = /\bv3="(\d+)"/.exec(s);
+          if (a1 && a2 && a3) t.push(+a1[1], +a2[1], +a3[1]); }
+        obj.vertices = v; obj.tris = t;
+      }
+      const reC = /<(?:\w+:)?component\b([^>]*)\/?>/g; let cm;
+      while ((cm = reC.exec(body))) { const c = attrs(cm[1]); obj.comps.push({ id: c.objectid, path: c["p:path"] || c.path || null, transform: c.transform }); }
+      objects.set(String(a.id), obj);
+    }
+    const build = []; const reI = /<(?:\w+:)?item\b([^>]*)\/?>/g; let im;
+    const bStart = xml.search(/<(?:\w+:)?build\b/);
+    if (bStart >= 0) { reI.lastIndex = bStart; while ((im = reI.exec(xml))) { const c = attrs(im[1]); if (c.printable === "0") continue; build.push({ id: c.objectid, path: c["p:path"] || c.path || null, transform: c.transform }); } }
+    const app = /<(?:\w+:)?metadata\s+name="Application"[^>]*>([^<]*)</i.exec(xml);
+    const f = { objects, build, unit, app: app ? app[1].trim() : "" }; files.set(key, f); return f;
+  }
+  // 3MF-Matrizen: 12 Werte, Zeilenvektor-Konvention (p' = p · M)
+  const parseT = (s) => { if (!s) return null; const n = s.trim().split(/\s+/).map(Number); return n.length === 12 && n.every(Number.isFinite) ? n : null; };
+  const ID = [1,0,0, 0,1,0, 0,0,1, 0,0,0];
+  const mul = (a, b) => { // erst a, dann b
+    const r = new Array(12);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j];
+    for (let j = 0; j < 3; j++) r[9+j] = a[9]*b[j] + a[10]*b[3+j] + a[11]*b[6+j] + b[9+j];
+    return r; };
+  const out = []; let parts = 0;
+  async function emit(path, id, M, depth) {
+    if (depth > 32) throw new ViewerError("Die 3MF-Datei enthält eine endlose Verschachtelung.");
+    const f = await loadModel(path); const obj = f.objects.get(String(id)); if (!obj) return;
+    if (obj.tris && obj.tris.length) {
+      parts++; const v = obj.vertices, t = obj.tris, s = f.unit, nV = v.length / 3;
+      for (let i = 0; i < t.length; i++) { const k = t[i]; if (k >= nV) throw new ViewerError("Die 3MF-Datei verweist auf einen nicht vorhandenen Punkt.");
+        const x = v[k*3], y = v[k*3+1], z = v[k*3+2];
+        out.push((x*M[0] + y*M[3] + z*M[6] + M[9]) * s, (x*M[1] + y*M[4] + z*M[7] + M[10]) * s, (x*M[2] + y*M[5] + z*M[8] + M[11]) * s); }
+    }
+    for (const c of obj.comps) await emit(c.path || path, c.id, mul(parseT(c.transform) || ID, M), depth + 1);
+  }
+  const rootModel = await loadModel(root);
+  const items = rootModel.build.length ? rootModel.build : [...rootModel.objects.keys()].map(id => ({ id, path: null, transform: null }));
+  for (const it of items) await emit(it.path || root, it.id, parseT(it.transform) || ID, 0);
+  if (!out.length) throw new ViewerError("Die 3MF-Datei enthält keine Dreiecke.");
+  const info = [rootModel.app ? "Erstellt mit " + rootModel.app : "", parts > 1 ? parts + " Teile" : ""].filter(Boolean).join(" · ");
+  return { pos: new Float32Array(out), fmt: "3MF", header: info };
+}
+
 /* ---------------- Netz vorbereiten ---------------- */
 const MAX_TOPO = 2_000_000;
 function prepareMesh(parsed, name, size) {
@@ -705,8 +882,13 @@ async function loadBuffer(buf, name, size) {
   await new Promise(r => setTimeout(r, 30));
   try {
     const ext = (name.split(".").pop() || "").toLowerCase();
+    const sig = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+    const isZip = sig[0] === 0x50 && sig[1] === 0x4b && sig[2] === 3 && sig[3] === 4;
+    const isPly = sig[0] === 0x70 && sig[1] === 0x6c && sig[2] === 0x79;   // "ply"
     let parsed;
-    if (ext === "obj") parsed = parseOBJ(buf);
+    if (ext === "3mf" || isZip) parsed = await parse3MF(buf);
+    else if (ext === "ply" || isPly) parsed = parsePLY(buf);
+    else if (ext === "obj") parsed = parseOBJ(buf);
     else { try { parsed = parseSTL(buf); } catch (e) { parsed = null; try { parsed = parseOBJ(buf); } catch (_) {} if (!parsed || !parsed.pos.length) throw e; } }
     showLoading(true, "Netz wird analysiert …"); await new Promise(r => setTimeout(r, 16));
     placeOnBed(parsed.pos);
@@ -782,7 +964,7 @@ function updateInfo() {
   else if (!m.manifold.open && !m.manifold.nonManifold) mf.innerHTML = '<span class="chip ok">Ja, geschlossen</span>';
   else mf.innerHTML = `<span class="chip ${m.manifold.open ? "bad" : "warn"}">${m.manifold.open ? fmtInt(m.manifold.open) + " offene Kanten" : fmtInt(m.manifold.nonManifold) + " Mehrfachkanten"}</span>`;
   const hn = $("headerNote");
-  if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = "Dateikopf: " + m.header.slice(0, 120); } else hn.hidden = true;
+  if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = (m.fmt === "3MF" ? "" : "Dateikopf: ") + m.header.slice(0, 120); } else hn.hidden = true;
   const ok = fitsBed(); const chip = $("fit-chip");
   chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
   const g = vol * state.density; $("weight").textContent = fmtNum(g, g < 10 ? 1 : 0) + " g";
@@ -877,7 +1059,7 @@ readPrinter(); state.density = +$("material").value; setColor(rgbToHex(state.col
   const pos = demoKnot(); placeOnBed(pos);
   const mesh = prepareMesh({ pos, fmt: "Beispiel", header: "" }, "Beispielmodell", 0); stats(mesh);
   state.mesh = mesh; uploadMesh(); updateInfo();
-  $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen, um deine STL zu laden";
+  $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen: STL, 3MF, OBJ oder PLY";
   resize(); fitView("iso");
 })();
 requestAnimationFrame(frame);

@@ -1,6 +1,6 @@
 # Modellblick
 
-**STL- und OBJ-Viewer für Android.** 3D-Modelle am Handy ansehen, drehen, zoomen, einfärben und vor dem Druck prüfen – offline, ohne Konto, ohne Werbung.
+**3D-Modell-Viewer für Android – STL, 3MF, OBJ und PLY.** 3D-Modelle am Handy ansehen, drehen, zoomen, einfärben und vor dem Druck prüfen – offline, ohne Konto, ohne Werbung.
 
 <p>
   <img src="docs/screen-info.png" width="24%" alt="Modell mit Abmessungen, Volumen und Netzprüfung">
@@ -29,9 +29,18 @@ Voraussetzung: Android 8.0 oder neuer mit OpenGL ES 3.0 (praktisch alle Geräte 
 - **Netzprüfung:** zeigt, ob das Modell geschlossen ist oder offene Kanten und Mehrfachkanten hat.
 - **Druck-Check:** Druckbett für Bambu X1/P1/A1, A1 mini, Prusa, Creality und Voron. Warnung, wenn das Modell nicht aufs Bett passt. Gewicht und Filamentlänge für PLA, PETG, ABS, ASA, TPU, Nylon und Resin. Skalieren (auch Zoll → mm) und um 90° drehen.
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
-- **Android:** STL-Dateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/Modellblick`).
+- **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/Modellblick`).
 
-Unterstützte Formate: STL (binär und ASCII), OBJ.
+Unterstützte Formate:
+
+| Format | Details |
+|---|---|
+| **STL** | binär und ASCII |
+| **3MF** | Projekte aus Bambu Studio, OrcaSlicer, PrusaSlicer, Cura, Fusion u. a. – mit mehreren Teilen, Unterbaugruppen und Einheiten (mm, cm, Zoll …). Geslicte 3MF mit nur G-Code werden erkannt. |
+| **OBJ** | Polygone werden trianguliert, Y-oben wird zu Z-oben gedreht |
+| **PLY** | ASCII und binär; reine Punktwolken ohne Flächen werden nicht angezeigt |
+
+STEP/STP und andere CAD-Formate werden nicht unterstützt – sie enthalten keine Dreiecksnetze und müssten erst umgerechnet werden.
 
 ## Datenschutz
 
@@ -73,6 +82,7 @@ Den Keystore nie ins Repository hochladen – `.gitignore` schließt `*.keystore
 ```bash
 python3 test/make_fixtures.py
 node web/build.mjs
+node test/formats.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 
