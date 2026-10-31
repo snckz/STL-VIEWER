@@ -53,7 +53,7 @@ await page.screenshot({ path: shots + "/05_view.png" });
 await page.click("#tab-rotate"); await page.click('[data-scale="200"]');
 r.scaled = await info();
 await page.click('[data-rot90="x"]'); r.rotX = await info();
-await page.click("#tab-print"); await page.selectOption("#printer", { label: "Bambu A1 mini" });
+await page.click("#tab-print"); await page.selectOption("#printer", "bambuMini");
 await page.screenshot({ path: shots + "/06_print.png" });
 // Base64 Schnittstelle der Android-App
 const b64 = (await import("node:fs")).readFileSync(root + "/test/cube20.stl").toString("base64");

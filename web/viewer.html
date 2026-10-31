@@ -125,6 +125,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 
 select,.num{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;width:100%}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2:has(> [hidden]){grid-template-columns:1fr}
 .field{display:grid;gap:6px;min-width:0}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg .btn{min-height:36px;padding:0 12px;font-size:13px;flex:1}
@@ -332,34 +333,16 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
       <div class="grid2">
         <div class="field"><label class="label" for="printer">Drucker</label>
-          <select id="printer">
-            <option value="bambu">Bambu X1 / P1</option>
-            <option value="bambuA1">Bambu A1</option>
-            <option value="bambuMini">Bambu A1 mini</option>
-            <option value="mk4">Prusa MK4 / Core One</option>
-            <option value="mk3">Prusa MK3</option>
-            <option value="mini">Prusa Mini</option>
-            <option value="ender3">Creality Ender 3</option>
-            <option value="ender5p">Creality Ender 5 Plus</option>
-            <option value="k1">Creality K1</option>
-            <option value="voron">Voron 2.4 (350)</option>
-          </select></div>
+          <select id="printer"><option value="bambu">Bambu Lab X1 Carbon / P1S / P1P</option></select></div>
         <div class="field"><label class="label" for="material">Material</label>
-          <select id="material">
-            <option value="pla">PLA</option>
-            <option value="petg">PETG</option>
-            <option value="abs">ABS</option>
-            <option value="asa">ASA</option>
-            <option value="tpu">TPU</option>
-            <option value="pa">Nylon</option>
-          </select></div>
+          <select id="material"></select></div>
       </div>
       <div class="row"><span>Passt aufs Druckbett</span><span id="fit-chip" class="chip na">–</span></div>
 
       <div class="estimate">
         <div class="est-main"><small>Geschätzte Druckzeit</small><span id="estTime">–</span><small id="estPrep">–</small></div>
         <div class="est-grid">
-          <div class="stat"><small>Filament</small><span id="estWeight">–</span><small id="estLen">–</small></div>
+          <div class="stat"><small id="estMatLabel">Filament</small><span id="estWeight">–</span><small id="estLen">–</small></div>
           <div class="stat"><small>Kosten</small><span id="estCost">–</span><small id="estCostNote">–</small></div>
           <div class="stat"><small>Schichten</small><span id="estLayers">–</span><small id="estLayerH">–</small></div>
         </div>
@@ -367,27 +350,21 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 
       <div class="grid2">
         <div class="field"><label class="label" for="layerH">Schichthöhe</label>
-          <select id="layerH">
-            <option value="0.08">0,08 mm · extra fein</option>
-            <option value="0.12">0,12 mm · fein</option>
-            <option value="0.16">0,16 mm · optimal</option>
-            <option value="0.2" selected>0,20 mm · Standard</option>
-            <option value="0.24">0,24 mm · Entwurf</option>
-            <option value="0.28">0,28 mm · schnell</option>
-          </select></div>
-        <div class="field"><label class="label" for="walls">Wände</label>
+          <select id="layerH"></select></div>
+        <div class="field" data-fdm><label class="label" for="walls">Wände</label>
           <select id="walls">
             <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
             <option value="4">4</option><option value="5">5</option><option value="6">6</option>
           </select></div>
       </div>
-      <div class="range">
+      <label class="switch" data-resin hidden><span>Hohl drucken<small>2 mm Wandstärke – spart viel Harz (Ablauflöcher im Slicer setzen)</small></span><input type="checkbox" id="optHollow"></label>
+      <div class="range" data-fdm>
         <div class="range-head"><label for="infill">Füllung</label><output id="infillOut">15 %</output></div>
         <input type="range" id="infill" min="0" max="100" step="5" value="15">
       </div>
       <label class="switch"><span>Stützstrukturen<small id="supportHint">Unter Überhängen steiler als 45°</small></span><input type="checkbox" id="optSupport"></label>
       <div class="field">
-        <label class="label" for="price">Filamentpreis (€ pro kg)</label>
+        <label class="label" for="price" id="priceLabel">Filamentpreis (€ pro kg)</label>
         <input class="num" type="number" id="price" min="0" max="1000" step="0.5" value="20" inputmode="decimal">
       </div>
 
@@ -396,6 +373,7 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
         <input type="range" id="layerSlider" min="1" max="100" step="1" value="100">
       </div>
       <p class="sr-only" id="estLive" aria-live="polite"></p>
+      <p class="note" data-resin hidden>Beim Resin-Druck hängt die Zeit fast nur von der Höhe ab: Jede Schicht wird auf einmal belichtet. Mehrere Modelle nebeneinander dauern deshalb kaum länger als eines.</p>
       <p class="note">Grobe Schätzung aus Form, Druckerprofil und Einstellungen, etwa ±30 %. Den genauen Wert liefert dein Slicer. Die Schichtvorschau zeigt, wie weit der Druck nach einer bestimmten Zeit ist.</p>
     </section>
   </aside>
@@ -529,21 +507,25 @@ const state = {
   cam: { theta: -Math.PI / 4, phi: 0.5, dist: 200, target: [0, 0, 20] },
   spin: false, dirty: true
 };
+let savedPrinter = "bambu";
+const printPrefs = { fdm: { material: "pla", layerH: "0.2", price: 20 }, resin: { material: "std", layerH: "0.05", price: 30 } };
 try { const s = JSON.parse(localStorage.getItem("modellblick") || "{}");
   if (Array.isArray(s.color) && s.color.length === 3) state.color = s.color;
   if (typeof s.gloss === "number") state.gloss = s.gloss;
   if (BG[s.bg]) state.bg = s.bg;
-  if (typeof s.printer === "string") { $("printer").value = s.printer; if (!$("printer").value) $("printer").selectedIndex = 0; }
-  if (typeof s.material === "string") { $("material").value = s.material; if (!$("material").value) $("material").selectedIndex = 0; }
-  for (const id of ["layerH", "walls"]) if (typeof s[id] === "string") { const el = $(id), old = el.value; el.value = s[id]; if (!el.value) el.value = old; }
+  if (typeof s.printer === "string") savedPrinter = s.printer;
+  if (s.printPrefs && typeof s.printPrefs === "object") { for (const t of ["fdm", "resin"]) if (s.printPrefs[t] && typeof s.printPrefs[t] === "object") Object.assign(printPrefs[t], s.printPrefs[t]); }
+  else { if (typeof s.material === "string") printPrefs.fdm.material = s.material; if (typeof s.layerH === "string") printPrefs.fdm.layerH = s.layerH;   // ältere Version
+    if (Number.isFinite(s.price)) printPrefs.fdm.price = s.price; }
+  if (typeof s.hollow === "boolean") $("optHollow").checked = s.hollow;
+  if (typeof s.walls === "string") { const el = $("walls"), old = el.value; el.value = s.walls; if (!el.value) el.value = old; }
   if (Number.isFinite(s.infill) && s.infill >= 0 && s.infill <= 100) $("infill").value = s.infill;
   if (typeof s.support === "boolean") $("optSupport").checked = s.support;
-  if (Number.isFinite(s.price) && s.price >= 0 && s.price <= 1000) $("price").value = s.price;
 } catch (_) {}
 $("infillOut").textContent = $("infill").value + " %";
 function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ color: state.color, gloss: state.gloss, bg: state.bg,
-  printer: $("printer").value, material: $("material").value, layerH: $("layerH").value, walls: $("walls").value,
-  infill: +$("infill").value, support: $("optSupport").checked, price: parseFloat($("price").value) || 0 })); } catch (_) {} }
+  printer: $("printer").value, printPrefs, walls: $("walls").value, hollow: $("optHollow").checked,
+  infill: +$("infill").value, support: $("optSupport").checked })); } catch (_) {} }
 
 /* ---------------- Parser ---------------- */
 class ViewerError extends Error {}
@@ -1146,39 +1128,171 @@ $("zoomIn").addEventListener("click", () => zoom(0.8)); $("zoomOut").addEventLis
 $("spin").addEventListener("click", () => { state.spin = !state.spin; $("spin").setAttribute("aria-pressed", String(state.spin)); hideHint(); });
 
 // Druck: Drucker- und Materialprofile
-// Geschwindigkeiten in mm/s, Beschleunigung in mm/s², Fluss in mm³/s, Zeiten in s – angelehnt an die Standardprofile der jeweiligen Slicer
-const PRINTERS = {
-  bambu:     { bed: [256, 256, 256], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 32, minLayer: 5, prep: 300 },
-  bambuA1:   { bed: [256, 256, 256], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 28, minLayer: 5, prep: 270 },
-  bambuMini: { bed: [180, 180, 180], outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 28, minLayer: 5, prep: 240 },
-  mk4:       { bed: [250, 210, 220], outer: 150, inner: 200, infill: 200, skin: 170, support: 150, first: 30, accel: 4000,  accelOuter: 2500, flow: 20, minLayer: 10, prep: 180 },
-  mk3:       { bed: [250, 210, 210], outer: 25,  inner: 45,  infill: 80,  skin: 40,  support: 50,  first: 20, accel: 1000,  accelOuter: 800,  flow: 11, minLayer: 15, prep: 210 },
-  mini:      { bed: [180, 180, 180], outer: 25,  inner: 40,  infill: 80,  skin: 40,  support: 50,  first: 20, accel: 1250,  accelOuter: 1000, flow: 10, minLayer: 15, prep: 180 },
-  ender3:    { bed: [220, 220, 250], outer: 25,  inner: 50,  infill: 50,  skin: 25,  support: 50,  first: 20, accel: 500,   accelOuter: 500,  flow: 8,  minLayer: 10, prep: 180 },
-  ender5p:   { bed: [300, 300, 400], outer: 25,  inner: 50,  infill: 50,  skin: 25,  support: 50,  first: 20, accel: 500,   accelOuter: 500,  flow: 8,  minLayer: 10, prep: 300 },
-  k1:        { bed: [220, 220, 250], outer: 200, inner: 300, infill: 270, skin: 200, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 26, minLayer: 5, prep: 180 },
-  voron:     { bed: [350, 350, 340], outer: 120, inner: 200, infill: 250, skin: 150, support: 120, first: 40, accel: 5000,  accelOuter: 3000, flow: 24, minLayer: 6, prep: 420 }
-};
+// FDM: Geschwindigkeiten in mm/s, Beschleunigung in mm/s², Fluss in mm³/s, Zeiten in s – angelehnt an die Standardprofile der Slicer.
+// Resin: Belichtung und Hub-/Kippzeit je Schicht in s bei 0,05 mm Standardharz, Bauraum in mm.
+const FDM_FAST = { outer: 200, inner: 300, infill: 270, skin: 220, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 32, minLayer: 5 };       // Bambu & Co.
+const FDM_COREXY = { outer: 200, inner: 300, infill: 270, skin: 200, support: 150, first: 50, accel: 10000, accelOuter: 5000, flow: 26, minLayer: 5 };     // schnelle CoreXY
+const FDM_SLINGER = { outer: 150, inner: 250, infill: 250, skin: 180, support: 150, first: 50, accel: 8000, accelOuter: 4000, flow: 22, minLayer: 6 };    // schnelle Bettschubser
+const FDM_BUDGET = { outer: 100, inner: 180, infill: 200, skin: 120, support: 100, first: 40, accel: 5000, accelOuter: 2500, flow: 16, minLayer: 8 };     // günstige schnelle
+const FDM_PRUSA = { outer: 150, inner: 200, infill: 200, skin: 170, support: 150, first: 30, accel: 4000, accelOuter: 2500, flow: 20, minLayer: 10 };
+const FDM_CLASSIC = { outer: 25, inner: 50, infill: 50, skin: 25, support: 50, first: 20, accel: 500, accelOuter: 500, flow: 8, minLayer: 10 };            // ältere Drucker
+const fdm = (name, bed, tier, extra = {}) => ({ type: "fdm", name, bed, ...tier, prep: 180, ...extra });
+const resin = (name, bed, exp, motion, extra = {}) => ({ type: "resin", name, bed, exp, motion, bottomExp: 25, bottomLayers: 5, prep: 120, ...extra });
+
+const PRINTER_GROUPS = [
+  ["Bambu Lab", {
+    bambu:     fdm("X1 Carbon / P1S / P1P", [256, 256, 256], FDM_FAST, { prep: 300 }),
+    bambuP2S:  fdm("P2S", [256, 256, 256], FDM_FAST, { prep: 300 }),
+    bambuX2D:  fdm("X2D", [256, 256, 256], FDM_FAST, { prep: 300 }),
+    bambuH2D:  fdm("H2D", [325, 320, 325], FDM_FAST, { prep: 330 }),
+    bambuH2S:  fdm("H2S", [340, 320, 340], FDM_FAST, { prep: 330 }),
+    bambuH2C:  fdm("H2C", [325, 320, 320], FDM_FAST, { prep: 330 }),
+    bambuA2L:  fdm("A2L", [330, 320, 325], FDM_FAST, { flow: 28, prep: 300 }),
+    bambuA1:   fdm("A1", [256, 256, 256], FDM_FAST, { flow: 28, prep: 270 }),
+    bambuMini: fdm("A1 mini", [180, 180, 180], FDM_FAST, { flow: 28, prep: 240 })
+  }],
+  ["Prusa", {
+    mk4:       fdm("MK4S / MK4", [250, 210, 220], FDM_PRUSA),
+    coreOne:   fdm("CORE One / One+", [250, 220, 270], FDM_PRUSA, { accel: 6000, accelOuter: 3000, flow: 22 }),
+    coreOneL:  fdm("CORE One L", [300, 300, 330], FDM_PRUSA, { accel: 6000, accelOuter: 3000, flow: 22, prep: 240 }),
+    prusaXL:   fdm("XL", [360, 360, 360], FDM_PRUSA, { prep: 300 }),
+    mk3:       fdm("MK3S+", [250, 210, 210], FDM_CLASSIC, { outer: 25, inner: 45, infill: 80, skin: 40, accel: 1000, accelOuter: 800, flow: 11, minLayer: 15, prep: 210 }),
+    mini:      fdm("MINI+", [180, 180, 180], FDM_CLASSIC, { outer: 25, inner: 40, infill: 80, skin: 40, accel: 1250, accelOuter: 1000, flow: 10, minLayer: 15 })
+  }],
+  ["Creality", {
+    k1:        fdm("K1 / K1C", [220, 220, 250], FDM_COREXY),
+    k1max:     fdm("K1 Max", [300, 300, 300], FDM_COREXY, { prep: 240 }),
+    k2pro:     fdm("K2 Pro", [300, 300, 300], FDM_COREXY, { accel: 15000, flow: 30, prep: 240 }),
+    k2plus:    fdm("K2 Plus", [350, 350, 350], FDM_COREXY, { accel: 15000, flow: 30, prep: 300 }),
+    sparkx:    fdm("SPARKX i7", [260, 260, 255], FDM_SLINGER),
+    ender3v3:  fdm("Ender-3 V3", [220, 220, 250], FDM_COREXY, { accel: 8000, flow: 24 }),
+    ender3ke:  fdm("Ender-3 V3 KE", [220, 220, 240], FDM_BUDGET, { accel: 8000, flow: 20 }),
+    ender3se:  fdm("Ender-3 V3 SE", [220, 220, 250], FDM_BUDGET),
+    ender3:    fdm("Ender-3 / V2 / Pro (klassisch)", [220, 220, 250], FDM_CLASSIC),
+    ender5p:   fdm("Ender-5 Plus", [350, 350, 400], FDM_CLASSIC, { prep: 300 })
+  }],
+  ["Elegoo", {
+    centauri:  fdm("Centauri Carbon", [256, 256, 256], FDM_COREXY, { flow: 30, prep: 240 }),
+    neptune4:  fdm("Neptune 4 / 4 Pro", [225, 225, 265], FDM_SLINGER, { accel: 5000, flow: 20 }),
+    neptune4max: fdm("Neptune 4 Max", [420, 420, 480], FDM_SLINGER, { accel: 4000, flow: 20, prep: 300 })
+  }],
+  ["Anycubic", {
+    kobraS1:   fdm("Kobra S1", [250, 250, 250], FDM_COREXY, { prep: 240 }),
+    kobraX:    fdm("Kobra X", [260, 260, 260], FDM_COREXY, { prep: 240 }),
+    kobra3:    fdm("Kobra 3", [250, 250, 260], FDM_SLINGER, { accel: 10000, flow: 22 }),
+    kobra3max: fdm("Kobra 3 Max", [420, 420, 500], FDM_SLINGER, { accel: 5000, prep: 300 }),
+    kobra2neo: fdm("Kobra 2 Neo", [220, 220, 250], FDM_BUDGET, { flow: 14 })
+  }],
+  ["QIDI", {
+    q1pro:     fdm("Q1 Pro", [245, 245, 240], FDM_COREXY, { prep: 240 }),
+    qidiPlus4: fdm("Plus4", [305, 305, 280], FDM_COREXY, { flow: 30, prep: 300 }),
+    qidiPlus5: fdm("Plus5", [320, 320, 300], FDM_COREXY, { flow: 30, prep: 300 })
+  }],
+  ["Sovol", {
+    sv06:      fdm("SV06 / SV06 Plus", [220, 220, 250], FDM_BUDGET),
+    sv08:      fdm("SV08", [350, 350, 345], FDM_COREXY, { accel: 20000, prep: 300 }),
+    sv08max:   fdm("SV08 Max", [500, 500, 500], FDM_COREXY, { accel: 10000, prep: 420 })
+  }],
+  ["Flashforge · Snapmaker · Voron", {
+    ad5m:      fdm("Flashforge Adventurer 5M / AD5X", [220, 220, 220], FDM_COREXY, { accel: 20000, flow: 24 }),
+    creator5:  fdm("Flashforge Creator 5", [256, 256, 256], FDM_COREXY, { prep: 240 }),
+    snapU1:    fdm("Snapmaker U1", [270, 270, 270], FDM_COREXY, { prep: 240 }),
+    voron:     fdm("Voron 2.4 (350)", [350, 350, 340], FDM_COREXY, { outer: 120, inner: 200, infill: 250, skin: 150, support: 120, first: 40, accel: 5000, accelOuter: 3000, flow: 24, minLayer: 6, prep: 420 }),
+    trident:   fdm("Voron Trident (300)", [300, 300, 250], FDM_COREXY, { outer: 120, inner: 200, infill: 250, skin: 150, support: 120, first: 40, accel: 5000, accelOuter: 3000, flow: 24, minLayer: 6, prep: 360 })
+  }],
+  ["Resin · Anycubic", {
+    photonM4:    resin("Photon Mono 4", [153, 87, 165], 2.0, 5.0),
+    photonM5s:   resin("Photon Mono M5s", [218, 123, 200], 1.6, 3.5),
+    photonM7:    resin("Photon Mono M7 / M7 Pro", [223, 126, 230], 1.6, 3.0, { prep: 300 }),
+    photonM7max: resin("Photon Mono M7 Max", [298, 164, 300], 2.0, 4.5, { prep: 300 })
+  }],
+  ["Resin · Elegoo", {
+    mars5:       resin("Mars 5", [143, 89, 150], 2.0, 4.5),
+    mars4u:      resin("Mars 4 Ultra", [153, 77, 165], 1.8, 3.5),
+    mars5u:      resin("Mars 5 Ultra", [153, 77, 165], 1.8, 2.2),
+    saturn4u:    resin("Saturn 4 Ultra", [218, 123, 220], 1.8, 2.5, { prep: 300 }),
+    saturn4u16:  resin("Saturn 4 Ultra 16K", [211, 118, 220], 2.2, 2.5, { prep: 300 }),
+    jupiterSE:   resin("Jupiter SE", [277, 156, 300], 2.5, 5.0, { prep: 300 })
+  }],
+  ["Resin · weitere", {
+    sonicMini8kS: resin("Phrozen Sonic Mini 8K S", [165, 72, 170], 2.0, 4.0),
+    mightyRevo:  resin("Phrozen Sonic Mighty Revo", [223, 126, 235], 1.5, 3.0, { prep: 300 }),
+    halotMage:   resin("Creality Halot-Mage S 14K", [228, 128, 230], 1.8, 3.5),
+    gktwo:       resin("UniFormation GKtwo", [228, 128, 245], 1.5, 3.0, { prep: 300 }),
+    form4:       resin("Formlabs Form 4", [200, 125, 210], 1.0, 2.5, { bottomExp: 12, prep: 300 }),
+    sl1s:        resin("Prusa SL1S Speed", [127, 80, 150], 1.4, 4.5, { bottomExp: 12 })
+  }]
+];
+const PRINTERS = Object.assign({}, ...PRINTER_GROUPS.map(([, list]) => list));
 const MATERIALS = {
-  pla:  { name: "PLA",   density: 1.24, flow: 21,  maxSpeed: Infinity },
-  petg: { name: "PETG",  density: 1.27, flow: 13,  maxSpeed: Infinity },
-  abs:  { name: "ABS",   density: 1.04, flow: 16,  maxSpeed: Infinity },
-  asa:  { name: "ASA",   density: 1.07, flow: 16,  maxSpeed: Infinity },
-  tpu:  { name: "TPU",   density: 1.21, flow: 3.6, maxSpeed: 40 },
-  pa:   { name: "Nylon", density: 1.14, flow: 12,  maxSpeed: Infinity }
+  fdm: {
+    pla:  { name: "PLA",   density: 1.24, flow: 21,  maxSpeed: Infinity },
+    petg: { name: "PETG",  density: 1.27, flow: 13,  maxSpeed: Infinity },
+    abs:  { name: "ABS",   density: 1.04, flow: 16,  maxSpeed: Infinity },
+    asa:  { name: "ASA",   density: 1.07, flow: 16,  maxSpeed: Infinity },
+    tpu:  { name: "TPU",   density: 1.21, flow: 3.6, maxSpeed: 40 },
+    pa:   { name: "Nylon", density: 1.14, flow: 12,  maxSpeed: Infinity }
+  },
+  resin: {   // expF: Belichtungsfaktor gegenüber Standardharz
+    std:   { name: "Standardharz", density: 1.12, expF: 1.0 },
+    hd:    { name: "8K / Hochdetail", density: 1.12, expF: 1.15 },
+    abs:   { name: "ABS-ähnlich", density: 1.13, expF: 1.25 },
+    water: { name: "Wasserwaschbar", density: 1.10, expF: 1.1 },
+    tough: { name: "Zäh / Engineering", density: 1.15, expF: 1.4 },
+    flex:  { name: "Flexibel", density: 1.10, expF: 1.6 }
+  }
+};
+const LAYER_HEIGHTS = {
+  fdm: [["0.08", "0,08 mm · extra fein"], ["0.12", "0,12 mm · fein"], ["0.16", "0,16 mm · optimal"], ["0.2", "0,20 mm · Standard"], ["0.24", "0,24 mm · Entwurf"], ["0.28", "0,28 mm · schnell"]],
+  resin: [["0.025", "0,025 mm · sehr fein"], ["0.03", "0,03 mm · fein"], ["0.05", "0,05 mm · Standard"], ["0.08", "0,08 mm · schnell"], ["0.1", "0,10 mm · sehr schnell"]]
 };
 const LW = 0.42, LW_INFILL = 0.45, TOP_MM = 1.0, BOTTOM_MM = 0.6, SUPPORT_DENSITY = 0.15;
-const est = { layerH: 0.2, layers: 0, cum: null, profile: null };
+const RESIN_LIFT_MM = 5, RESIN_SUPPORT_EXTRA = 0.15, RESIN_WALL_MM = 2;
+const est = { layerH: 0.2, layers: 0, cum: null, profile: null, zOffset: 0 };
 
+// Druckerliste nach Hersteller gruppiert aufbauen
+(() => {
+  const sel = $("printer"); sel.textContent = "";
+  for (const [group, list] of PRINTER_GROUPS) {
+    const og = document.createElement("optgroup"); og.label = group;
+    for (const [key, p] of Object.entries(list)) { const o = document.createElement("option"); o.value = key; o.textContent = p.name; og.appendChild(o); }
+    sel.appendChild(og);
+  }
+  sel.value = PRINTERS[savedPrinter] ? savedPrinter : "bambu";
+})();
+const currentPrinter = () => PRINTERS[$("printer").value] || PRINTERS.bambu;
+let printType = null;
+function fillSelect(sel, entries, value) {
+  sel.textContent = "";
+  for (const [v, label] of entries) { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.appendChild(o); }
+  sel.value = value; if (!sel.value) sel.selectedIndex = 0;
+}
+// Material, Schichthöhen und Preisfeld an den Druckertyp (FDM/Resin) anpassen – Werte je Typ merken
+function syncPrintType() {
+  const type = currentPrinter().type; if (type === printType) return;
+  printType = type; const pref = printPrefs[type];
+  fillSelect($("material"), Object.entries(MATERIALS[type]).map(([k, m]) => [k, m.name]), pref.material);
+  fillSelect($("layerH"), LAYER_HEIGHTS[type], pref.layerH);
+  $("price").value = pref.price;
+  $("priceLabel").textContent = type === "resin" ? "Harzpreis (€ pro Liter)" : "Filamentpreis (€ pro kg)";
+  $("estMatLabel").textContent = type === "resin" ? "Harz" : "Filament";
+  document.querySelectorAll("#pane-print [data-fdm]").forEach(el => (el.hidden = type !== "fdm"));
+  document.querySelectorAll("#pane-print [data-resin]").forEach(el => (el.hidden = type !== "resin"));
+}
+function rememberPrintPrefs() {
+  const pref = printPrefs[printType]; if (!pref) return;
+  pref.material = $("material").value; pref.layerH = $("layerH").value;
+  const v = parseFloat(String($("price").value).replace(",", ".")); if (Number.isFinite(v) && v >= 0) pref.price = v;
+}
 function readPrinter() {
-  const pr = PRINTERS[$("printer").value] || PRINTERS.bambu;
-  state.printer = pr.bed.slice(); buildBed(); updateInfo(); persist();
+  syncPrintType();
+  state.printer = currentPrinter().bed.slice(); buildBed(); updateInfo(); persist();
 }
 $("printer").addEventListener("change", readPrinter);
-for (const id of ["material", "layerH", "walls", "optSupport"]) $(id).addEventListener("change", () => { updateEstimate(); persist(); });
+for (const id of ["material", "layerH", "walls", "optSupport", "optHollow"]) $(id).addEventListener("change", () => { rememberPrintPrefs(); updateEstimate(); persist(); });
 $("infill").addEventListener("input", () => { $("infillOut").textContent = $("infill").value + " %"; updateEstimate(); });
 $("infill").addEventListener("change", persist);
-$("price").addEventListener("input", () => { updateEstimate(); persist(); });
+$("price").addEventListener("input", () => { rememberPrintPrefs(); updateEstimate(); persist(); });
 
 /* Querschnitts-Profil: Fläche und Umfang des Modells in vielen Höhen (unskaliert), dazu Überhänge für Stützen.
    Grundlage für Schichtanzahl, Wände, Füllung und Druckzeit. */
@@ -1223,8 +1337,36 @@ function secPerMm(v, a, seg) {   // Trapez-Bewegungsprofil: Beschleunigen und Br
 function estimate() {
   const m = state.mesh; if (!m) return null;
   if (!est.profile) est.profile = computeProfile(m);
+  const pr = currentPrinter();
+  return pr.type === "resin" ? estimateResin(m, pr) : estimateFdm(pr);
+}
+
+/* Resin (MSLA/SLA): Jede Schicht wird komplett auf einmal belichtet. Zeit = Schichten × (Belichtung + Hub/Kippen),
+   die ersten Schichten werden länger belichtet. Stützen heben das Modell an und kosten zusätzlich Harz. */
+function estimateResin(m, pr) {
   const pf = est.profile, s = state.scale;
-  const pr = PRINTERS[$("printer").value] || PRINTERS.bambu, mat = MATERIALS[$("material").value] || MATERIALS.pla;
+  const mat = MATERIALS.resin[$("material").value] || MATERIALS.resin.std;
+  const lh = +$("layerH").value || 0.05, sup = $("optSupport").checked, hollow = $("optHollow").checked;
+  const zOff = sup ? RESIN_LIFT_MM : 0, H = pf.H * s + zOff, N = Math.max(1, Math.ceil(H / lh - 1e-9));
+  const exp = pr.exp * mat.expF * Math.pow(lh / 0.05, 0.7), bottomExp = pr.bottomExp * mat.expF;
+  const motion = pr.motion * (0.9 + 0.1 * lh / 0.05);
+  const cum = new Float64Array(N); let t = 0;
+  for (let i = 0; i < N; i++) {
+    const k = Math.min(pr.bottomLayers, N);
+    const e = i < k ? bottomExp : i < k + 4 ? bottomExp + (exp - bottomExp) * (i - k + 1) / 5 : exp;   // Übergangsschichten
+    t += e + motion; cum[i] = t + pr.prep;
+  }
+  const solid = m.vol * s * s * s, shell = m.area * s * s * RESIN_WALL_MM;
+  let vol = hollow ? Math.min(solid, shell) : solid;
+  if (sup) vol *= 1 + RESIN_SUPPORT_EXTRA;
+  const ml = vol / 1000, grams = ml * mat.density, price = Math.max(0, parseFloat(String($("price").value).replace(",", ".")) || 0);
+  const prevH = est.layerH; est.layerH = lh; est.layers = N; est.cum = cum; est.prevLayerH = prevH; est.zOffset = zOff;
+  return { type: "resin", seconds: t + pr.prep, prep: pr.prep, layers: N, lh, grams, ml, cost: ml / 1000 * price, price, mat, heated: pr.prep >= 300, lift: zOff };
+}
+
+function estimateFdm(pr) {
+  const pf = est.profile, s = state.scale;
+  const mat = MATERIALS.fdm[$("material").value] || MATERIALS.fdm.pla;
   const lh = +$("layerH").value || 0.2, walls = +$("walls").value || 2, inf = (+$("infill").value || 0) / 100, sup = $("optSupport").checked;
   const H = pf.H * s, N = Math.max(1, Math.round(H / lh));
   const nTop = Math.max(3, Math.ceil(TOP_MM / lh)), nBot = Math.max(3, Math.ceil(BOTTOM_MM / lh));
@@ -1256,9 +1398,9 @@ function estimate() {
     cum[i] = t;
   }
   for (let i = 0; i < N; i++) cum[i] += pr.prep;   // Zeit ab Druckstart inkl. Vorbereitung
-  const prevH = est.layerH; est.layerH = lh; est.layers = N; est.cum = cum; est.prevLayerH = prevH;
+  const prevH = est.layerH; est.layerH = lh; est.layers = N; est.cum = cum; est.prevLayerH = prevH; est.zOffset = 0;
   const grams = vol / 1000 * mat.density, price = Math.max(0, parseFloat(String($("price").value).replace(",", ".")) || 0);
-  return { seconds: t + pr.prep, prep: pr.prep, layers: N, lh, grams, meters: vol / (Math.PI * 0.875 * 0.875) / 1000, cost: grams / 1000 * price, price,
+  return { type: "fdm", seconds: t + pr.prep, prep: pr.prep, layers: N, lh, grams, meters: vol / (Math.PI * 0.875 * 0.875) / 1000, cost: grams / 1000 * price, price,
     overhangCm2: supportAreaAbove(pf, 0.3 / s) * s * s / 100, mat };
 }
 function fmtDuration(sec) {
@@ -1268,23 +1410,31 @@ function fmtDuration(sec) {
 function updateEstimate() {
   const r = estimate(); if (!r) return;
   $("estTime").textContent = "≈ " + fmtDuration(r.seconds);
-  $("estPrep").textContent = "inkl. ca. " + fmtDuration(r.prep) + " Aufheizen und Kalibrieren";
-  $("estWeight").textContent = fmtNum(r.grams, r.grams < 10 ? 1 : 0) + " g";
-  $("estLen").textContent = fmtNum(r.meters, r.meters < 10 ? 2 : 1) + " m " + r.mat.name;
+  const resinMode = r.type === "resin";
+  $("estPrep").textContent = "inkl. ca. " + fmtDuration(r.prep) + (resinMode ? (r.heated ? " Harz vorwärmen und Vorbereiten" : " Vorbereitung") : " Aufheizen und Kalibrieren");
+  if (resinMode) {
+    $("estWeight").textContent = fmtNum(r.ml, r.ml < 10 ? 1 : 0) + " ml";
+    $("estLen").textContent = "≈ " + fmtNum(r.grams, r.grams < 10 ? 1 : 0) + " g " + r.mat.name;
+  } else {
+    $("estWeight").textContent = fmtNum(r.grams, r.grams < 10 ? 1 : 0) + " g";
+    $("estLen").textContent = fmtNum(r.meters, r.meters < 10 ? 2 : 1) + " m " + r.mat.name;
+  }
   $("estCost").textContent = fmtNum(r.cost, 2) + " €";
-  $("estCostNote").textContent = "bei " + fmtNum(r.price, r.price % 1 ? 2 : 0) + " €/kg";
+  $("estCostNote").textContent = "bei " + fmtNum(r.price, r.price % 1 ? 2 : 0) + (resinMode ? " €/l" : " €/kg");
   $("estLayers").textContent = fmtInt(r.layers);
-  $("estLayerH").textContent = "à " + fmtNum(r.lh, 2) + " mm";
-  $("supportHint").textContent = r.overhangCm2 >= 0.5 ? "Empfohlen – " + fmtNum(r.overhangCm2, 1) + " cm² Überhänge über 45°" : "Keine nennenswerten Überhänge über 45°";
+  $("estLayerH").textContent = "à " + fmtNum(r.lh, r.lh < 0.05 ? 3 : 2) + " mm";
+  $("supportHint").textContent = resinMode ? "Bei den meisten Modellen nötig – hebt das Modell um ca. " + RESIN_LIFT_MM + " mm an"
+    : r.overhangCm2 >= 0.5 ? "Empfohlen – " + fmtNum(r.overhangCm2, 1) + " cm² Überhänge über 45°" : "Keine nennenswerten Überhänge über 45°";
   const ls = $("layerSlider"); const atMax = +ls.value >= +ls.max;
-  if (!atMax && state.layerPreview && Number.isFinite(state.clipZ) && est.prevLayerH !== r.lh) ls.value = Math.max(1, Math.round(state.clipZ / r.lh));   // Höhe halten
+  if (!atMax && state.layerPreview && Number.isFinite(state.clipZ) && est.prevLayerH !== r.lh) ls.value = Math.max(1, Math.round((state.clipZ + est.zOffset) / r.lh));   // Höhe halten
   ls.max = r.layers; if (atMax || +ls.value > r.layers) ls.value = r.layers;
   updateLayerView(); announceEstimate(r);
 }
 
 let announceTimer;
 function announceEstimate(r) { clearTimeout(announceTimer);   // Screenreader: erst nach einer kurzen Pause ansagen
-  announceTimer = setTimeout(() => { $("estLive").textContent = "Geschätzte Druckzeit " + fmtDuration(r.seconds) + ", " + fmtNum(r.grams, 0) + " Gramm Filament"; }, 900); }
+  announceTimer = setTimeout(() => { $("estLive").textContent = "Geschätzte Druckzeit " + fmtDuration(r.seconds) + ", "
+    + (r.type === "resin" ? fmtNum(r.ml, 0) + " Milliliter Harz" : fmtNum(r.grams, 0) + " Gramm Filament"); }, 900); }
 
 // Schichtvorschau
 function updateLayerView() {
@@ -1293,10 +1443,11 @@ function updateLayerView() {
     if (state.layerPreview) { state.layerPreview = false; state.clipZ = Infinity; }
     $("layerOut").textContent = "alle Schichten"; state.dirty = true; return;
   }
-  state.layerPreview = true; state.clipZ = n * est.layerH;
+  const zBuild = n * est.layerH;   // Bauhöhe inkl. Stützen (Resin); das Modell beginnt erst bei zOffset
+  state.layerPreview = true; state.clipZ = zBuild - est.zOffset;
   $("clip").value = 1000; $("clipOut").textContent = "aus";
   const tl = est.cum ? est.cum[Math.max(0, n - 1)] : 0;
-  $("layerOut").textContent = "Schicht " + fmtInt(n) + " / " + fmtInt(N) + " · " + fmtNum(state.clipZ, 2) + " mm · nach ≈ " + fmtDuration(tl);
+  $("layerOut").textContent = "Schicht " + fmtInt(n) + " / " + fmtInt(N) + " · " + fmtNum(zBuild, 2) + " mm" + (zBuild <= est.zOffset ? " (Stützen)" : "") + " · nach ≈ " + fmtDuration(tl);
   state.dirty = true;
 }
 $("layerSlider").addEventListener("input", updateLayerView);

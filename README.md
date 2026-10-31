@@ -44,7 +44,7 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 - **Infos:** Maße X/Y/Z in mm, Volumen, Oberfläche, Anzahl Dreiecke und Punkte, Format, Dateigröße.
 - **Netzprüfung:** zeigt, ob das Modell geschlossen ist oder offene Kanten und Mehrfachkanten hat.
 - **Drehen:** Modell frei um X, Y und Z drehen (Regler oder Gradzahl eintippen), +90°-Knöpfe, „Flach hinlegen“ legt die größte ebene Fläche aufs Bett. Größe ändern, auch Zoll → mm.
-- **Druckvorschau:** geschätzte Druckzeit, Filament in Gramm und Metern, Kosten und Schichtanzahl – abhängig von Drucker (Bambu, Prusa, Creality, Voron), Material (PLA, PETG, ABS, ASA, TPU, Nylon), Schichthöhe, Füllung, Wänden und Stützen. Ein Schichtregler zeigt Schicht für Schicht, wie weit der Druck nach welcher Zeit ist. Warnung, wenn das Modell nicht aufs Bett passt.
+- **Druckvorschau:** geschätzte Druckzeit, Material, Kosten und Schichtanzahl für über 60 Drucker – FDM (Bambu Lab, Prusa, Creality, Elegoo, Anycubic, QIDI, Sovol, Flashforge, Snapmaker, Voron) und Resin (Anycubic Photon, Elegoo Mars/Saturn/Jupiter, Phrozen, Creality Halot, UniFormation, Formlabs, Prusa SL1S). FDM: Schichthöhe, Füllung, Wände, Stützen, Filament. Resin: Harzart, Schichthöhe, Stützen, hohl drucken, Harzverbrauch in ml. Ein Schichtregler zeigt, wie weit der Druck nach welcher Zeit ist. Warnung, wenn das Modell nicht aufs Bett passt.
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/Modellblick`).
 
