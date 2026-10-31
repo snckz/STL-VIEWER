@@ -73,13 +73,13 @@ jobs:
         run: rm -f android/app/release.keystore
 
       - name: APK umbenennen
-        run: cp android/app/build/outputs/apk/release/app-release.apk STL-3D-Viewer-${{ github.run_number }}.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk 3D-Viewer-${{ github.run_number }}.apk
 
       - name: Als Download speichern (Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: STL-3D-Viewer-APK
-          path: STL-3D-Viewer-${{ github.run_number }}.apk
+          name: 3D-Viewer-APK
+          path: 3D-Viewer-${{ github.run_number }}.apk
 
       - name: Release-Text zusammenstellen
         run: |
@@ -90,7 +90,7 @@ jobs:
             echo
             echo "---"
             echo
-            echo "**Installieren:** \`STL-3D-Viewer-${{ github.run_number }}.apk\` am Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob der Browser Apps installieren darf – erlauben."
+            echo "**Installieren:** \`3D-Viewer-${{ github.run_number }}.apk\` am Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob der Browser Apps installieren darf – erlauben."
             echo "Ältere Versionen werden dabei automatisch aktualisiert. Ab dieser Version meldet die App neue Updates selbst. Voraussetzung: Android 8.0 oder neuer."
           } > release-body.md
           cat release-body.md
@@ -99,7 +99,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: STL & 3D Viewer 1.0.${{ github.run_number }}
+          name: 3D Viewer 1.0.${{ github.run_number }}
           make_latest: true
           body_path: release-body.md
-          files: STL-3D-Viewer-${{ github.run_number }}.apk
+          files: 3D-Viewer-${{ github.run_number }}.apk

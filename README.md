@@ -1,4 +1,4 @@
-# STL & 3D Viewer
+# 3D Viewer
 
 **3D-Modell-Viewer für Android – STL, 3MF, OBJ und PLY.** 3D-Modelle am Handy ansehen, drehen, zoomen, einfärben und vor dem Druck prüfen – offline, ohne Konto, ohne Werbung.
 
@@ -13,7 +13,7 @@
 
 ### Android
 
-**[➜ Neueste Version herunterladen](../../releases/latest)** – dort die Datei `STL-3D-Viewer-….apk` antippen.
+**[➜ Neueste Version herunterladen](../../releases/latest)** – dort die Datei `3D-Viewer-….apk` antippen.
 
 1. APK am Android-Handy herunterladen und öffnen.
 2. Beim ersten Mal fragt Android, ob der Browser bzw. Dateimanager Apps installieren darf → **erlauben**.
@@ -31,7 +31,7 @@ Ab Version 1.0.11 meldet die App neue Versionen selbst: Beim Start erscheint ein
 
 1. Unten auf **Teilen** <kbd>⬆︎</kbd> tippen.
 2. **Zum Home-Bildschirm** wählen und **Hinzufügen** tippen.
-3. STL & 3D Viewer startet ab jetzt vom Home-Bildschirm wie eine App – im Vollbild und auch ohne Internet.
+3. Der 3D Viewer startet ab jetzt vom Home-Bildschirm wie eine App – im Vollbild und auch ohne Internet.
 
 Dateien öffnest du über **Öffnen** in der App (Dateien, iCloud Drive, Downloads). Das Kamera-Symbol öffnet das Teilen-Menü, dort **Bild sichern** wählen. Voraussetzung: iOS/iPadOS 16.4 oder neuer.
 
@@ -48,7 +48,7 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 - **Drehen:** Modell frei um X, Y und Z drehen (Regler oder Gradzahl eintippen), +90°-Knöpfe, „Flach hinlegen“ legt die größte ebene Fläche aufs Bett. Größe ändern, auch Zoll → mm.
 - **Druckvorschau:** geschätzte Druckzeit, Material, Kosten und Schichtanzahl für über 60 Drucker – FDM (Bambu Lab, Prusa, Creality, Elegoo, Anycubic, QIDI, Sovol, Flashforge, Snapmaker, Voron) und Resin (Anycubic Photon, Elegoo Mars/Saturn/Jupiter, Phrozen, Creality Halot, UniFormation, Formlabs, Prusa SL1S). FDM: Schichthöhe, Füllung, Wände, Stützen, Filament. Resin: Harzart, Schichthöhe, Stützen, hohl drucken, Harzverbrauch in ml. Ein Schichtregler zeigt, wie weit der Druck nach welcher Zeit ist. Warnung, wenn das Modell nicht aufs Bett passt.
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
-- **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/STL-3D-Viewer`).
+- **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/3D-Viewer`).
 
 Unterstützte Formate:
 

@@ -310,11 +310,11 @@ public class MainActivity extends Activity {
             }
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
-            r.setTitle("STL & 3D Viewer " + safe);
+            r.setTitle("3D Viewer " + safe);
             r.setDescription("Update wird heruntergeladen");
             r.setMimeType("application/vnd.android.package-archive");
             r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            r.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "STL-3D-Viewer-" + safe + ".apk");
+            r.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "3D-Viewer-" + safe + ".apk");
             updateDownloadId = dm.enqueue(r);
             js("window.updateState && window.updateState('downloading')");
         } catch (Exception e) {
@@ -402,14 +402,14 @@ public class MainActivity extends Activity {
                         ContentValues v = new ContentValues();
                         v.put(MediaStore.Images.Media.DISPLAY_NAME, safe);
                         v.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
-                        v.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/STL-3D-Viewer");
+                        v.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/3D-Viewer");
                         Uri u = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
                         if (u == null) throw new IllegalStateException("insert");
                         try (OutputStream out = getContentResolver().openOutputStream(u)) {
                             if (out == null) throw new IllegalStateException("stream");
                             out.write(bytes);
                         }
-                        where = "Bilder/STL-3D-Viewer";
+                        where = "Bilder/3D-Viewer";
                     } else {
                         File dir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
                         if (dir == null) throw new IllegalStateException("dir");

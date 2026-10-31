@@ -1,4 +1,4 @@
-<title>STL &amp; 3D Viewer</title>
+<title>3D Viewer</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -223,7 +223,7 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     <canvas id="gl" aria-label="3D-Ansicht des Modells. Ziehen zum Drehen, mit zwei Fingern zoomen und verschieben."></canvas>
 
     <header class="top">
-      <div class="brand" aria-label="STL &amp; 3D Viewer">
+      <div class="brand" aria-label="3D Viewer">
         <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2 23 7.5v11L13 24 3 18.5v-11z" fill="none" stroke="#f2a541" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 13 13l10-5.5M13 13v11" fill="none" stroke="#f2a541" stroke-width="2" stroke-linejoin="round" opacity=".55"/></svg>
       </div>
       <div class="file">
@@ -1607,7 +1607,7 @@ if (window.Android && typeof window.Android.saveImage === "function") {
     draw();   // synchron erzeugen, damit das Teilen noch als direkte Reaktion auf das Tippen gilt
     const bin = atob(canvas.toDataURL("image/png").split(",")[1]); const u8 = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    try { await navigator.share({ files: [new File([u8], shotName(), { type: "image/png" })], title: "STL & 3D Viewer" }); }
+    try { await navigator.share({ files: [new File([u8], shotName(), { type: "image/png" })], title: "3D Viewer" }); }
     catch (e) { if (e && e.name !== "AbortError") showToast("Das Bild konnte nicht geteilt werden."); }
   });
 }

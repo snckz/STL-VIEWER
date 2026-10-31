@@ -29,7 +29,7 @@ const pwaHead = `<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="STL &amp; 3D Viewer">
+<meta name="apple-mobile-web-app-title" content="3D Viewer">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="STL, 3MF, OBJ und PLY ansehen, drehen, einfärben und vor dem 3D-Druck prüfen – mit Druckzeit-Schätzung.">`;
 const swScript = `<script>

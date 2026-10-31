@@ -1,6 +1,6 @@
 {
-  "name": "STL & 3D Viewer",
-  "short_name": "STL & 3D Viewer",
+  "name": "3D Viewer",
+  "short_name": "3D Viewer",
   "description": "STL, 3MF, OBJ und PLY ansehen, drehen, einfärben und vor dem 3D-Druck prüfen – mit Druckzeit-Schätzung.",
   "lang": "de",
   "start_url": "./",
