@@ -81,13 +81,25 @@ jobs:
           name: Modellblick-APK
           path: Modellblick-${{ github.run_number }}.apk
 
+      - name: Release-Text zusammenstellen
+        run: |
+          {
+            echo "## Neu in dieser Version"
+            echo
+            grep -E '^\s*[-*] ' RELEASE_NOTES.md || echo "- Verbesserungen und Fehlerbehebungen"
+            echo
+            echo "---"
+            echo
+            echo "**Installieren:** \`Modellblick-${{ github.run_number }}.apk\` am Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob der Browser Apps installieren darf – erlauben."
+            echo "Ältere Versionen werden dabei automatisch aktualisiert. Ab dieser Version meldet die App neue Updates selbst. Voraussetzung: Android 8.0 oder neuer."
+          } > release-body.md
+          cat release-body.md
+
       - name: Release mit APK veröffentlichen
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Modellblick 1.0.${{ github.run_number }}
           make_latest: true
-          body: |
-            **Installieren:** `Modellblick-${{ github.run_number }}.apk` am Android-Handy herunterladen und öffnen. Beim ersten Mal fragt Android, ob der Browser Apps installieren darf – erlauben.
-            Ältere Versionen werden dabei automatisch aktualisiert. Voraussetzung: Android 8.0 oder neuer.
+          body_path: release-body.md
           files: Modellblick-${{ github.run_number }}.apk

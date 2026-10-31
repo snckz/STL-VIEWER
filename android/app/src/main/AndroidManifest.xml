@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Nur für die Update-Prüfung bei GitHub und den Download neuer Versionen; Modelle verlassen das Gerät nie. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Damit „Jetzt aktualisieren“ die heruntergeladene neue Version installieren darf (Android fragt einmalig nach). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <uses-feature android:glEsVersion="0x00030000" android:required="true" />
 
     <application

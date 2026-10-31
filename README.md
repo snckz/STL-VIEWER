@@ -21,6 +21,8 @@
 
 Voraussetzung: Android 8.0 oder neuer mit OpenGL ES 3.0 (praktisch alle Geräte ab 2017).
 
+Ab Version 1.0.11 meldet die App neue Versionen selbst: Beim Start erscheint ein Hinweis mit den Neuerungen, „Jetzt aktualisieren“ lädt das Update und öffnet die Installation. Unter **Info** kannst du auch selbst nach Updates suchen.
+
 > Google Play Protect kann bei Apps außerhalb des Play Store nachfragen. Das ist normal für frei verteilte APKs.
 
 ### iPhone und iPad
@@ -61,7 +63,7 @@ STEP/STP und andere CAD-Formate werden nicht unterstützt – sie enthalten kein
 
 ## Datenschutz
 
-Modellblick hat **keine Internet-Berechtigung**. Dateien werden nur auf dem Gerät gelesen und nirgendwohin übertragen. Es gibt keine Analyse, kein Tracking und keine Werbung.
+Modelle werden nur auf dem Gerät gelesen und nirgendwohin übertragen. Es gibt keine Analyse, kein Tracking und keine Werbung. Die Android-App geht nur ins Internet, um bei GitHub nach einer neuen Version zu fragen (höchstens alle 6 Stunden) und auf Wunsch das Update herunterzuladen.
 
 ## Aufbau
 
@@ -73,6 +75,7 @@ Modellblick hat **keine Internet-Berechtigung**. Dateien werden nur auf dem Ger�
 | `.github/workflows/build-apk.yml` | Baut bei jedem Push die signierte APK und veröffentlicht sie als Release |
 | `.github/workflows/pages.yml` | Baut die installierbare Web-App (iPhone/iPad) in den Zweig `gh-pages`, den GitHub Pages veröffentlicht |
 | `web/pwa/` | Manifest, Icons und Service Worker der Web-App |
+| `RELEASE_NOTES.md` | Neuerungen der nächsten Version – erscheinen im Release und im Update-Hinweis der App |
 | `test/` | Browser-Tests mit Playwright und Testdateien |
 | `docs/` | Bilder für diese Seite |
 

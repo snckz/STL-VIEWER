@@ -1,9 +1,14 @@
 package at.modellblick;
 
 import android.app.Activity;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
@@ -46,6 +51,9 @@ import java.util.concurrent.Executors;
  * Die Seite läuft unter https://appassets.androidplatform.net/ (für Apps reservierter Host, verlässt nie das Gerät).
  * Dateien aus den Assets und geteilte Dateien werden in shouldInterceptRequest direkt als Stream ausgeliefert –
  * so bleibt der Speicherbedarf auch bei großen STL-Dateien klein.
+ *
+ * Updates: Der Viewer fragt beim Start die neueste GitHub-Version ab und zeigt die Neuerungen an.
+ * „Jetzt aktualisieren“ lädt die APK über den DownloadManager und öffnet danach die Android-Installation.
  */
 public class MainActivity extends Activity {
 
@@ -61,6 +69,16 @@ public class MainActivity extends Activity {
     /** Geteilte Dateien, die der Viewer per fetch() abholen darf (id → Uri). */
     private final Map<String, Uri> sharedFiles = Collections.synchronizedMap(new HashMap<>());
 
+    private long updateDownloadId = -1;
+    private String updateFallbackUrl = null;
+    private final BroadcastReceiver downloadDone = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            if (id != -1 && id == updateDownloadId) onUpdateDownloaded(id);
+        }
+    };
+
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -71,6 +89,9 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.parseColor("#1B1F26"));
 
         createWebView(savedInstanceState);
+        IntentFilter f = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(downloadDone, f, Context.RECEIVER_EXPORTED);
+        else registerReceiver(downloadDone, f);
         boolean fromHistory = (getIntent() != null)
                 && (getIntent().getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0;
         if (savedInstanceState == null && !fromHistory) {
@@ -261,9 +282,77 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        try { unregisterReceiver(downloadDone); } catch (Exception ignored) { }
         io.shutdownNow();
         if (webView != null) webView.destroy();
         super.onDestroy();
+    }
+
+    // ---------------- Updates ----------------
+
+    /** Nur HTTPS-Downloads von GitHub zulassen – die Brücke darf keine beliebigen Dateien installieren. */
+    private static boolean isTrustedApkUrl(String url) {
+        if (url == null) return false;
+        Uri u = Uri.parse(url);
+        String host = u.getHost() == null ? "" : u.getHost();
+        return "https".equals(u.getScheme()) && url.toLowerCase().contains(".apk")
+                && (host.equals("github.com") || host.endsWith(".githubusercontent.com"));
+    }
+
+    private void startUpdateDownload(String url, String version) {
+        updateFallbackUrl = url;
+        try {
+            String safe = version == null ? "neu" : version.replaceAll("[^\\w.\\-]", "_");
+            File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (dir != null) {   // alte Update-Dateien aufräumen
+                File[] old = dir.listFiles();
+                if (old != null) for (File o : old) if (o.getName().endsWith(".apk")) o.delete();
+            }
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
+            r.setTitle("Modellblick " + safe);
+            r.setDescription("Update wird heruntergeladen");
+            r.setMimeType("application/vnd.android.package-archive");
+            r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            r.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "Modellblick-" + safe + ".apk");
+            updateDownloadId = dm.enqueue(r);
+            js("window.updateState && window.updateState('downloading')");
+        } catch (Exception e) {
+            openInBrowser(url);
+        }
+    }
+
+    private void onUpdateDownloaded(long id) {
+        DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        boolean ok = false;
+        try (Cursor c = dm.query(new DownloadManager.Query().setFilterById(id))) {
+            if (c != null && c.moveToFirst()) {
+                int col = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                ok = col >= 0 && c.getInt(col) == DownloadManager.STATUS_SUCCESSFUL;
+            }
+        } catch (Exception ignored) { }
+        updateDownloadId = -1;
+        if (!ok) {
+            js("window.updateState && window.updateState('failed')");
+            if (updateFallbackUrl != null) openInBrowser(updateFallbackUrl);
+            return;
+        }
+        try {
+            Uri apk = dm.getUriForDownloadedFile(id);
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setDataAndType(apk, "application/vnd.android.package-archive");
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            js("window.updateState && window.updateState('installing')");
+        } catch (Exception e) {
+            js("window.updateState && window.updateState('failed')");
+            if (updateFallbackUrl != null) openInBrowser(updateFallbackUrl);
+        }
+    }
+
+    private void openInBrowser(String url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+        catch (Exception e) { toast("Bitte die neue Version unter github.com/snckz/STL-VIEWER herunterladen."); }
     }
 
     private void js(String code) {
@@ -276,6 +365,32 @@ public class MainActivity extends Activity {
 
     /** Wird im JavaScript als window.Android angesprochen. */
     private class Bridge {
+        @JavascriptInterface
+        public long getVersionCode() {
+            try {
+                PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+                return Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+            } catch (Exception e) { return 0; }
+        }
+
+        @JavascriptInterface
+        public String getVersionName() {
+            try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; }
+            catch (Exception e) { return ""; }
+        }
+
+        @JavascriptInterface
+        public void downloadUpdate(String url, String version) {
+            if (!isTrustedApkUrl(url)) return;
+            main.post(() -> startUpdateDownload(url, version));
+        }
+
+        @JavascriptInterface
+        public void openReleasePage(String url) {
+            if (url == null || !url.startsWith("https://github.com/")) return;
+            main.post(() -> openInBrowser(url));
+        }
+
         @JavascriptInterface
         public void saveImage(String base64Png, String fileName) {
             io.execute(() -> {

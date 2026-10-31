@@ -126,6 +126,31 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 select,.num{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;width:100%}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid2:has(> [hidden]){grid-template-columns:1fr}
+
+/* Update-Hinweis (Android-App) */
+.upd-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,8,11,.62);backdrop-filter:blur(3px);
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));animation:updFade .2s ease}
+.upd{width:min(520px,100%);max-height:85%;display:flex;flex-direction:column;gap:14px;background:var(--surface);border:1px solid var(--line);border-bottom:0;
+  border-radius:20px 20px 0 0;padding:22px 20px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.45);animation:updUp .28s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:600px){ .upd-backdrop{align-items:center} .upd{border-radius:20px;border-bottom:1px solid var(--line);padding-bottom:18px} }
+.upd:focus{outline:none}
+.upd-head{display:grid;gap:6px}
+.upd-badge{justify-self:start;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent);padding:3px 9px;border-radius:99px}
+.upd h2{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.upd-ver{margin:0;font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.upd-ver b{color:var(--fg);font-weight:600}
+.upd-body{overflow-y:auto;min-height:0;border-top:1px solid var(--line);padding-top:14px}
+.upd h3{margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.upd ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.upd li{position:relative;padding-left:22px;line-height:1.45}
+.upd li::before{content:"";position:absolute;left:3px;top:.5em;width:8px;height:8px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+.upd-status{margin:0;font-size:13px;color:var(--muted)}
+.upd-actions{display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
+.upd-actions .btn{min-height:48px}
+.app-ver{justify-content:space-between;padding-top:6px}
+.app-ver #appVer{font-family:var(--font-mono);font-size:13px}
+@keyframes updFade{from{opacity:0}}
+@keyframes updUp{from{transform:translateY(40px);opacity:0}}
 .field{display:grid;gap:6px;min-width:0}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg .btn{min-height:36px;padding:0 12px;font-size:13px;flex:1}
@@ -230,6 +255,24 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     <div class="overlay drop" id="dropOverlay" hidden><div class="box">Datei hier ablegen</div></div>
     <div class="overlay" id="loading" hidden><div class="box"><div class="spinner"></div><div id="loadingText">Modell wird geladen …</div></div></div>
     <div class="toast" id="toast" role="alert" hidden><p id="toastText"></p><button id="toastClose" aria-label="Meldung schließen">×</button></div>
+    <div class="upd-backdrop" id="updBackdrop" hidden>
+      <section class="upd" id="updDialog" role="dialog" aria-modal="true" aria-labelledby="updTitle" tabindex="-1">
+        <div class="upd-head">
+          <span class="upd-badge">Update</span>
+          <h2 id="updTitle">Neue Version verfügbar</h2>
+          <p class="upd-ver"><span id="updFrom">–</span> → <b id="updTo">–</b></p>
+        </div>
+        <div class="upd-body">
+          <h3>Neu in dieser Version</h3>
+          <ul id="updNotes"></ul>
+        </div>
+        <p class="upd-status" id="updStatus" hidden></p>
+        <div class="upd-actions">
+          <button class="btn" id="updLater">Später</button>
+          <button class="btn btn-primary" id="updNow">Jetzt aktualisieren</button>
+        </div>
+      </section>
+    </div>
   </div>
 
   <aside class="panel" id="panel">
@@ -261,6 +304,10 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
         <div><dt>Dateigröße</dt><dd id="fsize">–</dd></div>
       </dl>
       <p class="note" id="headerNote" hidden></p>
+      <div class="row app-ver" id="appVerRow" hidden>
+        <span><span class="label">App-Version</span><br><span id="appVer">–</span></span>
+        <button class="btn" id="updCheck">Nach Updates suchen</button>
+      </div>
     </section>
 
     <section class="pane" id="pane-color" role="tabpanel" aria-labelledby="tab-color" hidden>
@@ -1599,6 +1646,62 @@ function demoKnot() {
     out.push(...a, ...c, ...b, ...a, ...d, ...c);
   }
   return new Float32Array(out);
+}
+
+/* ---------------- Updates (nur Android-App) ----------------
+   Beim Start höchstens alle 6 Stunden die neueste GitHub-Version abfragen. Ist sie neuer als die installierte,
+   erscheint ein Hinweis mit den Neuerungen aus den Release-Notizen (Text vor der Trennlinie „---“). */
+const UPDATE_API = "https://api.github.com/repos/snckz/STL-VIEWER/releases/latest";
+const hasUpdater = !!(window.Android && typeof window.Android.getVersionCode === "function" && typeof window.Android.downloadUpdate === "function");
+let pendingUpdate = null;
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+function releaseNotes(body) {
+  const part = String(body || "").split(/\r?\n---/)[0];
+  const items = part.split(/\r?\n/).map(l => l.trim()).filter(l => /^[-*•]\s+/.test(l)).map(l => l.replace(/^[-*•]\s+/, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1"));
+  return items.length ? items : ["Verbesserungen und Fehlerbehebungen"];
+}
+async function checkForUpdate(manual) {
+  if (!hasUpdater) return;
+  const last = +(lsGet("modellblick-update-check") || 0);
+  if (!manual && Date.now() - last < 6 * 3600e3) return;
+  lsSet("modellblick-update-check", String(Date.now()));
+  try {
+    const res = await fetch(UPDATE_API, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const rel = await res.json();
+    const latest = parseInt(String(rel.tag_name || "").split(".").pop(), 10), current = Number(window.Android.getVersionCode());
+    const apk = (rel.assets || []).find(a => /\.apk$/i.test(a.name || ""));
+    if (!Number.isFinite(latest) || !apk || !(latest > current)) { if (manual) showToast("Du hast die neueste Version.", "info"); return; }
+    if (!manual && lsGet("modellblick-update-skip") === String(latest)) return;
+    showUpdate({ code: latest, name: String(rel.tag_name).replace(/^v/, ""), url: apk.browser_download_url, page: rel.html_url, notes: releaseNotes(rel.body) });
+  } catch (_) { if (manual) showToast("Keine Verbindung – Updates konnten nicht geprüft werden."); }
+}
+function showUpdate(u) {
+  pendingUpdate = u;
+  $("updFrom").textContent = String(window.Android.getVersionName ? window.Android.getVersionName() : "") || "installiert";
+  $("updTo").textContent = u.name;
+  const ul = $("updNotes"); ul.textContent = "";
+  u.notes.slice(0, 12).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+  $("updStatus").hidden = true; $("updNow").disabled = false; $("updNow").textContent = "Jetzt aktualisieren";
+  $("updBackdrop").hidden = false; $("updDialog").focus({ preventScroll: true });
+}
+function hideUpdate() { $("updBackdrop").hidden = true; }
+window.updateState = (st) => {
+  const el = $("updStatus"); el.hidden = false;
+  if (st === "downloading") { el.textContent = "Wird heruntergeladen … das dauert meist nur ein paar Sekunden."; $("updNow").disabled = true; $("updNow").textContent = "Lädt …"; }
+  else if (st === "installing") { el.textContent = "Bitte im nächsten Fenster auf „Installieren“ tippen."; $("updNow").disabled = false; $("updNow").textContent = "Erneut installieren"; }
+  else { el.textContent = "Der Download hat nicht geklappt. Die Seite mit der neuen Version wurde im Browser geöffnet."; $("updNow").disabled = false; $("updNow").textContent = "Nochmal versuchen"; }
+};
+$("updLater").addEventListener("click", () => { if (pendingUpdate) lsSet("modellblick-update-skip", String(pendingUpdate.code)); hideUpdate(); });
+$("updBackdrop").addEventListener("click", (e) => { if (e.target === e.currentTarget) hideUpdate(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("updBackdrop").hidden) hideUpdate(); });
+$("updNow").addEventListener("click", () => { if (pendingUpdate) window.Android.downloadUpdate(pendingUpdate.url, pendingUpdate.name); });
+if (hasUpdater) {
+  $("appVerRow").hidden = false;
+  $("appVer").textContent = (window.Android.getVersionName ? window.Android.getVersionName() : "") || String(window.Android.getVersionCode());
+  $("updCheck").addEventListener("click", () => checkForUpdate(true));
+  setTimeout(() => checkForUpdate(false), 1500);   // nach dem Start, damit das Modell zuerst erscheint
 }
 
 /* ---------------- Start ---------------- */
