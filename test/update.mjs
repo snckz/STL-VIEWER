@@ -20,7 +20,8 @@ async function open(installed, latest) {
 { const { p, ctx, errs } = await open(10, 11);
   const st = await p.evaluate(() => ({ shown: !updBackdrop.hidden, from: updFrom.textContent, to: updTo.textContent, notes: [...document.querySelectorAll("#updNotes li")].map(l => l.textContent), ver: appVer.textContent, row: !appVerRow.hidden }));
   check("Hinweis erscheint bei neuerer Version", st.shown && st.from === "1.0.10" && st.to === "1.0.11", st);
-  check("Neuerungen aus den Release-Notizen", st.notes.length === 5 && st.notes[0].startsWith("Update-Hinweis"), st.notes);
+  const expected = notes.split("\n").map(l => l.replace(/^- /, ""));
+  check("Neuerungen aus den Release-Notizen", JSON.stringify(st.notes) === JSON.stringify(expected), [st.notes, expected]);
   check("App-Version im Info-Tab", st.row && st.ver === "1.0.10", st);
   if (shots) await p.screenshot({ path: shots + "/22_update_android.png" });
   await p.click("#updNow");
