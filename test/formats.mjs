@@ -9,6 +9,7 @@ const expect = {
   "bambu.3mf":    { x: "50,00", y: "20,00", z: "20,00", vol: "16,0 cm³", mf: "Ja, geschlossen", note: "Erstellt mit BambuStudio-02.03 · 2 Teile" },
   "inch.3mf":     { x: "25,40", vol: "16,4 cm³", mf: "Ja, geschlossen" },
   "sliced.3mf":   { toast: "Diese 3MF enthält nur G-Code (geslicte Datei) und kein Modell." },
+  "prefixed.3mf": { x: "200,0", vol: "8.000,0 cm³", mf: "Ja, geschlossen", note: "Erstellt mit Fusion 360" },
   "cube_ascii.ply": { x: "10,00", vol: "1,00 cm³", mf: "Ja, geschlossen", note: "Dateikopf: Scanner-Test" },
   "cube_le.ply":  { x: "10,00", vol: "1,00 cm³", mf: "Ja, geschlossen" },
   "cube_be.ply":  { x: "10,00", vol: "1,00 cm³", mf: "Ja, geschlossen" },

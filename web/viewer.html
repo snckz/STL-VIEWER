@@ -546,7 +546,7 @@ canvas.addEventListener("webglcontextrestored", () => {
 /* ---------------- Zustand ---------------- */
 const BG = { dark: [0.078, 0.09, 0.11], grey: [0.30, 0.32, 0.35], light: [0.86, 0.87, 0.89] };
 const state = {
-  mesh: null,           // { pos, triCount, vid, uniqueVerts, manifold, fmt, size, name, header, faceN, smoothN }
+  mesh: null,           // { pos, triCount, vid, uniqueVerts, manifold, fmt, size, name, header, R, base }
   color: [0.95, 0.65, 0.25], gloss: 0.4, bg: "dark",
   wire: false, smooth: false, overhang: false, bed: true, ortho: false, clipZ: Infinity, layerPreview: false,
   rot: [0, 0, 0], live: { R: [1,0,0, 0,1,0, 0,0,1], off: [0, 0, 0] },
@@ -576,6 +576,24 @@ function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ 
 
 /* ---------------- Parser ---------------- */
 class ViewerError extends Error {}
+// Wachsende typisierte Arrays: speichersparend statt JS-Arrays mit Millionen Zahlen
+class Grow {
+  constructor(Type, cap = 1 << 16) { this.T = Type; this.a = new Type(cap); this.n = 0; }
+  push3(x, y, z) { if (this.n + 3 > this.a.length) this.grow(this.n + 3); const a = this.a, n = this.n; a[n] = x; a[n + 1] = y; a[n + 2] = z; this.n = n + 3; }
+  grow(min) { let c = this.a.length * 2; while (c < min) c *= 2; const b = new this.T(c); b.set(this.a.subarray(0, this.n)); this.a = b; }
+  done() { return this.a.length - this.n > 1 << 20 ? this.a.slice(0, this.n) : this.a.subarray(0, this.n); }
+}
+// Zahl aus ASCII-Bytes lesen (für 3MF-XML), ohne Zwischen-Strings
+function bytesToNumber(b, i, end) {
+  while (i < end && (b[i] === 32 || b[i] === 9)) i++;
+  let sign = 1; if (b[i] === 45) { sign = -1; i++; } else if (b[i] === 43) i++;
+  let v = 0, any = false;
+  while (i < end && b[i] >= 48 && b[i] <= 57) { v = v * 10 + (b[i] - 48); i++; any = true; }
+  if (b[i] === 46) { i++; let f = 0.1; while (i < end && b[i] >= 48 && b[i] <= 57) { v += (b[i] - 48) * f; f *= 0.1; i++; any = true; } }
+  if (i < end && (b[i] === 101 || b[i] === 69)) { i++; let es = 1; if (b[i] === 45) { es = -1; i++; } else if (b[i] === 43) i++;
+    let e = 0; while (i < end && b[i] >= 48 && b[i] <= 57) { e = e * 10 + (b[i] - 48); i++; } v *= Math.pow(10, es * e); }
+  return any ? sign * v : NaN;
+}
 function parseSTL(buf) {
   const dv = new DataView(buf);
   if (buf.byteLength >= 84) {
@@ -598,18 +616,23 @@ function parseSTL(buf) {
   return { pos: new Float32Array(out.slice(0, usable)), fmt: "STL ASCII", header: name.trim() };
 }
 function parseOBJ(buf) {
-  const text = new TextDecoder().decode(buf); const v = []; const tris = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (/^v\s/.test(line)) { const p = line.split(/\s+/); v.push([+p[1], +p[2], +p[3]]); }
-    else if (/^f\s/.test(line)) {
-      const idx = line.split(/\s+/).slice(1).map(t => { const i = parseInt(t, 10); return i < 0 ? v.length + i : i - 1; });
-      for (let k = 1; k + 1 < idx.length; k++) tris.push(idx[0], idx[k], idx[k + 1]);
+  const text = new TextDecoder().decode(buf); const v = new Grow(Float64Array); const tris = new Grow(Uint32Array);
+  const idx = []; let pos0 = 0;
+  while (pos0 < text.length) {
+    let e = text.indexOf("\n", pos0); if (e < 0) e = text.length;
+    const c0 = text.charCodeAt(pos0), c1 = text.charCodeAt(pos0 + 1);
+    if (c0 === 118 && (c1 === 32 || c1 === 9)) {   // "v "
+      const p = text.slice(pos0 + 2, e).trim().split(/\s+/); v.push3(+p[0], +p[1], +p[2]);
+    } else if (c0 === 102 && (c1 === 32 || c1 === 9)) {   // "f "
+      const p = text.slice(pos0 + 2, e).trim().split(/\s+/); idx.length = 0; const nv = v.n / 3;
+      for (const t of p) { const i = parseInt(t, 10); if (Number.isFinite(i)) idx.push(i < 0 ? nv + i : i - 1); }
+      for (let k = 1; k + 1 < idx.length; k++) tris.push3(idx[0], idx[k], idx[k + 1]);
     }
+    pos0 = e + 1;
   }
-  const pos = new Float32Array(tris.length * 3);
-  for (let i = 0; i < tris.length; i++) { const p = v[tris[i]]; if (!p) throw new ViewerError("OBJ-Datei verweist auf einen nicht vorhandenen Punkt."); // Y-up → Z-up
-    pos[i * 3] = p[0]; pos[i * 3 + 1] = -p[2]; pos[i * 3 + 2] = p[1]; }
+  const va = v.a, t = tris.a, nT = tris.n, nV = v.n / 3; const pos = new Float32Array(nT * 3);
+  for (let i = 0; i < nT; i++) { const k = t[i]; if (k >= nV) throw new ViewerError("OBJ-Datei verweist auf einen nicht vorhandenen Punkt."); // Y-up → Z-up
+    pos[i * 3] = va[k * 3]; pos[i * 3 + 1] = -va[k * 3 + 2]; pos[i * 3 + 2] = va[k * 3 + 1]; }
   return { pos, fmt: "OBJ", header: "" };
 }
 
@@ -638,15 +661,15 @@ function parsePLY(buf) {
   const ix = vEl.props.findIndex(p => p.name === "x"), iy = vEl.props.findIndex(p => p.name === "y"), iz = vEl.props.findIndex(p => p.name === "z");
   const fIdx = fEl.props.findIndex(p => p.list && (p.name === "vertex_indices" || p.name === "vertex_index"));
   if (ix < 0 || iy < 0 || iz < 0 || fIdx < 0) throw new ViewerError("Die PLY-Datei hat kein lesbares Punkt- oder Flächenformat.");
-  const verts = new Float64Array(vEl.count * 3); const tris = [];
-  const addFace = (idx) => { for (let k = 1; k + 1 < idx.length; k++) tris.push(idx[0], idx[k], idx[k + 1]); };
+  const verts = new Float64Array(vEl.count * 3); const tris = new Grow(Uint32Array);
+  const addFace = (idx) => { for (let k = 1; k + 1 < idx.length; k++) tris.push3(idx[0], idx[k], idx[k + 1]); };
 
   if (format === "ascii") {
     const body = new TextDecoder().decode(u8.subarray(endM.index + endM[0].length));
-    const tok = body.split(/\s+/).filter(Boolean); let p = 0;
+    const re = /\S+/g; const next = () => { const m = re.exec(body); return m ? +m[0] : NaN; };
     for (const el of elements) for (let r = 0; r < el.count; r++) {
       const vals = [];
-      for (const pr of el.props) { if (pr.list) { const n = +tok[p++]; vals.push(tok.slice(p, p + n).map(Number)); p += n; } else vals.push(+tok[p++]); }
+      for (const pr of el.props) { if (pr.list) { const n = next(); const l = new Array(n > 0 ? n : 0); for (let j = 0; j < l.length; j++) l[j] = next(); vals.push(l); } else vals.push(next()); }
       if (el === vEl) { verts[r*3] = vals[ix]; verts[r*3+1] = vals[iy]; verts[r*3+2] = vals[iz]; }
       else if (el === fEl) addFace(vals[fIdx]);
     }
@@ -673,8 +696,8 @@ function parsePLY(buf) {
     } catch (e) { if (e instanceof ViewerError) throw e; throw new ViewerError("Die PLY-Datei ist unvollständig oder beschädigt."); }
   } else throw new ViewerError("Unbekanntes PLY-Format: " + (format || "fehlt") + ".");
 
-  const nV = vEl.count; const pos = new Float32Array(tris.length * 3);
-  for (let i = 0; i < tris.length; i++) { const v = tris[i];
+  const nV = vEl.count, ta = tris.a, nT = tris.n; const pos = new Float32Array(nT * 3);
+  for (let i = 0; i < nT; i++) { const v = ta[i];
     if (!(v >= 0 && v < nV)) throw new ViewerError("Die PLY-Datei verweist auf einen nicht vorhandenen Punkt.");
     pos[i*3] = verts[v*3]; pos[i*3+1] = verts[v*3+1]; pos[i*3+2] = verts[v*3+2]; }
   return { pos, fmt: format === "ascii" ? "PLY ASCII" : "PLY binär", header: comment };
@@ -707,16 +730,16 @@ async function readZip(buf) {
   return {
     names: [...entries.values()].map(e => e.name),
     has: (n) => entries.has(n.replace(/^\/+/, "").toLowerCase()),
-    async text(n) {
+    stream(n) {   // entpackter Inhalt als Datenstrom – große Modelle müssen nie komplett als Text im Speicher liegen
       const e = entries.get(n.replace(/^\/+/, "").toLowerCase()); if (!e) return null;
       const start = e.lho + 30 + dv.getUint16(e.lho + 26, true) + dv.getUint16(e.lho + 28, true);
       const data = u8.subarray(start, start + e.csize);
-      if (e.method === 0) return dec.decode(data);
+      if (e.method === 0) return new Blob([data]).stream();
       if (e.method !== 8) throw new ViewerError("Die 3MF-Datei verwendet eine nicht unterstützte Kompression.");
-      if (typeof DecompressionStream === "undefined") throw new ViewerError("Dieses Gerät kann 3MF nicht entpacken. Bitte Android System WebView aktualisieren.");
-      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-      return await new Response(stream).text();
-    }
+      if (typeof DecompressionStream === "undefined") throw new ViewerError("Dieses Gerät kann 3MF nicht entpacken. Bitte Android System WebView bzw. iOS aktualisieren.");
+      return new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    },
+    async text(n) { const st = this.stream(n); return st ? await new Response(st).text() : null; }
   };
 }
 
@@ -729,38 +752,64 @@ async function parse3MF(buf) {
     const t = m && /Target="([^"]+)"/i.exec(m[0]); if (t) root = t[1]; }
   if (!zip.has(root)) { const alt = zip.names.find(n => /\.model$/i.test(n)); if (!alt) throw new ViewerError(zip.names.some(n => /\.gcode$/i.test(n)) ? "Diese 3MF enthält nur G-Code (geslicte Datei) und kein Modell." : "Die 3MF-Datei enthält kein 3D-Modell."); root = alt; }
 
-  const attrs = (s) => { const o = {}; const re = /([\w:.-]+)\s*=\s*"([^"]*)"/g; let m; while ((m = re.exec(s))) o[m[1]] = m[2]; return o; };
+  const attrs = (s) => { const o = {}; const re = /([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g; let m; while ((m = re.exec(s))) o[m[1]] = m[2] !== undefined ? m[2] : m[3]; return o; };
   const UNITS = { micron: 0.001, millimeter: 1, centimeter: 10, inch: 25.4, foot: 304.8, meter: 1000 };
   const files = new Map();   // Pfad → { objects: Map(id → obj), build: [], unit }
+  const latin = new TextDecoder("latin1"), utf8 = new TextDecoder();
+  // Wert eines Attributs (Bytes) im Tag b[s..e) finden: liefert [start, ende) oder null
+  const attrRange = (b, s, e, k0, k1) => {   // k0/k1: Attributname als 1–2 Zeichencodes (x, y, z, v1 …)
+    for (let i = s; i < e - 2; i++) {
+      if (b[i] !== k0 || (b[i - 1] !== 32 && b[i - 1] !== 9 && b[i - 1] !== 10 && b[i - 1] !== 13)) continue;
+      let j = i + 1; if (k1) { if (b[j] !== k1) continue; j++; }
+      while (b[j] === 32) j++; if (b[j] !== 61) continue; j++; while (b[j] === 32) j++;
+      const q = b[j]; if (q !== 34 && q !== 39) continue;
+      let k = j + 1; while (k < e && b[k] !== q) k++; return [j + 1, k];
+    }
+    return null;
+  };
+  const num = (b, s, e, k0, k1) => { const r = attrRange(b, s, e, k0, k1); return r ? bytesToNumber(b, r[0], r[1]) : NaN; };
   async function loadModel(path) {
     const key = path.replace(/^\/+/, "").toLowerCase(); if (files.has(key)) return files.get(key);
-    const xml = await zip.text(path); if (xml == null) throw new ViewerError("In der 3MF fehlt die Datei " + path + ".");
-    const modelTag = /<(?:\w+:)?model\b([^>]*)>/.exec(xml); const unit = UNITS[(modelTag && attrs(modelTag[1]).unit) || "millimeter"] || 1;
-    const objects = new Map(); const reObj = /<(?:\w+:)?object\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?object>/g; let m;
-    while ((m = reObj.exec(xml))) {
-      const a = attrs(m[1]), body = m[2]; const obj = { id: a.id, vertices: null, tris: null, comps: [] };
-      const vStart = body.search(/<(?:\w+:)?vertices\b/);
-      if (vStart >= 0) {
-        const v = []; const reV = /<(?:\w+:)?vertex\b([^>]*)\/?>/g; reV.lastIndex = vStart; let vm;
-        const vEnd = body.search(/<\/(?:\w+:)?vertices>/);
-        while ((vm = reV.exec(body)) && (vEnd < 0 || vm.index < vEnd)) {
-          const s = vm[1]; const x = /\bx="([^"]*)"/.exec(s), y = /\by="([^"]*)"/.exec(s), z = /\bz="([^"]*)"/.exec(s);
-          v.push(x ? +x[1] : 0, y ? +y[1] : 0, z ? +z[1] : 0); }
-        const t = []; const reT = /<(?:\w+:)?triangle\b([^>]*)\/?>/g; let tm;
-        while ((tm = reT.exec(body))) { const s = tm[1];
-          const a1 = /\bv1="(\d+)"/.exec(s), a2 = /\bv2="(\d+)"/.exec(s), a3 = /\bv3="(\d+)"/.exec(s);
-          if (a1 && a2 && a3) t.push(+a1[1], +a2[1], +a3[1]); }
-        obj.vertices = v; obj.tris = t;
+    const st = zip.stream(path); if (!st) throw new ViewerError("In der 3MF fehlt die Datei " + path + ".");
+    const objects = new Map(), build = []; let unit = 1, app = "", obj = null, inBuild = false, appNext = false;
+    const reader = st.getReader(); let carry = null;
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      let b = value; if (carry) { b = new Uint8Array(carry.length + value.length); b.set(carry); b.set(value, carry.length); carry = null; }
+      let i = 0;
+      for (;;) {
+        const lt = b.indexOf(60, i); if (lt < 0) break;
+        if (appNext) { app = utf8.decode(b.subarray(i, lt)).trim(); appNext = false; }
+        const gt = b.indexOf(62, lt); if (gt < 0) { carry = b.slice(lt); break; }
+        i = gt + 1;
+        let s0 = lt + 1; const closing = b[s0] === 47; if (closing) s0++;
+        if (b[s0] === 63 || b[s0] === 33) continue;   // <?xml …?>, Kommentare
+        let ne = s0; while (ne < gt && b[ne] !== 32 && b[ne] !== 47 && b[ne] !== 62 && b[ne] !== 9 && b[ne] !== 10 && b[ne] !== 13) ne++;
+        let ns = s0; for (let k = s0; k < ne; k++) if (b[k] === 58) ns = k + 1;   // Namensraum-Präfix weg
+        const c0 = b[ns], len = ne - ns;
+        if (c0 === 118 && len === 6 && obj) {   // vertex
+          if (!obj.v) obj.v = new Grow(Float32Array);
+          const x = num(b, ne, gt, 120), y = num(b, ne, gt, 121), z = num(b, ne, gt, 122);
+          obj.v.push3(x || 0, y || 0, z || 0);
+        } else if (c0 === 116 && len === 8 && obj) {   // triangle
+          if (!obj.t) obj.t = new Grow(Uint32Array);
+          const a = num(b, ne, gt, 118, 49), c = num(b, ne, gt, 118, 50), d = num(b, ne, gt, 118, 51);
+          if (a >= 0 && c >= 0 && d >= 0) obj.t.push3(a, c, d);
+        } else {
+          const name = latin.decode(b.subarray(ns, ne));
+          if (closing) { if (name === "object") obj = null; else if (name === "build") inBuild = false; continue; }
+          const at = attrs(utf8.decode(b.subarray(ne, gt)));
+          if (name === "object") { obj = { id: at.id, v: null, t: null, comps: [] }; objects.set(String(at.id), obj); if (b[gt - 1] === 47) obj = null; }
+          else if (name === "component" && obj) obj.comps.push({ id: at.objectid, path: at["p:path"] || at.path || null, transform: at.transform });
+          else if (name === "build") inBuild = b[gt - 1] !== 47;
+          else if (name === "item" && inBuild) { if (at.printable !== "0") build.push({ id: at.objectid, path: at["p:path"] || at.path || null, transform: at.transform }); }
+          else if (name === "model") unit = UNITS[at.unit || "millimeter"] || 1;
+          else if (name === "metadata" && at.name === "Application" && b[gt - 1] !== 47) appNext = true;
+        }
       }
-      const reC = /<(?:\w+:)?component\b([^>]*)\/?>/g; let cm;
-      while ((cm = reC.exec(body))) { const c = attrs(cm[1]); obj.comps.push({ id: c.objectid, path: c["p:path"] || c.path || null, transform: c.transform }); }
-      objects.set(String(a.id), obj);
     }
-    const build = []; const reI = /<(?:\w+:)?item\b([^>]*)\/?>/g; let im;
-    const bStart = xml.search(/<(?:\w+:)?build\b/);
-    if (bStart >= 0) { reI.lastIndex = bStart; while ((im = reI.exec(xml))) { const c = attrs(im[1]); if (c.printable === "0") continue; build.push({ id: c.objectid, path: c["p:path"] || c.path || null, transform: c.transform }); } }
-    const app = /<(?:\w+:)?metadata\s+name="Application"[^>]*>([^<]*)</i.exec(xml);
-    const f = { objects, build, unit, app: app ? app[1].trim() : "" }; files.set(key, f); return f;
+    for (const o of objects.values()) { o.vertices = o.v ? o.v.done() : null; o.tris = o.t ? o.t.done() : null; o.v = o.t = null; }
+    const f = { objects, build, unit, app }; files.set(key, f); return f;
   }
   // 3MF-Matrizen: 12 Werte, Zeilenvektor-Konvention (p' = p · M)
   const parseT = (s) => { if (!s) return null; const n = s.trim().split(/\s+/).map(Number); return n.length === 12 && n.every(Number.isFinite) ? n : null; };
@@ -770,24 +819,30 @@ async function parse3MF(buf) {
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j];
     for (let j = 0; j < 3; j++) r[9+j] = a[9]*b[j] + a[10]*b[3+j] + a[11]*b[6+j] + b[9+j];
     return r; };
-  const out = []; let parts = 0;
-  async function emit(path, id, M, depth) {
+  // Erst alle Teile mit ihrer Lage sammeln, dann die Gesamtgröße kennen und direkt in ein Float32Array schreiben
+  const inst = [];
+  async function collect(path, id, M, depth) {
     if (depth > 32) throw new ViewerError("Die 3MF-Datei enthält eine endlose Verschachtelung.");
     const f = await loadModel(path); const obj = f.objects.get(String(id)); if (!obj) return;
-    if (obj.tris && obj.tris.length) {
-      parts++; const v = obj.vertices, t = obj.tris, s = f.unit, nV = v.length / 3;
-      for (let i = 0; i < t.length; i++) { const k = t[i]; if (k >= nV) throw new ViewerError("Die 3MF-Datei verweist auf einen nicht vorhandenen Punkt.");
-        const x = v[k*3], y = v[k*3+1], z = v[k*3+2];
-        out.push((x*M[0] + y*M[3] + z*M[6] + M[9]) * s, (x*M[1] + y*M[4] + z*M[7] + M[10]) * s, (x*M[2] + y*M[5] + z*M[8] + M[11]) * s); }
-    }
-    for (const c of obj.comps) await emit(c.path || path, c.id, mul(parseT(c.transform) || ID, M), depth + 1);
+    if (obj.tris && obj.tris.length && obj.vertices) inst.push({ obj, M, s: f.unit });
+    for (const c of obj.comps) await collect(c.path || path, c.id, mul(parseT(c.transform) || ID, M), depth + 1);
   }
   const rootModel = await loadModel(root);
   const items = rootModel.build.length ? rootModel.build : [...rootModel.objects.keys()].map(id => ({ id, path: null, transform: null }));
-  for (const it of items) await emit(it.path || root, it.id, parseT(it.transform) || ID, 0);
-  if (!out.length) throw new ViewerError("Die 3MF-Datei enthält keine Dreiecke.");
+  for (const it of items) await collect(it.path || root, it.id, parseT(it.transform) || ID, 0);
+  const total = inst.reduce((n, x) => n + x.obj.tris.length, 0);
+  if (!total) throw new ViewerError("Die 3MF-Datei enthält keine Dreiecke.");
+  const pos = new Float32Array(total * 3); let o = 0;
+  for (const { obj, M, s } of inst) {
+    const v = obj.vertices, t = obj.tris, nV = v.length / 3;
+    for (let i = 0; i < t.length; i++) { const k = t[i]; if (k >= nV) throw new ViewerError("Die 3MF-Datei verweist auf einen nicht vorhandenen Punkt.");
+      const x = v[k*3], y = v[k*3+1], z = v[k*3+2];
+      pos[o++] = (x*M[0] + y*M[3] + z*M[6] + M[9]) * s; pos[o++] = (x*M[1] + y*M[4] + z*M[7] + M[10]) * s; pos[o++] = (x*M[2] + y*M[5] + z*M[8] + M[11]) * s; }
+  }
+  files.clear();   // Zwischendaten freigeben
+  const parts = inst.length;
   const info = [rootModel.app ? "Erstellt mit " + rootModel.app : "", parts > 1 ? parts + " Teile" : ""].filter(Boolean).join(" · ");
-  return { pos: new Float32Array(out), fmt: "3MF", header: info };
+  return { pos, fmt: "3MF", header: info };
 }
 
 /* ---------------- Netz vorbereiten ---------------- */
@@ -801,7 +856,7 @@ function prepareMesh(parsed, name, size) {
     // Punkte zusammenführen (0,1 µm Raster) – offene Adressierung auf typisierten Arrays, schnell auch bei Millionen Dreiecken
     const nV = triCount * 3; const vid = new Int32Array(nV);
     let cap = 1; while (cap < nV * 2) cap <<= 1; const mask = cap - 1;
-    const slot = new Int32Array(cap).fill(-1); const first = new Int32Array(nV); let next = 0;
+    let slot = new Int32Array(cap).fill(-1), first = new Int32Array(nV); let next = 0;
     for (let i = 0; i < nV; i++) {
       const x = Math.round(pos[i*3] * 1e4), y = Math.round(pos[i*3+1] * 1e4), z = Math.round(pos[i*3+2] * 1e4);
       let h = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & mask;
@@ -811,7 +866,7 @@ function prepareMesh(parsed, name, size) {
         if (Math.round(pos[f] * 1e4) === x && Math.round(pos[f+1] * 1e4) === y && Math.round(pos[f+2] * 1e4) === z) { vid[i] = id; break; }
         h = (h + 1) & mask; }
     }
-    mesh.vid = vid; mesh.uniqueVerts = next;
+    mesh.vid = vid; mesh.uniqueVerts = next; slot = first = null;   // vor der Kantenzählung freigeben
     // Kanten zählen: jede Kante eines geschlossenen Netzes gehört zu genau zwei Dreiecken
     let ecap = 1; while (ecap < triCount * 4) ecap <<= 1; const emask = ecap - 1;
     const ea = new Int32Array(ecap).fill(-1), eb = new Int32Array(ecap), en = new Uint8Array(ecap); let degenerate = 0;
@@ -874,14 +929,14 @@ function smoothNormals(mesh, fn) {
 }
 function uploadMesh() {
   const m = state.mesh;
-  m.faceN = faceNormals(m.pos); m.smoothN = null;
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, m.pos, gl.STATIC_DRAW);
   uploadNormals();
 }
+// Normalen werden nur zum Hochladen berechnet und danach verworfen – spart bei großen Modellen viel Speicher
 function uploadNormals() {
   const m = state.mesh; if (!m) return;
-  let n = m.faceN;
-  if (state.smooth) { if (!m.smoothN) m.smoothN = smoothNormals(m, m.faceN); n = m.smoothN; }
+  let n = faceNormals(m.pos);
+  if (state.smooth) n = smoothNormals(m, n);
   gl.bindBuffer(gl.ARRAY_BUFFER, bufNor); gl.bufferData(gl.ARRAY_BUFFER, n, gl.STATIC_DRAW);
   state.dirty = true;
 }
@@ -1520,19 +1575,19 @@ function eulerMatrix([rx, ry, rz]) {
   const Z = [Math.cos(c),-Math.sin(c),0, Math.sin(c),Math.cos(c),0, 0,0,1];
   return mul3(Z, mul3(Y, X));
 }
-function initOrientation(m) { m.orig = m.pos.slice(); m.base = I3.slice(); m.R = I3.slice(); state.rot = [0, 0, 0];
+function initOrientation(m) { m.base = I3.slice(); m.R = I3.slice(); state.rot = [0, 0, 0];
   state.live = { R: I3.slice(), off: [0, 0, 0] }; est.profile = null; syncRotUI(); }
 const transpose3 = (a) => [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]];
 /* Endgültig: Ausrichtung in die Punkte übernehmen, Maße, Normalen und Schätzung neu berechnen */
 function applyOrientation() {
-  const m = state.mesh; if (!m || !m.orig) return;
+  const m = state.mesh; if (!m || !m.R) return;
   cancelAnimationFrame(rotFrame); rotFrame = 0;
-  const R = mul3(eulerMatrix(state.rot), m.base), o = m.orig, p = m.pos;
-  for (let i = 0; i < o.length; i += 3) { const x = o[i], y = o[i+1], z = o[i+2];
-    p[i] = R[0]*x + R[1]*y + R[2]*z; p[i+1] = R[3]*x + R[4]*y + R[5]*z; p[i+2] = R[6]*x + R[7]*y + R[8]*z; }
+  // Nur die Differenz zur aktuellen Lage anwenden – keine zweite Kopie aller Punkte nötig
+  const R = mul3(eulerMatrix(state.rot), m.base), D = mul3(R, transpose3(m.R)), p = m.pos;
+  for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
+    p[i] = D[0]*x + D[1]*y + D[2]*z; p[i+1] = D[3]*x + D[4]*y + D[5]*z; p[i+2] = D[6]*x + D[7]*y + D[8]*z; }
   placeOnBed(p); stats(m); est.profile = null; m.R = R;
   state.live = { R: I3.slice(), off: [0, 0, 0] };
-  m.faceN = faceNormals(p); m.smoothN = null;
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, p, gl.DYNAMIC_DRAW); uploadNormals();
   resetLayerView(); updateInfo();
   const s = state.scale; state.cam.target = [(m.min[0] + m.max[0]) / 2 * s, (m.min[1] + m.max[1]) / 2 * s, (m.min[2] + m.max[2]) / 2 * s];   // Zoom und Blickwinkel bleiben
@@ -1543,7 +1598,7 @@ let rotFrame = 0;
 function previewOrientation() {
   if (rotFrame) return;
   rotFrame = requestAnimationFrame(() => {
-    rotFrame = 0; const m = state.mesh; if (!m || !m.orig) return;
+    rotFrame = 0; const m = state.mesh; if (!m || !m.R) return;
     const D = mul3(mul3(eulerMatrix(state.rot), m.base), transpose3(m.R)), p = m.pos;
     let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
     for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];

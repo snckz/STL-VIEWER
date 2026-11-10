@@ -1,3 +1,4 @@
 <!-- Neuerungen der nächsten Version. Jede Zeile mit „- “ erscheint in der App im Update-Hinweis. -->
-- Neuer, kürzerer Name: Die App heißt jetzt „3D Viewer“
-- Gespeicherte Bilder landen ab jetzt im Ordner „Bilder/3D-Viewer“
+- Große Dateien öffnen: 3MF, STL, OBJ und PLY mit 45 MB und mehr laden jetzt zuverlässig
+- Deutlich weniger Speicherbedarf – große 3MF-Projekte brauchen nur noch einen Bruchteil davon
+- 3MF-Dateien aus weiteren Programmen werden besser erkannt (z. B. mit anderen Einheiten)
