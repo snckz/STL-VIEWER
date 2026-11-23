@@ -125,7 +125,7 @@ button,input,select{font:inherit;color:inherit}
 .hint.gone{opacity:0;pointer-events:none}
 
 /* Panel */
-.panel{position:relative;z-index:6;background:var(--bg-2);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:46%;transition:max-height .25s ease;
+.panel{position:relative;z-index:6;background:var(--bg-2);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:46%;transition:max-height .26s cubic-bezier(.2,.9,.25,1);
   padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
 .panel.collapsed{max-height:calc(68px + env(safe-area-inset-bottom,0px));overflow:hidden}
 .panel.collapsed .pane{visibility:hidden}
@@ -147,7 +147,12 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:400px){ .tab{font-size:11px;gap:3px} .tab svg{width:20px;height:20px} .tabs{gap:2px} .collapse{width:30px} .handle{padding-left:6px;padding-right:4px} }
 .pane{overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 18px;display:grid;gap:16px;align-content:start}
 .pane[hidden]{display:none!important}
-.pane{touch-action:pan-y}
+/* Bereiche blättern (Paket: Hauptseiten blättern) */
+.pane-pager{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow-x:clip;overflow-y:clip;touch-action:pan-y}
+.pane-track{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.pane.is-side{position:absolute;top:0;left:calc(100% + 24px);width:100%;height:100%;pointer-events:none}
+.pane.is-side[data-dir="-1"]{left:calc(-100% - 24px)}
+@supports not (overflow: clip) { .pane.is-side{display:none!important} }
 .pane.in-next{animation:paneNext .24s cubic-bezier(.2,.8,.2,1)}
 .pane.in-prev{animation:panePrev .24s cubic-bezier(.2,.8,.2,1)}
 @keyframes paneNext{from{opacity:0;transform:translateX(28px)}}
@@ -292,20 +297,21 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .icon-btn{width:40px;padding:0;flex:none}
 .parts-box{display:grid;gap:8px}
 .parts{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--line)}
-.parts li{display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid var(--line)}
+.parts li{border-bottom:1px solid var(--line)}
+.parts .swipe-content{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 8px;background:#1a1e25;border-radius:12px}
 .parts .p-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .parts .p-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
-.parts button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;flex:none}
-.parts button:hover{color:var(--bad);border-color:var(--bad)}
-.parts li{cursor:pointer;margin:0 -8px;padding:0 8px;border-radius:10px;transition:background .15s}
-.parts li.sel{background:color-mix(in srgb,#389aff 16%,transparent)}
+.parts .p-x{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;flex:none}
+.parts .p-x:hover{color:var(--bad);border-color:var(--bad)}
+.parts li{cursor:pointer;margin:0 -8px}
+.parts li.sel .swipe-content{background:color-mix(in srgb,#389aff 16%,#1a1e25)}
 .parts li.sel .p-name{color:#7fbcff;font-weight:600}
 .rt-label{display:grid;gap:2px;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .rt-label b{font-size:14px;letter-spacing:0;text-transform:none;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Update-Hinweis (Android-App) */
-.upd-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,8,11,.62);backdrop-filter:blur(3px);
-  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));animation:updFade .2s ease}
+.upd-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(4,4,8,.64);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));animation:updFade .22s ease-out}
 .upd{width:min(520px,100%);max-height:85%;display:flex;flex-direction:column;gap:14px;background:var(--surface);border:1px solid var(--line);border-bottom:0;
   border-radius:20px 20px 0 0;padding:22px 20px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.45);animation:updUp .28s cubic-bezier(.2,.8,.2,1)}
 @media (min-width:600px){ .upd-backdrop{align-items:center} .upd{border-radius:20px;border-bottom:1px solid var(--line);padding-bottom:18px} }
@@ -327,6 +333,24 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .app-ver #appVer{font-family:var(--font-mono);font-size:13px}
 @keyframes updFade{from{opacity:0}}
 @keyframes updUp{from{transform:translateY(40px);opacity:0}}
+.upd{animation:updUp .34s cubic-bezier(.2,.9,.25,1);border-radius:32px 32px 0 0}
+@media (min-width:600px){ .upd{border-radius:32px} .upd > .sheet-grab{display:none} }
+.sheet-grab{flex:none;position:relative;width:44px;height:5px;margin:-12px auto -4px;border-radius:999px;background:rgba(255,255,255,.22)}
+.sheet-grab::before{content:"";position:absolute;inset:-10px -50vw -2px}
+.sheet-grab{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.upd.is-dragging{will-change:transform;animation:none}
+.upd.is-settling{transition:transform .26s cubic-bezier(.2,.9,.25,1);animation:none}
+.upd-backdrop.is-closing{animation:winFadeOut .18s ease-in forwards}
+.upd-backdrop.is-closing .upd{animation:winSink .18s ease-in forwards}
+@keyframes winFadeOut{to{opacity:0}}
+@keyframes winSink{to{transform:translateY(var(--sink,32px))}}
+/* Wischen zum Löschen (Teile-Liste) */
+.swipe-row{position:relative;list-style:none;min-width:0;touch-action:pan-y}
+.swipe-row.is-swiping{overflow:hidden}
+.swipe-content{position:relative;z-index:1;height:100%}
+.swipe-delete{position:absolute;z-index:0;top:50%;right:20px;width:44px;height:44px;border:0;border-radius:50%;background:#ff453a;color:#fff;display:grid;place-items:center;cursor:pointer;opacity:0;transform:translate3d(0,-50%,0) scale(.6)}
+.swipe-delete svg{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){ .upd,.upd-backdrop,.upd-backdrop.is-closing,.upd-backdrop.is-closing .upd{animation:none} .upd.is-settling,.swipe-content,.swipe-delete{transition:none!important} }
 .field{display:grid;gap:6px;min-width:0}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg .btn{min-height:36px;padding:0 12px;font-size:13px;flex:1}
@@ -406,7 +430,7 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .sw{box-shadow:inset 0 -6px 10px rgba(0,0,0,.18),inset 0 4px 8px rgba(255,255,255,.18);transition:transform .15s}
 .sw:hover{transform:scale(1.06)}
 .sw[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg-2),0 0 0 4px var(--fg),inset 0 -6px 10px rgba(0,0,0,.18)}
-.parts li{border-radius:12px}
+
 .upd{background:linear-gradient(180deg,#252b34 0%,var(--surface) 160px)}
 .pane{scrollbar-width:thin;scrollbar-color:#3a414d transparent}
 .pane::-webkit-scrollbar{width:6px}.pane::-webkit-scrollbar-thumb{background:#3a414d;border-radius:3px}
@@ -495,6 +519,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
     <div class="toast" id="toast" role="alert" hidden><p id="toastText"></p><button id="toastClose" aria-label="Meldung schließen">×</button></div>
     <div class="upd-backdrop" id="zipBackdrop" hidden>
       <section class="upd sheet zipdlg" id="zipDialog" role="dialog" aria-modal="true" aria-labelledby="zipTitle" tabindex="-1">
+        <div class="sheet-grab" aria-hidden="true"></div>
         <div class="upd-head">
           <h2 id="zipTitle">Was soll geöffnet werden?</h2>
           <p class="upd-ver" id="zipSub">–</p>
@@ -513,6 +538,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
     </div>
     <div class="upd-backdrop" id="expBackdrop" hidden>
       <section class="upd sheet" id="expDialog" role="dialog" aria-modal="true" aria-labelledby="expTitle" tabindex="-1">
+        <div class="sheet-grab" aria-hidden="true"></div>
         <div class="upd-head">
           <h2 id="expTitle">Exportieren &amp; teilen</h2>
           <p class="upd-ver" id="expSub">Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.</p>
@@ -533,6 +559,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
     </div>
     <div class="upd-backdrop" id="updBackdrop" hidden>
       <section class="upd" id="updDialog" role="dialog" aria-modal="true" aria-labelledby="updTitle" tabindex="-1">
+        <div class="sheet-grab" aria-hidden="true"></div>
         <div class="upd-head">
           <span class="upd-badge">Update</span>
           <h2 id="updTitle">Neue Version verfügbar</h2>
@@ -562,6 +589,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
       <button class="collapse" id="collapse" aria-label="Bereich ein-/ausklappen" aria-expanded="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
 
+    <div class="pane-pager"><div class="pane-track">
     <section class="pane" id="pane-model" role="tabpanel" aria-labelledby="tab-model">
       <div class="dims">
         <div class="dim"><b class="x">Breite · X</b><span id="dimX">–</span><small>mm</small></div>
@@ -741,6 +769,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
         </div>
       </div>
     </section>
+    </div></div>
   </aside>
 </div>
 
@@ -2071,7 +2100,7 @@ function pickZip(name, zip, entries, opts) {
     $("zipTitle").textContent = opts.loaded ? "Weitere Dateien wählen" : "Was soll geöffnet werden?";
     $("zipSub").textContent = name + " · " + entries.length + " Modelle" + (nDirs ? " in " + nDirs + (nDirs === 1 ? " Ordner" : " Ordnern") : "") + " · " + fmtBytes(total);
     syncZip();
-    $("zipBackdrop").hidden = false; $("zipDialog").focus({ preventScroll: true }); ul.scrollTop = 0;
+    G.openSheet($("zipBackdrop")); $("zipDialog").focus({ preventScroll: true }); ul.scrollTop = 0;
   });
 }
 function syncZip() {
@@ -2093,7 +2122,7 @@ function syncZip() {
 }
 function closeZip(result) {
   if (!zipPick) return; const { resolve, files } = zipPick; zipPick = null;
-  $("zipBackdrop").hidden = true; $("zipTree").textContent = "";
+  G.closeSheet($("zipBackdrop"), () => { if (!zipPick) $("zipTree").textContent = ""; });
   resolve(result ? files.filter(f => !f.loaded && f.box.checked).map(f => f.path) : null);
 }
 $("zipAll").addEventListener("change", (e) => { if (!zipPick) return; zipPick.files.forEach(f => { if (!f.loaded) f.box.checked = e.target.checked; }); syncZip(); });
@@ -2124,6 +2153,7 @@ $("toastClose").addEventListener("click", () => ($("toast").hidden = true));
 function fitsBed() { const m = state.mesh; if (!m) return true; const s = state.scale; const [bx, by, bz] = state.printer;
   return (m.max[0] - m.min[0]) * s <= bx + 1e-6 && (m.max[1] - m.min[1]) * s <= by + 1e-6 && (m.max[2] - m.min[2]) * s <= bz + 1e-6; }
 
+let partRowDetach = [];   // Wischen-zum-Löschen der Teile-Liste (vor dem Neuaufbau aushängen)
 function updateInfo() {
   const m = state.mesh; if (!m) return; const s = state.scale;
   $("fileName").textContent = m.name;
@@ -2145,14 +2175,18 @@ function updateInfo() {
   const multi = m.parts && m.parts.length > 1; $("partsBox").hidden = !multi; $("addBtn").hidden = !!m.demo;
   if (multi) {
     $("partsTitle").textContent = "Auf der Platte · " + m.parts.length + " Teile";
-    const ul = $("partsList"); ul.textContent = "";
+    const ul = $("partsList"); partRowDetach.forEach(f => f()); partRowDetach = []; ul.textContent = "";
     m.parts.forEach((p, i) => {
-      const li = document.createElement("li"), n = document.createElement("span"), meta = document.createElement("span"), b = document.createElement("button");
+      const li = document.createElement("li"), c = document.createElement("div"), n = document.createElement("span"), meta = document.createElement("span"), b = document.createElement("button"), del = document.createElement("button");
+      li.className = "swipe-row"; c.className = "swipe-content";
       n.className = "p-name"; n.textContent = p.name; meta.className = "p-meta"; meta.textContent = fmtInt((p.end - p.start) / 9) + " △";
-      b.type = "button"; b.textContent = "×"; b.title = "Entfernen"; b.setAttribute("aria-label", p.name + " entfernen");
+      b.type = "button"; b.className = "p-x"; b.textContent = "×"; b.title = "Entfernen"; b.setAttribute("aria-label", p.name + " entfernen");
       b.addEventListener("click", () => removePart(i));
-      li.addEventListener("click", (e) => { if (e.target === b) return; selectPart(i); focusPart(i); });
-      li.append(n, meta, b); ul.appendChild(li);
+      del.type = "button"; del.className = "swipe-delete"; del.setAttribute("aria-label", p.name + " entfernen");
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+      c.addEventListener("click", (e) => { if (e.target === b) return; selectPart(i); focusPart(i); });
+      c.append(n, meta, b); li.append(c, del); ul.appendChild(li);
+      partRowDetach.push(G.attachSwipeRow(li, { content: c, action: del, onDelete: () => removePart(i) }));
     });
   }
   updatePartsUI(); updateZipRow();
@@ -2162,31 +2196,363 @@ function updateInfo() {
   state.dirty = true;
 }
 
+/* ---------------- Gesten ----------------
+   Übernommen aus dem Wischen-und-Fenster-Paket (Beyblade X-Planer, Stand November 2026) – Werte unverändert:
+   categorySwipe.ts (Seiten blättern), tabSwipe.ts (wo nicht geblättert wird), sheetDrag.ts (Fenster am Griff
+   nach unten ziehen), swipeRow.ts (Wischen zum Löschen). Von TypeScript in reines JavaScript übertragen. */
+const G = (() => {
+  const reducedMotion = () => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const touchOf = (list, id) => [...list].find((t) => t.identifier === id) || null;
+
+  /* --- categorySwipe.ts --- */
+  const SLOP = 6, MIN_DX = 30, FLICK = 0.25, FLICK_MIN_DX = 18, DOMINANCE = 1, MAX_MS = 1000, VELOCITY_MS = 100, CLICK_GUARD_MS = 400;
+  const RUBBER = 0.55, PAGE_GAP = 24, SPRING_MS = 220, SETTLE_MIN_MS = 160, SETTLE_MAX_MS = 320, EASE = "cubic-bezier(.2, .8, .2, 1)", SPRING_OMEGA = 19;
+  const IGNORE = "input, textarea, select, .height-filter, [data-no-swipe]";
+  function swipeStep(dx, dy, ms, velocity) {
+    const ax = Math.abs(dx);
+    if (ax < FLICK_MIN_DX || ax <= Math.abs(dy) * DOMINANCE || ms > MAX_MS) return 0;
+    const v = velocity != null ? velocity : (ms > 0 ? ax / ms : 0);
+    if (ax < MIN_DX && v < FLICK) return 0;
+    return dx < 0 ? 1 : -1;
+  }
+  function followOffset(dx, canMove, width = 375) {
+    if (canMove) return Math.round(dx);
+    const d = Math.max(1, width);
+    return Math.round(Math.sign(dx) * (1 - 1 / ((Math.abs(dx) * RUBBER) / d + 1)) * d);
+  }
+  let linearSupport;
+  const supportsLinear = () => (linearSupport != null ? linearSupport : (linearSupport = typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("transition-timing-function", "linear(0, 1)")));
+  function springEasing(v0, omega = SPRING_OMEGA) {
+    if (!supportsLinear()) return null;
+    const v = Math.max(0, Math.min(v0, 3 * omega));
+    const x = (t) => Math.min(1, 1 - Math.exp(-omega * t) * (1 + (omega - v) * t));
+    let end = 0.05;
+    while (end < 1.2 && 1 - x(end) > 0.003) end += 0.01;
+    const n = 24;
+    const points = Array.from({ length: n + 1 }, (_, i) => (i === n ? 1 : x((end * i) / n)).toFixed(4));
+    return { easing: "linear(" + points.join(", ") + ")", ms: Math.round(end * 1000) };
+  }
+  const STEPS = [1, -1];
+  function attachCategorySwipe(el, onStep, { pager, canStep = () => true, onActive, onSettle, ignore, ownsStep, scrollTop = () => el.scrollTop } = {}) {
+    let g = null, guardUntil = 0, pages = null, settling = null, lastOffset = 0;
+    const finishSettling = () => { const s = settling; if (!s) return; settling = null; window.clearTimeout(s.timer); s.done(); };
+    const clear = (node) => { node.style.transition = ""; node.style.transform = ""; };
+    const preparePages = () => {
+      const track = pager && pager.track(); if (!track) return;
+      const width = track.offsetWidth + PAGE_GAP, y = scrollTop(), sides = [];
+      for (const s of STEPS) { const side = canStep(s) ? pager.side(s) : null; if (!side) continue; side.style.transform = y ? "translate3d(0, " + y + "px, 0)" : ""; sides.push(side); }
+      track.style.transition = "none";
+      pages = { track, sides, width };
+    };
+    const move = (offset) => { if (pages) pages.track.style.transform = "translate3d(" + offset + "px, 0, 0)"; };
+    const settle = (step, offset, velocity) => {
+      const p = pages; pages = null;
+      if (step && onSettle) onSettle(step);
+      const commit = () => { if (step) onStep(step); if (onActive) onActive(false); };
+      if (!p) return commit();
+      const all = [p.track, ...p.sides], target = step ? -step * p.width : 0, distance = Math.abs(target - offset);
+      if (p.width <= PAGE_GAP || reducedMotion() || distance < 1) { all.forEach(clear); return commit(); }
+      const toward = (velocity * Math.sign(target - offset) * 1000) / distance;
+      const spring = springEasing(toward);
+      const ms = spring ? spring.ms : (step ? Math.min(SETTLE_MAX_MS, Math.max(SETTLE_MIN_MS, distance / Math.max(Math.abs(velocity), 0.8))) : SPRING_MS);
+      p.track.style.transition = "transform " + ms + "ms " + (spring ? spring.easing : EASE);
+      p.track.style.transform = "translate3d(" + target + "px, 0, 0)";
+      // Erst wechseln, dann die Stile lösen – die neue Seite steht ohne Sprung an derselben Stelle
+      settling = { timer: window.setTimeout(finishSettling, ms + 20), done: () => { commit(); all.forEach(clear); } };
+    };
+    const onStart = (e) => {
+      finishSettling();
+      if (g && g.horizontal) settle(0, 0, 0);
+      g = null;
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0], target = e.target instanceof Element ? e.target : null;
+      if ((target && target.closest(IGNORE)) || (target && ignore && ignore(target))) return;
+      g = { id: t.identifier, x: t.clientX, y: t.clientY, t: e.timeStamp, horizontal: false, target, samples: [[e.timeStamp, t.clientX]] };
+    };
+    const onMove = (e) => {
+      if (!g) return;
+      const t = touchOf(e.touches, g.id); if (!t) return;
+      const dx = t.clientX - g.x, dy = t.clientY - g.y;
+      if (!g.horizontal) {
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        if (Math.abs(dy) >= Math.abs(dx)) { g = null; return; }
+        if (g.target && ownsStep && ownsStep(g.target, dx < 0 ? 1 : -1)) { g = null; return; }
+        g.horizontal = true;
+        if (onActive) onActive(true);
+        preparePages();
+      }
+      if (e.cancelable) e.preventDefault();
+      g.samples.push([e.timeStamp, t.clientX]); if (g.samples.length > 12) g.samples.shift();
+      lastOffset = followOffset(dx, canStep(dx < 0 ? 1 : -1), pages ? pages.width : undefined);
+      move(lastOffset);
+    };
+    const onEnd = (e) => {
+      if (!g) return;
+      const t = touchOf(e.changedTouches, g.id); if (!t) return;
+      const s = g; g = null;
+      if (!s.horizontal) return;
+      const dx = t.clientX - s.x, recent = s.samples.filter(([time]) => e.timeStamp - time <= VELOCITY_MS), first = recent[0];
+      const dt = first ? e.timeStamp - first[0] : 0, signed = first && dt > 0 ? (t.clientX - first[1]) / dt : undefined;
+      let step = swipeStep(dx, t.clientY - s.y, e.timeStamp - s.t, signed == null ? undefined : Math.abs(signed));
+      if (step && signed != null && Math.sign(signed) === step && Math.abs(signed) > 0.15) step = 0;   // zum Schluss zurückgezogen
+      guardUntil = e.timeStamp + CLICK_GUARD_MS;
+      settle(step && canStep(step) ? step : 0, lastOffset, signed != null ? signed : 0);
+    };
+    const onCancel = () => { if (g && g.horizontal) settle(0, lastOffset, 0); g = null; };
+    const onClick = (e) => { if (e.timeStamp <= guardUntil) { e.preventDefault(); e.stopPropagation(); } };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onCancel);
+    el.addEventListener("click", onClick, true);
+    return { finish: finishSettling };
+  }
+
+  /* --- tabSwipe.ts --- */
+  const OWN = 'input[type="range"], [role="slider"], .sheet, .sheet-backdrop, .live, [aria-modal="true"], [role="dialog"]';
+  const modalOpen = () => [...document.querySelectorAll(".upd-backdrop")].some(b => !b.hidden);
+  function blocksTabSwipe(target, root) {
+    if (modalOpen() || target.closest(OWN)) return true;
+    for (let n = target; n && n !== root; n = n.parentElement) {
+      if (n.scrollWidth <= n.clientWidth + 1) continue;
+      const flow = getComputedStyle(n).overflowX;
+      if (flow === "auto" || flow === "scroll") return true;
+    }
+    return false;
+  }
+  function rowOwnsStep(target, step) {
+    const row = target.closest(".swipe-row"); if (!row) return false;
+    return step === 1 || row.classList.contains("is-open") || row.classList.contains("is-swiping");
+  }
+
+  /* --- sheetDrag.ts --- */
+  const D_SLOP = 6, CLOSE_SHARE = 0.3, CLOSE_PX = 140, D_FLICK = 0.5, FLICK_MIN_PX = 24, UPWARD = -0.1, D_VELOCITY_MS = 100, SETTLE_MS = 260;
+  const ZONE = ".sheet-grab, .win-head", INTERACTIVE = 'button, a, input, select, textarea, label, summary, [role="button"]';
+  function dragCloses(dy, velocity, height) {
+    if (!(dy > 0) || velocity < UPWARD) return false;
+    if (velocity >= D_FLICK && dy >= FLICK_MIN_PX) return true;
+    return dy >= Math.min(CLOSE_PX, height * CLOSE_SHARE);
+  }
+  function resetSheetDrag(root) { root.classList.remove("is-dragging", "is-settling"); root.style.removeProperty("transform"); root.style.removeProperty("--sink"); }
+  function attachSheetDrag(root, close) {
+    if (![...root.children].some((c) => c.classList.contains("sheet-grab"))) return () => {};
+    let drag = null, settleTimer = 0;
+    const endSettle = () => { window.clearTimeout(settleTimer); root.classList.remove("is-settling"); };
+    const settle = () => {
+      root.classList.remove("is-dragging");
+      if (reducedMotion() || !root.style.transform) { root.style.removeProperty("transform"); return; }
+      root.classList.add("is-settling"); root.style.removeProperty("transform");
+      settleTimer = window.setTimeout(endSettle, SETTLE_MS + 60);
+    };
+    const onDown = (e) => {
+      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (drag && drag.active) return;
+      drag = null;
+      const target = e.target, zone = target && target.closest && target.closest(ZONE);
+      if (!target || !zone || zone.parentElement !== root || target.closest(INTERACTIVE)) return;
+      if (root.classList.contains("is-settling") || root.closest(".is-closing")) return;
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, active: false, samples: [[e.timeStamp, e.clientY]] };
+    };
+    const onMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.active) {
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (Math.abs(dx) < D_SLOP && Math.abs(dy) < D_SLOP) return;
+        if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) { drag = null; return; }
+        drag.active = true; drag.y += D_SLOP;
+        root.classList.add("is-dragging");
+        try { root.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+      root.style.transform = "translateY(" + Math.max(0, e.clientY - drag.y) + "px)";
+      drag.samples.push([e.timeStamp, e.clientY]); if (drag.samples.length > 12) drag.samples.shift();
+    };
+    const onUp = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      if (!d.active) return;
+      const dy = Math.max(0, e.clientY - d.y), recent = d.samples.filter(([t]) => e.timeStamp - t <= D_VELOCITY_MS), first = recent[0];
+      const dt = first ? e.timeStamp - first[0] : 0, velocity = first && dt > 0 ? (e.clientY - first[1]) / dt : 0;
+      if (dragCloses(dy, velocity, root.getBoundingClientRect().height)) { root.classList.remove("is-dragging"); root.style.setProperty("--sink", "100%"); close(); }
+      else settle();
+    };
+    const onCancel = (e) => { if (!drag || e.pointerId !== drag.id) return; const active = drag.active; drag = null; if (active) settle(); };
+    const onLost = (e) => { if (e.target === root) onCancel(e); };
+    const onSettled = (e) => { if (e.target === root && e.propertyName === "transform") endSettle(); };
+    const onTouchMove = (e) => { if (drag && e.cancelable) e.preventDefault(); };
+    root.addEventListener("pointerdown", onDown); root.addEventListener("pointermove", onMove); root.addEventListener("pointerup", onUp);
+    root.addEventListener("pointercancel", onCancel); root.addEventListener("lostpointercapture", onLost); root.addEventListener("transitionend", onSettled);
+    for (const z of [...root.children].filter((c) => c.matches(ZONE))) z.addEventListener("touchmove", onTouchMove, { passive: false });
+  }
+  // Fenster schließen wie useModal.ts: kurze Animation (Klasse is-closing am Hintergrund), danach erst ausblenden
+  const CLOSE_MS = 180;
+  function closeSheet(backdrop, done) {
+    const root = backdrop.querySelector(".upd");
+    if (backdrop.hidden) { if (done) done(); return; }
+    if (reducedMotion()) { backdrop.hidden = true; resetSheetDrag(root); if (done) done(); return; }
+    if (backdrop.classList.contains("is-closing")) return;
+    backdrop.classList.add("is-closing");
+    window.setTimeout(() => { backdrop.hidden = true; backdrop.classList.remove("is-closing"); resetSheetDrag(root); if (done) done(); }, CLOSE_MS);
+  }
+  function openSheet(backdrop) { backdrop.classList.remove("is-closing"); resetSheetDrag(backdrop.querySelector(".upd")); backdrop.hidden = false; }
+
+  /* --- swipeRow.ts --- */
+  const ACTION_WIDTH = 84, R_SLOP = 8, FULL = 0.6, FULL_MIN = 160, R_FLICK = 0.35, R_VELOCITY_MS = 100, SNAP_MS = 260, R_EASE = "cubic-bezier(.2, .8, .2, 1)", R_CLICK_GUARD_MS = 400;
+  let openRow = null, globalSwallowTimer = 0;
+  const swallowClick = (e) => { e.preventDefault(); e.stopPropagation(); releaseGlobalClick(); };
+  const releaseGlobalClick = () => { window.clearTimeout(globalSwallowTimer); document.removeEventListener("click", swallowClick, true); document.removeEventListener("touchstart", releaseGlobalClick, true); };
+  function swallowGlobalClick() {
+    releaseGlobalClick();
+    document.addEventListener("click", swallowClick, true);
+    document.addEventListener("touchstart", releaseGlobalClick, { capture: true, once: true, passive: true });
+    globalSwallowTimer = window.setTimeout(releaseGlobalClick, 500);
+  }
+  const reveal = (x) => Math.max(0, Math.min(1, -x / ACTION_WIDTH));
+  function attachSwipeRow(el, { content, action, onDelete, onOpenChange }) {
+    let x = 0, open = false, g = null, swallow = false, swallowTimer = 0, timer = 0, removing = false;
+    const swallowNextClick = () => { swallow = true; window.clearTimeout(swallowTimer); swallowTimer = window.setTimeout(() => (swallow = false), R_CLICK_GUARD_MS); };
+    const paint = (px, ms = 0) => {
+      x = px;
+      el.classList.toggle("is-swiping", px !== 0 || ms > 0);
+      content.style.transition = ms ? "transform " + ms + "ms " + R_EASE : px ? "none" : "";
+      content.style.transform = px ? "translate3d(" + px + "px, 0, 0)" : "";
+      if (!removing) content.style.opacity = "";
+      const r = reveal(px), follow = Math.min(0, px + ACTION_WIDTH);
+      action.style.transition = ms ? "transform " + ms + "ms " + R_EASE + ", opacity " + ms + "ms " + R_EASE : "none";
+      action.style.opacity = String(r);
+      action.style.transform = "translate3d(" + follow + "px, -50%, 0) scale(" + (0.6 + 0.4 * r) + ")";
+    };
+    const setOpen = (next) => {
+      if (open === next) return;
+      open = next; el.classList.toggle("is-open", next);
+      action.tabIndex = next ? 0 : -1; if (next) action.removeAttribute("aria-hidden"); else action.setAttribute("aria-hidden", "true");
+      if (onOpenChange) onOpenChange(next);
+      if (next) {
+        if (openRow && openRow.el !== el) openRow.close();
+        openRow = handle;
+        window.addEventListener("scroll", onAnyScroll, { passive: true, capture: true });
+        document.addEventListener("touchstart", onOutside, { passive: true, capture: true });
+      } else {
+        if (openRow === handle) openRow = null;
+        window.removeEventListener("scroll", onAnyScroll, true);
+        document.removeEventListener("touchstart", onOutside, true);
+      }
+    };
+    const close = (animate = true) => {
+      window.clearTimeout(timer);
+      const ms = animate && !reducedMotion() ? SNAP_MS : 0;
+      paint(0, ms); setOpen(false);
+      if (ms) timer = window.setTimeout(() => !open && x === 0 && el.classList.remove("is-swiping"), ms + 20);
+    };
+    const handle = { close, el };
+    const finishRemove = () => { if (!removing) return; removing = false; window.clearTimeout(timer); onDelete(); };
+    const remove = () => {
+      if (removing) return;
+      setOpen(false);
+      const width = el.offsetWidth || 400;
+      if (reducedMotion()) return onDelete();
+      removing = true; paint(-width, 200); content.style.opacity = "0";
+      timer = window.setTimeout(finishRemove, 190);
+    };
+    const onAnyScroll = (e) => { if (!g && !(e.target instanceof Element && el.contains(e.target))) close(); };
+    const onOutside = (e) => {
+      if (el.contains(e.target)) return;
+      close();
+      if (e.target && e.target.closest && e.target.closest(".swipe-row")) swallowGlobalClick();
+    };
+    const onStart = (e) => {
+      swallow = false;
+      if (removing || e.touches.length !== 1) { g = null; return; }
+      const t = e.touches[0];
+      if (openRow && openRow.el !== el) openRow.close();
+      window.clearTimeout(timer);
+      g = { id: t.identifier, x0: t.clientX, y0: t.clientY, start: x, horizontal: false, samples: [[e.timeStamp, t.clientX]] };
+    };
+    const onMove = (e) => {
+      if (!g) return;
+      const t = touchOf(e.touches, g.id); if (!t) return;
+      const dx = t.clientX - g.x0, dy = t.clientY - g.y0;
+      if (!g.horizontal) {
+        if (Math.abs(dx) < R_SLOP && Math.abs(dy) < R_SLOP) return;
+        if (Math.abs(dy) >= Math.abs(dx) || (dx > 0 && g.start === 0)) { g = null; return; }
+        g.horizontal = true;
+      }
+      if (e.cancelable) e.preventDefault();
+      g.samples.push([e.timeStamp, t.clientX]); if (g.samples.length > 12) g.samples.shift();
+      let next = g.start + dx;
+      if (next > 0) next = next * 0.25;
+      paint(Math.round(next));
+    };
+    const onEnd = (e) => {
+      if (!g) return;
+      const t = touchOf(e.changedTouches, g.id); if (!t) return;
+      const s = g; g = null;
+      if (!s.horizontal) { if (open && !action.contains(e.target)) { swallowNextClick(); close(); } return; }
+      swallowNextClick();
+      const recent = s.samples.filter(([time]) => e.timeStamp - time <= R_VELOCITY_MS), first = recent[0];
+      const dt = first ? e.timeStamp - first[0] : 0, v = first && dt > 0 ? (t.clientX - first[1]) / dt : 0;
+      const width = el.offsetWidth || 400;
+      if (x < -Math.max(width * FULL, FULL_MIN)) return remove();
+      const shouldOpen = v < -R_FLICK || (v <= R_FLICK && x < -ACTION_WIDTH / 2);
+      if (shouldOpen) { paint(-ACTION_WIDTH, reducedMotion() ? 0 : SNAP_MS); setOpen(true); } else close();
+    };
+    const onCancel = () => { if (g && g.horizontal) { if (open) paint(-ACTION_WIDTH, SNAP_MS); else close(); } g = null; };
+    const onClick = (e) => {
+      if (action.contains(e.target)) return;
+      if (swallow || open) { swallow = false; e.preventDefault(); e.stopPropagation(); if (open) close(); }
+    };
+    const onAction = (e) => { e.preventDefault(); e.stopPropagation(); remove(); };
+    const onFocusOut = (e) => { if (open && !el.contains(e.relatedTarget)) close(); };
+    paint(0); action.tabIndex = -1; action.setAttribute("aria-hidden", "true");
+    el.addEventListener("focusout", onFocusOut);
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onCancel);
+    content.addEventListener("click", onClick, true);
+    action.addEventListener("click", onAction);
+    return () => {
+      if (removing) finishRemove();
+      window.clearTimeout(timer); window.clearTimeout(swallowTimer); setOpen(false);
+      el.removeEventListener("focusout", onFocusOut); el.removeEventListener("touchstart", onStart); el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd); el.removeEventListener("touchcancel", onCancel);
+      content.removeEventListener("click", onClick, true); action.removeEventListener("click", onAction);
+    };
+  }
+  return { attachCategorySwipe, blocksTabSwipe, rowOwnsStep, attachSheetDrag, resetSheetDrag, closeSheet, openSheet, attachSwipeRow, swipeStep, followOffset, dragCloses, reducedMotion };
+})();
+
 // Tabs
 const tabs = [...document.querySelectorAll(".tab")];
-function selectTab(t, dir) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; const pn = $(x.getAttribute("aria-controls")); pn.hidden = !on;
-    if (on && dir) { pn.classList.remove("in-next", "in-prev"); void pn.offsetWidth; pn.classList.add(dir === "next" ? "in-next" : "in-prev"); } });
-  $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true"); }
-tabs.forEach((t, i) => { t.addEventListener("click", () => { const cur = tabs.findIndex(x => x.getAttribute("aria-selected") === "true"); selectTab(t, i > cur ? "next" : i < cur ? "prev" : null); }); t.tabIndex = i ? -1 : 0;
+let tabIndex = 0;
+// Aktueller Bereich liegt normal im Bedienbereich, die Nachbarn fertig daneben (für das Blättern) – unsichtbar und inaktiv
+function layoutPanes() {
+  tabs.forEach((x, k) => {
+    const pn = $(x.getAttribute("aria-controls")), d = k - tabIndex, side = Math.abs(d) === 1;
+    pn.hidden = !(d === 0 || side); pn.classList.toggle("is-side", side);
+    if (side) { pn.dataset.dir = String(d); pn.inert = true; pn.setAttribute("aria-hidden", "true"); }
+    else { delete pn.dataset.dir; pn.inert = false; pn.removeAttribute("aria-hidden"); }
+  });
+}
+function markTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; }); }
+function selectTab(t, dir) {
+  tabIndex = tabs.indexOf(t); markTab(t); layoutPanes();
+  const pn = $(t.getAttribute("aria-controls"));
+  if (dir) { pn.classList.remove("in-next", "in-prev"); void pn.offsetWidth; pn.classList.add(dir === "next" ? "in-next" : "in-prev"); }
+  $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true");
+}
+tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t, i > tabIndex ? "next" : i < tabIndex ? "prev" : null)); t.tabIndex = i ? -1 : 0;
   t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n, d > 0 ? "next" : "prev"); } }); });
-
-/* Im Bedienbereich nach links/rechts wischen wechselt den Bereich (Regler, Auswahlfelder und Listen ausgenommen) */
+layoutPanes();
+// Blättern per Wischen (Paket: TabPager + categorySwipe)
 (() => {
-  let sw = null;
-  document.querySelectorAll("#panel .pane").forEach(pane => {
-    pane.addEventListener("pointerdown", (e) => {
-      if (e.pointerType !== "touch" || e.target.closest("input[type=range], select, input[type=number], .seg, .swatches")) { sw = null; return; }
-      sw = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
-    });
-    pane.addEventListener("pointerup", (e) => {
-      if (!sw || e.pointerId !== sw.id) return;
-      const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = performance.now() - sw.t; sw = null;
-      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6 || dt > 800) return;
-      const i = tabs.findIndex(t => t.getAttribute("aria-selected") === "true"), n = i + (dx < 0 ? 1 : -1);
-      if (n < 0 || n >= tabs.length) return;
-      selectTab(tabs[n], dx < 0 ? "next" : "prev");
-    });
-    pane.addEventListener("pointercancel", () => { sw = null; });
+  const pager = document.querySelector(".pane-pager"), track = pager.querySelector(".pane-track");
+  G.attachCategorySwipe(pager, (step) => { const n = tabs[tabIndex + step]; if (n) selectTab(n); }, {
+    pager: { track: () => track, side: (step) => track.querySelector(':scope > .pane.is-side[data-dir="' + step + '"]') },
+    canStep: (step) => !!tabs[tabIndex + step],
+    onSettle: (step) => { const n = tabs[tabIndex + step]; if (n) markTab(n); },   // Leiste sofort umschalten
+    ignore: (target) => G.blocksTabSwipe(target, pager),
+    ownsStep: G.rowOwnsStep,
+    scrollTop: () => 0   // jeder Bereich scrollt in sich selbst
   });
 })();
 function openTab(id) { selectTab($(id)); if (narrowMQ.matches && $("panel").classList.contains("collapsed")) setSheet("normal"); }
@@ -2940,7 +3306,7 @@ function openExport() {
   const multi = multiPart();
   $("exp3mf").querySelector("small").textContent = multi ? "Für Bambu Studio, Orca & Prusa – " + state.mesh.parts.length + " Teile bleiben einzeln" : "Für Bambu Studio, Orca & Prusa";
   $("expStl").querySelector("small").textContent = multi ? "Für jeden Slicer – alle Teile in einer Datei" : "Für jeden Slicer";
-  $("expBackdrop").hidden = false; $("expDialog").focus({ preventScroll: true });
+  G.openSheet($("expBackdrop")); $("expDialog").focus({ preventScroll: true });
 }
 function resetExport() {
   expGen++;
@@ -2949,7 +3315,7 @@ function resetExport() {
   $("expSub").textContent = "Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.";
   ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = false));
 }
-function closeExport() { $("expBackdrop").hidden = true; resetExport(); }
+function closeExport() { G.closeSheet($("expBackdrop"), resetExport); }
 async function makeExport(kind) {
   const m = state.mesh; if (!m) return;
   ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = true));
@@ -3090,9 +3456,9 @@ function showUpdate(u) {
   const ul = $("updNotes"); ul.textContent = "";
   u.notes.slice(0, 12).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
   $("updStatus").hidden = true; $("updNow").disabled = false; $("updNow").textContent = "Jetzt aktualisieren";
-  $("updBackdrop").hidden = false; $("updDialog").focus({ preventScroll: true });
+  G.openSheet($("updBackdrop")); $("updDialog").focus({ preventScroll: true });
 }
-function hideUpdate() { $("updBackdrop").hidden = true; }
+function hideUpdate() { G.closeSheet($("updBackdrop")); }
 window.updateState = (st) => {
   const el = $("updStatus"); el.hidden = false;
   if (st === "downloading") { el.textContent = "Wird heruntergeladen … das dauert meist nur ein paar Sekunden."; $("updNow").disabled = true; $("updNow").textContent = "Lädt …"; }
@@ -3109,6 +3475,11 @@ if (hasUpdater) {
   $("updCheck").addEventListener("click", () => checkForUpdate(true));
   setTimeout(() => checkForUpdate(false), 1500);   // nach dem Start, damit das Modell zuerst erscheint
 }
+
+// Fenster am Griff nach unten ziehen schließt sie – derselbe Weg wie der Schließen-Knopf
+G.attachSheetDrag($("expDialog"), closeExport);
+G.attachSheetDrag($("zipDialog"), () => closeZip(false));
+G.attachSheetDrag($("updDialog"), hideUpdate);
 
 /* ---------------- Start ---------------- */
 readPrinter(); setColor(rgbToHex(state.color)); setBg(state.bg);

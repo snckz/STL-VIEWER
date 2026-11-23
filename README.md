@@ -41,7 +41,7 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 
 ## Funktionen
 
-Die Bedienung ist in vier Bereiche aufgeteilt – **Modell**, **Bearbeiten**, **Druck** und **Aussehen** – dazu rechts die Werkzeugleiste mit **Einpassen**, **Ansicht**, **Messen** und **Export**.
+Die Bedienung ist in vier Bereiche aufgeteilt – **Modell**, **Bearbeiten**, **Druck** und **Aussehen** – dazu rechts die Werkzeugleiste mit **Einpassen**, **Ansicht**, **Messen** und **Export**. Zwischen den Bereichen wechselst du auch per Wischen (der Bereich geht mit dem Finger mit, wie in iOS). Fenster lassen sich am Griff nach unten wegziehen, Teile in der Liste per Wisch nach links löschen.
 
 - **Ansehen:** ein Finger dreht, zwei Finger zoomen und verschieben, Doppeltipp passt das Modell ein. Unter **Ansicht**: vorne, oben, seitlich und schräg, Zoom-Knöpfe, Auto-Drehen.
 - **Messen:** zwei Punkte auf dem Modell antippen – Abstand in mm plus Abstand je Achse. Mit **Einrasten** (Standard) werden Ecken und Kanten exakt getroffen; auf einer Bohrung oder einem Zapfen (oder an deren Rand) zählt die Mitte, und der Durchmesser wird angezeigt.

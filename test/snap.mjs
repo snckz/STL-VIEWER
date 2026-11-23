@@ -58,9 +58,17 @@ if (shots) { await p.waitForTimeout(150); await p.screenshot({ path: shots + "/5
 await p.click("#measureDone");
 
 // --- Wischen zwischen den Bereichen
-const swipe = (sel, dx) => V(([sel, dx]) => { const el = document.querySelector(sel), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + 30;
-  const ev = (t, xx) => el.dispatchEvent(new PointerEvent(t, { pointerId: 8, clientX: xx, clientY: y, bubbles: true, pointerType: "touch", isPrimary: true }));
-  ev("pointerdown", x); ev("pointerup", x + dx); }, [sel, dx]);
+// Echte Touch-Ereignisse wie am Handy (das Paket nutzt Touch statt Pointer)
+const touchSwipe = (sel, dx, dy = 0, steps = 8) => V(async ([sel, dx, dy, steps]) => {
+  const el = document.querySelector(sel), r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 150), y = r.top + Math.min(r.height / 2, 20);
+  const fire = (type, xx, yy) => { const t = new Touch({ identifier: 7, target: el, clientX: xx, clientY: yy });
+    el.dispatchEvent(new TouchEvent(type, { touches: type === "touchend" ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); };
+  fire("touchstart", x, y);
+  for (let i = 1; i <= steps; i++) { await new Promise(r => setTimeout(r, 16)); fire("touchmove", x + dx * i / steps, y + dy * i / steps); }
+  fire("touchend", x + dx, y + dy);
+  await new Promise(r => setTimeout(r, 900));
+}, [sel, dx, dy, steps]);
+const swipe = (sel, dx) => touchSwipe(sel, dx);
 const cur = () => V(() => document.querySelector(".tab[aria-selected=true]").id);
 await p.click("#tab-model");
 await swipe("#pane-model .dims", -140); check("Wischen nach links → Bearbeiten", await cur() === "tab-edit", await cur());
@@ -68,10 +76,41 @@ await swipe("#pane-edit .sec", -140); check("Weiter → Druck", await cur() === 
 await swipe("#pane-print .estimate", 140); check("Wischen nach rechts → Bearbeiten", await cur() === "tab-edit", await cur());
 await swipe("#rotX", -140); check("Wischen auf einem Regler wechselt nicht", await cur() === "tab-edit", await cur());
 await p.click("#tab-model"); await swipe("#pane-model .dims", 140); check("Am Anfang: nicht weiter nach rechts", await cur() === "tab-model", await cur());
+await touchSwipe("#pane-model .dims", -15, 60); check("Schräg nach unten: kein Wechsel", await cur() === "tab-model", await cur());
+await touchSwipe("#pane-model .dims", -22, 0, 2); check("Kurzer schneller Schnipp wechselt", await cur() === "tab-edit", await cur());
+check("Nach dem Wechsel keine Reste von Verschiebungen", await V(() => !document.querySelector(".pane-track").style.transform && [...document.querySelectorAll(".pane")].every(x => !x.style.transform)), null);
+check("Nachbarbereiche vorbereitet, aber inaktiv", await V(() => { const sides = [...document.querySelectorAll(".pane.is-side")]; return sides.length === 2 && sides.every(x => x.inert && x.getAttribute("aria-hidden") === "true"); }), null);
+await p.click("#tab-model");
+
+// --- Wischen zum Löschen in der Teile-Liste
+await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/cube.obj", "test/tall.stl"]); await p.waitForTimeout(700);
+check("Teile-Hinweis beim ersten Mal", await V(() => !toast.hidden && /Tippe ein Teil an/.test(toastText.textContent)), null);
+await V(() => toast.hidden = true);
+await p.click("#tab-model");
+await touchSwipe("#partsList li:nth-child(2) .swipe-content", -60);
+check("Kurz nach links: Papierkorb offen", await V(() => document.querySelector("#partsList li:nth-child(2)").classList.contains("is-open")), null);
+await touchSwipe("#partsList li:nth-child(1) .p-meta", -6, 0, 1);   // Tipp woanders schließt nur
+check("Tipp auf andere Zeile schließt den offenen Eintrag", await V(() => !document.querySelector("#partsList .is-open")), null);
+await touchSwipe("#partsList li:nth-child(2) .swipe-content", -320);
+check("Ganz durchwischen löscht das Teil", await V(() => __viewer.state.mesh.parts.length === 2 && !__viewer.state.mesh.parts.some(x => x.name === "cube.obj")), await V(() => __viewer.state.mesh.parts.map(x => x.name)));
+await touchSwipe("#partsList li:nth-child(1) .swipe-content", 140);
+check("Nach rechts auf einer Zeile blättert den Bereich nicht weg, wenn es keinen vorherigen gibt", await cur() === "tab-model", await cur());
+
+// --- Fenster am Griff nach unten ziehen
+const grabDrag = (dlg, dy) => V(async ([dlg, dy]) => {
+  const root = document.getElementById(dlg), g = root.querySelector(".sheet-grab"), r = g.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + 2;
+  const ev = (t, yy) => g.dispatchEvent(new PointerEvent(t, { pointerId: 11, clientX: x, clientY: yy, bubbles: true, isPrimary: true, pointerType: "touch" }));
+  ev("pointerdown", y); for (let i = 1; i <= 8; i++) { await new Promise(r => setTimeout(r, 30)); ev("pointermove", y + dy * i / 8); } ev("pointerup", y + dy);
+  await new Promise(r => setTimeout(r, 500));
+}, [dlg, dy]);
+await p.click("#exportBtn"); await p.waitForTimeout(400);
+await grabDrag("expDialog", 30);
+check("Griff 1 cm ziehen: Fenster gleitet zurück", await V(() => !expBackdrop.hidden && !expDialog.style.transform), null);
+await grabDrag("expDialog", 200);
+check("Griff weit ziehen: Fenster schließt", await V(() => expBackdrop.hidden), null);
 
 // --- Hinweise nur einmal: Teile-Hinweis
 await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/cube.obj"]); await p.waitForTimeout(600);
-check("Teile-Hinweis beim ersten Mal", await V(() => !toast.hidden && /Tippe ein Teil an/.test(toastText.textContent)), null);
 await V(() => toast.hidden = true);
 await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/tall.stl"]); await p.waitForTimeout(600);
 check("Teile-Hinweis kein zweites Mal", await V(() => toast.hidden || !/Tippe ein Teil an/.test(toastText.textContent)), null);

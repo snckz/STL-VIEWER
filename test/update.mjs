@@ -31,7 +31,7 @@ async function open(installed, latest) {
   check("Status: lädt", await p.evaluate(() => updNow.disabled && !updStatus.hidden), null);
   if (shots) await p.screenshot({ path: shots + "/23_update_downloading.png" });
   await p.evaluate(() => window.updateState("installing"));
-  await p.click("#updLater");
+  await p.click("#updLater"); await p.waitForTimeout(300);
   check("Später schließt und merkt die Version", await p.evaluate(() => updBackdrop.hidden && localStorage.getItem("modellblick-update-skip") === "11"), null);
   await p.evaluate(() => localStorage.removeItem("modellblick-update-check")); await p.reload(); await p.waitForTimeout(2200);
   check("Übersprungene Version erscheint nicht erneut", await p.evaluate(() => updBackdrop.hidden), null);

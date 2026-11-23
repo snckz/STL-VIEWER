@@ -90,7 +90,7 @@ check("STL fertig, Dateiname", await V(() => expFile.textContent === "cube20.stl
 const [dl] = await Promise.all([p.waitForEvent("download"), p.click("#expDownload")]);
 const stl = (await import("node:fs")).readFileSync(await dl.path());
 check("STL binär mit 12 Dreiecken", stl.length === 684 && stl.readUInt32LE(80) === 12, stl.length);
-await p.click("#expClose");
+await p.click("#expClose"); await p.waitForTimeout(300);
 // Zweites Modell dazu und als 3MF wieder einlesen
 await p.setInputFiles("#addInput", "test/tall.stl"); await p.waitForTimeout(500);
 const before = await V(() => ({ tris: __viewer.state.mesh.triCount, vol: __viewer.state.mesh.vol, dims: [0,1,2].map(k => __viewer.state.mesh.max[k] - __viewer.state.mesh.min[k]) }));
@@ -98,7 +98,7 @@ await p.click("#exportBtn"); await p.click("#exp3mf"); await p.waitForSelector("
 const [dl3] = await Promise.all([p.waitForEvent("download"), p.click("#expDownload")]);
 const buf = (await import("node:fs")).readFileSync(await dl3.path());
 check("3MF heißt Platte.3mf", dl3.suggestedFilename() === "Platte.3mf", dl3.suggestedFilename());
-await p.click("#expClose");
+await p.click("#expClose"); await p.waitForTimeout(300);
 await V((b64) => window.loadModelBase64("Platte.3mf", b64), buf.toString("base64")); await p.waitForTimeout(600);
 const after = await V(() => ({ tris: __viewer.state.mesh.triCount, vol: __viewer.state.mesh.vol, fmt: __viewer.state.mesh.fmt, n: __viewer.state.mesh.parts.length, mf: __viewer.state.mesh.manifold,
   dims: [0,1,2].map(k => __viewer.state.mesh.max[k] - __viewer.state.mesh.min[k]) }));
@@ -112,7 +112,7 @@ const sc = await V(() => { const m = __viewer.state.mesh, s = __viewer.state.sca
 check("Anordnen bei 200 %: passt aufs Bett", sc.n === 8 && sc.w <= 256 && sc.d <= 256, sc);
 // Escape im Export-Dialog behält die Auswahl
 await V(() => document.querySelector("#partsList li:nth-child(2) .p-name").click());
-await p.click("#exportBtn"); await p.keyboard.press("Escape");
+await p.click("#exportBtn"); await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 check("Escape schließt nur den Dialog", await V(() => expBackdrop.hidden && __viewer.state.sel === 1), await V(() => __viewer.state.sel));
 await p.click("#tab-model");
 
