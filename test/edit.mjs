@@ -105,6 +105,17 @@ const after = await V(() => ({ tris: __viewer.state.mesh.triCount, vol: __viewer
 check("3MF-Rundlauf: gleiche Dreiecke, Volumen und Maße", after.tris === before.tris && Math.abs(after.vol - before.vol) / before.vol < 1e-4 && after.dims.every((d, k) => Math.abs(d - before.dims[k]) < 0.01) && after.fmt === "3MF", [before, after]);
 check("3MF-Rundlauf: Netz geschlossen", after.mf && !after.mf.open && !after.mf.nonManifold, after.mf);
 
+// --- Anordnen beachtet die Größe (200 %): 8 Würfel à 40 mm passen in zwei Reihen auf 256 mm
+await p.setInputFiles("#fileInput", Array(8).fill("test/cube20.stl").map((f, i) => f)); await p.waitForTimeout(600);
+await p.click("#tab-edit"); await p.click('[data-scale="200"]'); await p.click("#arrangeBtn"); await p.waitForTimeout(300);
+const sc = await V(() => { const m = __viewer.state.mesh, s = __viewer.state.scale; return { w: (m.max[0] - m.min[0]) * s, d: (m.max[1] - m.min[1]) * s, n: m.parts.length }; });
+check("Anordnen bei 200 %: passt aufs Bett", sc.n === 8 && sc.w <= 256 && sc.d <= 256, sc);
+// Escape im Export-Dialog behält die Auswahl
+await V(() => document.querySelector("#partsList li:nth-child(2) .p-name").click());
+await p.click("#exportBtn"); await p.keyboard.press("Escape");
+check("Escape schließt nur den Dialog", await V(() => expBackdrop.hidden && __viewer.state.sel === 1), await V(() => __viewer.state.sel));
+await p.click("#tab-model");
+
 // --- Ansicht-Menü
 await p.click("#viewMenuBtn");
 check("Ansicht-Menü offen", await V(() => !viewMenu.hidden && viewMenuBtn.getAttribute("aria-expanded") === "true"), null);

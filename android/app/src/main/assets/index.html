@@ -1422,8 +1422,8 @@ function pan(dx, dy) {
 }
 function zoom(f) { state.cam.dist *= f; clampCam(); state.dirty = true; }
 window.addEventListener("keydown", (e) => {
+  if (!$("updBackdrop").hidden || !$("expBackdrop").hidden || e.defaultPrevented) return;   // Dialog offen: Tasten gehören dem Dialog
   if (e.key === "Escape") {
-    if (!$("updBackdrop").hidden || !$("expBackdrop").hidden) return;
     if (!$("viewMenu").hidden) closeViewMenu(true); else if (state.measure.on) setMeasure(false); else if (state.sel >= 0) selectPart(-1);
     return;
   }
@@ -1503,15 +1503,16 @@ function bbox(pos, a = 0, b = pos.length) {
    blocks: [{ pos, parts:[{name, fmt, size, start, end}] }] – start/end beziehen sich auf block.pos.
    pack = true: große Teile zuerst setzen (dichter), die Reihenfolge der Teile in der Liste bleibt gleich. */
 function combineBlocks(blocks, pack) {
-  const maxW = Math.max(state.printer[0] || 256, ...blocks.map(b => { const { mn, mx } = bbox(b.pos); b.mn = mn; b.mx = mx; return mx[0] - mn[0]; }));
+  const sc = state.scale || 1, GAP = PART_GAP / sc;   // Bett und Abstand in Modelleinheiten
+  const maxW = Math.max((state.printer[0] || 256) / sc, ...blocks.map(b => { const { mn, mx } = bbox(b.pos); b.mn = mn; b.mx = mx; return mx[0] - mn[0]; }));
   const order = blocks.slice();
   if (pack) order.sort((a, b) => (b.mx[1] - b.mn[1]) - (a.mx[1] - a.mn[1]) || (b.mx[0] - b.mn[0]) - (a.mx[0] - a.mn[0]));
   let x = 0, y = 0, rowD = 0, total = 0;
   for (const b of order) {
     const w = b.mx[0] - b.mn[0], d = b.mx[1] - b.mn[1];
-    if (x > 0 && x + w > maxW) { x = 0; y -= rowD + PART_GAP; rowD = 0; }
+    if (x > 0 && x + w > maxW) { x = 0; y -= rowD + GAP; rowD = 0; }
     b.off = [x - b.mn[0], y - b.mx[1], -b.mn[2]];   // Reihen laufen nach hinten (−Y), Unterseite auf z = 0
-    x += w + PART_GAP; rowD = Math.max(rowD, d); total += b.pos.length;
+    x += w + GAP; rowD = Math.max(rowD, d); total += b.pos.length;
   }
   const pos = new Float32Array(total), parts = []; let o = 0;
   for (const b of blocks) {
@@ -1530,8 +1531,10 @@ function setMesh(pos, parts, keepScale, opt = {}) {
   const single = parts.length === 1;
   const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
     single ? parts[0].name : parts.length + " Teile", parts.reduce((n, p) => n + (p.size || 0), 0));
-  mesh.parts = parts; state.sel = -1; state.dragOff = null;
+  mesh.parts = parts; state.sel = -1; state.dragOff = null; if (opt.demo) mesh.demo = true;
   stats(mesh); initOrientation(mesh, opt.keepRot);
+  const old = state.mesh;
+  if (opt.keepRot && old && old.rot) { mesh.rot = old.rot.slice(); mesh.base = old.base.slice(); mesh.R = old.R.slice(); }
   state.mesh = mesh;
   if (!keepScale) { state.scale = 1; $("scale").value = 100; }
   if (Number.isInteger(opt.sel) && opt.sel >= 0 && opt.sel < parts.length && parts.length > 1) state.sel = opt.sel;
@@ -1589,7 +1592,7 @@ function removePart(idx) {
   const keep = m.parts.filter((_, i) => i !== idx), total = keep.reduce((n, p) => n + (p.end - p.start), 0);
   const pos = new Float32Array(total), parts = []; let o = 0;
   for (const p of keep) { pos.set(m.pos.subarray(p.start, p.end), o); parts.push({ ...p, start: o, end: o + (p.end - p.start) }); o += p.end - p.start; }
-  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: true });
+  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: true, demo: !!m.demo });
   showToast("„" + name + "“ entfernt.", "info");
 }
 // Alle Teile neu und platzsparend auf dem Bett verteilen (stellt dabei auch schwebende Teile aufs Bett)
@@ -1599,7 +1602,7 @@ function arrangeParts(quiet) {
   const sel = state.sel;
   const blocks = m.parts.map(p => { const pos = m.pos.slice(p.start, p.end); return { pos, parts: [{ ...p, start: 0, end: pos.length }] }; });
   const { pos, parts } = combineBlocks(blocks, true);
-  setMesh(pos, parts, true, { keepRot: true, sel });
+  setMesh(pos, parts, true, { keepRot: true, sel, demo: !!m.demo });
   if (!quiet) showToast("Teile neu angeordnet.", "info");
 }
 const copyName = (name, parts) => { const base = name.replace(/ \(\d+\)$/, ""); let n = 2; while (parts.some(p => p.name === base + " (" + n + ")")) n++; return base + " (" + n + ")"; };
@@ -1611,7 +1614,7 @@ function duplicatePart() {
   const idx = selectedPart() ? state.sel : m.parts.length === 1 ? 0 : -1; if (idx < 0) return;
   const pt = m.parts[idx], len = pt.end - pt.start;
   if (m.parts.length >= MAX_PARTS) { showToast("Höchstens " + MAX_PARTS + " Teile passen auf eine Platte."); return; }
-  if ((m.pos.length + len) / 9 > 8e6) { showToast("Für eine weitere Kopie ist das Modell zu groß – das würde den Speicher sprengen."); return; }
+  if ((m.pos.length + len) / 9 > 4e6) { showToast("Für eine weitere Kopie ist das Modell zu groß – das würde den Speicher sprengen."); return; }
   const s = state.scale, [bx, by] = state.printer, G = PART_GAP / s;
   const { mn, mx } = bbox(m.pos, pt.start, pt.end), w = mx[0] - mn[0], d = mx[1] - mn[1];
   const boxes = m.parts.map(p => bbox(m.pos, p.start, p.end));
@@ -1630,9 +1633,8 @@ function duplicatePart() {
   const parts = m.parts.map(p => ({ ...p }));
   parts.push({ ...pt, name: copyName(pt.name, parts), start: o, end: o + len, rot: pt.rot.slice(), base: pt.base.slice(), R: pt.R.slice() });
   const wasDemo = !!m.demo;
-  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: !!off, sel: parts.length - 1 });
+  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: !!off, sel: parts.length - 1, demo: wasDemo });
   if (!off) arrangeParts(true);
-  if (wasDemo) state.mesh.demo = true;
   showToast("Kopie angelegt" + (off ? "." : " – die Platte wurde neu angeordnet, damit alles Platz hat."), "info");
 }
 $("fileInput").addEventListener("change", (e) => { loadSources([...e.target.files].map(fileSource), false); e.target.value = ""; });
@@ -2226,7 +2228,7 @@ function resetLayerView() {
 
 // Größe
 function setScale(pct) { if (!Number.isFinite(pct) || pct <= 0) return; pct = Math.min(10000, Math.max(1, pct));
-  state.scale = pct / 100; $("scale").value = Math.round(pct * 10) / 10; resetLayerView(); updateInfo(); fitView(); }
+  state.scale = pct / 100; $("scale").value = Math.round(pct * 10) / 10; clearMeasure(); resetLayerView(); updateInfo(); fitView(); }
 $("scale").addEventListener("change", (e) => { const v = parseFloat(String(e.target.value).replace(",", ".")); if (Number.isFinite(v) && v > 0) setScale(v); else e.target.value = state.scale * 100; });
 document.querySelectorAll("[data-scale]").forEach(b => b.addEventListener("click", () => setScale(+b.dataset.scale)));
 
@@ -2369,7 +2371,7 @@ if (isIOS) {
    Position und Größe. Android: über die App-Brücke teilen oder per „Speichern unter“ ablegen.
    Browser/iPhone: Teilen-Menü (iOS: „In Dateien sichern“), sonst normaler Download. */
 const exportBase = () => (state.mesh && !state.mesh.demo ? state.mesh.parts && state.mesh.parts.length > 1 ? "Platte" : state.mesh.name : "modell")
-  .replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "modell";
+  .replace(/\.[^.]+$/, "").replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "modell";
 const hasFileBridge = !!(window.Android && ["fileBegin", "fileAppend", "fileShare", "fileSave"].every(k => typeof window.Android[k] === "function"));
 const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 function crc32(u8, crc = 0) { let c = crc ^ 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
@@ -2461,7 +2463,7 @@ async function zipStore(files, type) {
   return new Blob([...out, ...central, end], { type });
 }
 
-let exp = null;   // { blob, name, mime, url, token }
+let exp = null, expGen = 0;   // exp: { blob, name, mime, url, token }; expGen verwirft veraltete Exporte
 function openExport() {
   closeViewMenu(); finishMove();
   if (!state.mesh) return;
@@ -2472,6 +2474,7 @@ function openExport() {
   $("expBackdrop").hidden = false; $("expDialog").focus({ preventScroll: true });
 }
 function resetExport() {
+  expGen++;
   if (exp && exp.url) URL.revokeObjectURL(exp.url);
   exp = null; $("expChoices").hidden = false; $("expReady").hidden = true; $("expTitle").textContent = "Exportieren & teilen";
   $("expSub").textContent = "Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.";
@@ -2482,17 +2485,21 @@ async function makeExport(kind) {
   const m = state.mesh; if (!m) return;
   ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = true));
   $("expSub").textContent = "Datei wird erstellt …";
+  const gen = ++expGen;
   await tick(); await new Promise(r => requestAnimationFrame(() => r()));
   try {
     const blob = kind === "stl" ? buildSTL() : await build3MF();
-    await readyExport(blob, exportBase() + (kind === "stl" ? ".stl" : ".3mf"), kind === "stl" ? "model/stl" : "model/3mf");
+    if (gen !== expGen) return;   // Dialog inzwischen geschlossen
+    await readyExport(blob, exportBase() + (kind === "stl" ? ".stl" : ".3mf"), kind === "stl" ? "model/stl" : "model/3mf", gen);
   } catch (err) {
+    if (gen !== expGen) return;
     console.warn(err); resetExport();
     showToast(err instanceof RangeError ? "Für den Export reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht erstellt werden.");
   }
 }
 // Fertige Datei anbieten. Android: einmal an die App übergeben, danach Teilen/Speichern ohne Wartezeit.
-async function readyExport(blob, name, mime) {
+async function readyExport(blob, name, mime, gen = expGen) {
+  if (gen !== expGen) return;
   exp = { blob, name, mime };
   if (hasFileBridge) {
     $("expSub").textContent = "Datei wird vorbereitet …";
@@ -2501,6 +2508,7 @@ async function readyExport(blob, name, mime) {
     for (let o = 0; o < blob.size; o += CH) {
       const u8 = new Uint8Array(await blob.slice(o, o + CH).arrayBuffer()); let bin = "";
       for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+      if (gen !== expGen) return;
       if (!window.Android.fileAppend(token, btoa(bin))) throw new Error("fileAppend");
     }
     exp.token = token;
@@ -2531,7 +2539,16 @@ $("expStl").addEventListener("click", () => makeExport("stl"));
 $("exp3mf").addEventListener("click", () => makeExport("3mf"));
 $("expClose").addEventListener("click", closeExport);
 $("expBackdrop").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeExport(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("expBackdrop").hidden) closeExport(); });
+document.addEventListener("keydown", (e) => {
+  if ($("expBackdrop").hidden) return;
+  if (e.key === "Escape") { e.preventDefault(); closeExport(); return; }
+  if (e.key === "Tab") {   // Fokus im Dialog halten
+    const f = [...$("expDialog").querySelectorAll("button, a[href]")].filter(el => !el.disabled && el.offsetParent !== null);
+    if (!f.length) return; const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
 
 // Bild der Ansicht: Android-App speichert direkt in der Galerie, sonst wie die anderen Exporte
 const shotName = () => exportBase() + "_" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".png";
@@ -2539,8 +2556,8 @@ $("shot").addEventListener("click", async () => {
   draw();   // synchron zeichnen, damit der Puffer das aktuelle Bild enthält
   const data = canvas.toDataURL("image/png");
   if (window.Android && typeof window.Android.saveImage === "function") { window.Android.saveImage(data.split(",")[1], shotName()); closeExport(); return; }
-  const blob = await (await fetch(data)).blob();
-  try { await readyExport(blob, shotName(), "image/png"); } catch (_) { resetExport(); showToast("Das Bild konnte nicht erstellt werden."); }
+  const gen = ++expGen, blob = await (await fetch(data)).blob();
+  try { await readyExport(blob, shotName(), "image/png", gen); } catch (_) { resetExport(); showToast("Das Bild konnte nicht erstellt werden."); }
 });
 
 /* ---------------- Beispielmodell: Torusknoten ---------------- */
@@ -2609,7 +2626,7 @@ window.updateState = (st) => {
 };
 $("updLater").addEventListener("click", () => { if (pendingUpdate) lsSet("modellblick-update-skip", String(pendingUpdate.code)); hideUpdate(); });
 $("updBackdrop").addEventListener("click", (e) => { if (e.target === e.currentTarget) hideUpdate(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("updBackdrop").hidden) hideUpdate(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("updBackdrop").hidden) { e.preventDefault(); hideUpdate(); } });
 $("updNow").addEventListener("click", () => { if (pendingUpdate) window.Android.downloadUpdate(pendingUpdate.url, pendingUpdate.name); });
 if (hasUpdater) {
   $("appVerRow").hidden = false;

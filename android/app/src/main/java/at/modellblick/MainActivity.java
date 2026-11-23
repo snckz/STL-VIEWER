@@ -316,7 +316,7 @@ public class MainActivity extends Activity {
     // ---------------- Export ----------------
 
     private static String safeFileName(String name) {
-        String n = name == null ? "" : name.replaceAll("[^\\w.\\-]", "_").replaceAll("^\\.+", "");
+        String n = name == null ? "" : name.replaceAll("[^\\p{L}\\p{N}._\\-]", "_").replaceAll("^\\.+", "");
         if (n.isEmpty()) n = "modell.stl";
         return n.length() > 100 ? n.substring(n.length() - 100) : n;
     }
@@ -454,8 +454,10 @@ public class MainActivity extends Activity {
             try {
                 File dir = ExportProvider.exportDir(MainActivity.this);
                 if (!dir.isDirectory() && !dir.mkdirs()) return "";
+                // Ältere Exporte aufräumen – frisch geteilte (< 10 min) bleiben, falls eine andere App sie noch liest
                 File[] old = dir.listFiles();
-                if (old != null) for (File o : old) o.delete();
+                long limit = System.currentTimeMillis() - 10 * 60 * 1000L;
+                if (old != null) for (File o : old) if (o.lastModified() < limit) o.delete();
                 File f = new File(dir, safeFileName(name));
                 try (FileOutputStream out = new FileOutputStream(f)) { out.flush(); }
                 exportFile = f;
