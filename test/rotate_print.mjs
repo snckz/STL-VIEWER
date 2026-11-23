@@ -19,7 +19,7 @@ await p.waitForTimeout(200); r.x30 = await dims();
 check("X 30° kippt das Modell", parseFloat(r.x30[2].replace(",", ".")) > 250 && parseFloat(r.x30[2].replace(",", ".")) < 300 && r.x30[3] === r.reset[3], r.x30);
 await p.screenshot({ path: shots + "/10_rotate.png" });
 await p.fill("#rotZOut", "45"); await p.press("#rotZOut", "Enter"); await p.locator("#rotZOut").blur();
-check("Gradzahl eintippen", await p.evaluate(() => __viewer.state.rot[2] === 45 && rotZ.value === "45"), null);
+check("Gradzahl eintippen", await p.evaluate(() => __viewer.state.mesh.rot[2] === 45 && rotZ.value === "45"), null);
 await p.fill("#rotZOut", "0"); await p.locator("#rotZOut").blur();
 await p.click("#layFlat"); await p.waitForTimeout(200); r.flat = await dims();
 check("Flach hinlegen stellt den Zylinder auf eine Stirnfläche", r.flat[2] === "300,0", r.flat);

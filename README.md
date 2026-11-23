@@ -50,7 +50,7 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/3D-Viewer`).
 
-- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet; unter **Info** lassen sich einzelne entfernen.
+- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet; unter **Info** lassen sich einzelne entfernen. Ein Teil antippen wählt es aus (blau markiert), Doppeltippen zoomt darauf; im Tab **Drehen** wird dann nur dieses Teil gedreht.
 
 Unterstützte Formate:
 
@@ -109,6 +109,7 @@ python3 test/make_fixtures.py
 node web/build.mjs
 node test/formats.mjs
 node test/multi.mjs
+node test/select.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 

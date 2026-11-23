@@ -139,6 +139,12 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .parts .p-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .parts button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;flex:none}
 .parts button:hover{color:var(--bad);border-color:var(--bad)}
+.parts li{cursor:pointer;margin:0 -8px;padding:0 8px;border-radius:10px;transition:background .15s}
+.parts li.sel{background:color-mix(in srgb,#389aff 16%,transparent)}
+.parts li.sel .p-name{color:#7fbcff;font-weight:600}
+.rot-target{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface)}
+.rt-label{display:grid;gap:2px;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.rt-label b{font-size:14px;letter-spacing:0;text-transform:none;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Update-Hinweis (Android-App) */
 .upd-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,8,11,.62);backdrop-filter:blur(3px);
@@ -361,6 +367,10 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     </section>
 
     <section class="pane" id="pane-rotate" role="tabpanel" aria-labelledby="tab-rotate" hidden>
+      <div class="rot-target" id="rotTarget" hidden>
+        <span class="rt-label">Drehen<b id="rotTargetName">ganze Platte</b></span>
+        <button class="btn mini" id="rotAll" hidden>Ganze Platte</button>
+      </div>
       <div class="rot-list">
         <div class="rot-row">
           <label class="axis x" for="rotX">X</label>
@@ -497,7 +507,7 @@ void main(){ vec3 p = (uRot * aPos + uOff) * uScale; vPos = p; vNor = uRot * aNo
 const MESH_FS = `#version 300 es
 precision highp float;
 in vec3 vNor; in vec3 vPos; in vec3 vBar;
-uniform vec3 uColor; uniform vec3 uEye; uniform float uGloss; uniform float uClip;
+uniform vec3 uColor; uniform vec3 uEye; uniform float uGloss; uniform float uClip; uniform int uSel; uniform vec3 uSelColor;
 uniform int uWire; uniform int uOver; uniform int uOut; uniform float uLayerH; uniform vec3 uAccent;
 out vec4 o;
 void main(){
@@ -507,6 +517,7 @@ void main(){
   bool back = !gl_FrontFacing;
   if (back) n = -n;
   vec3 base = uColor;
+  if (uSel == 1) base = mix(base, uSelColor, 0.85);   /* ausgewähltes Teil */
   if (uOver == 1 && n.z < -0.7071 && vPos.z > 0.3) base = mix(base, vec3(0.94,0.27,0.22), 0.85);
   if (uOut == 1) base = mix(base, vec3(0.94,0.35,0.3), 0.35);
   vec3 L1 = normalize(vec3(0.45, -0.6, 0.85));
@@ -527,6 +538,7 @@ void main(){
     c *= 1.0 - 0.28 * line;
     if (uClip < 1e8 && vPos.z > uClip - uLayerH) c = mix(c, uAccent, back ? 0.55 : 0.4);
   }
+  if (uSel == 1) c += uSelColor * (0.12 + 0.35 * pow(1.0 - max(dot(n, V), 0.0), 2.0));   /* leuchtender Rand */
   if (uWire == 1) {
     vec3 w = fwidth(vBar); vec3 a = smoothstep(vec3(0.0), w * 1.2, vBar);
     float e = 1.0 - min(min(a.x, a.y), a.z);
@@ -1035,7 +1047,13 @@ function draw() {
     gl.uniform1f(u.uClip, Number.isFinite(state.clipZ) ? state.clipZ : 1e9);
     gl.uniform1f(u.uLayerH, state.layerPreview ? est.layerH * 1 : 0); gl.uniform3fv(u.uAccent, [0.95, 0.65, 0.25]);
     gl.uniform1i(u.uWire, state.wire ? 1 : 0); gl.uniform1i(u.uOver, state.overhang ? 1 : 0); gl.uniform1i(u.uOut, (state.bed && !fitsBed()) ? 1 : 0);
-    gl.bindVertexArray(meshVAO); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3);
+    gl.bindVertexArray(meshVAO);
+    const sp = selectedPart();
+    if (sp) {
+      const a = sp.start / 3, b = sp.end / 3, n = m.triCount * 3;
+      gl.uniform1i(u.uSel, 0); if (a > 0) gl.drawArrays(gl.TRIANGLES, 0, a); if (b < n) gl.drawArrays(gl.TRIANGLES, b, n - b);
+      gl.uniform1i(u.uSel, 1); gl.uniform3fv(u.uSelColor, srgbToLin(selColor())); gl.drawArrays(gl.TRIANGLES, a, b - a);
+    } else { gl.uniform1i(u.uSel, 0); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3); }
   }
   if (state.bed) {
     gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
@@ -1048,6 +1066,61 @@ function draw() {
   gl.bindVertexArray(null);
 }
 function srgbToLin(c) { return c.map(v => Math.pow(v, 1.12)); }
+// Markierfarbe: Blau – außer das Modell ist selbst bläulich, dann Orange
+function selColor() { const [r, g, b] = state.color; return b > r + 0.1 && b > g - 0.05 ? [0.98, 0.55, 0.16] : [0.22, 0.6, 1.0]; }
+
+/* ---------------- Teile auswählen ---------------- */
+state.sel = -1;
+const multiPart = () => !!(state.mesh && state.mesh.parts && state.mesh.parts.length > 1);
+const selectedPart = () => multiPart() && state.sel >= 0 ? state.mesh.parts[state.sel] || null : null;
+function cameraRay(clientX, clientY) {
+  const c = state.cam, r = canvas.getBoundingClientRect();
+  const nx = (clientX - r.left) / r.width * 2 - 1, ny = 1 - (clientY - r.top) / r.height * 2;
+  const e = eye(), f = norm(sub(c.target, e));
+  const upv = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
+  const right = norm(cross(f, upv)), u = cross(right, f), asp = r.width / Math.max(1, r.height), t = Math.tan(FOV / 2);
+  if (state.ortho) { const h = c.dist * t; return { o: [0, 1, 2].map(k => e[k] + right[k] * nx * h * asp + u[k] * ny * h), d: f }; }
+  return { o: e, d: norm([0, 1, 2].map(k => f[k] + right[k] * nx * t * asp + u[k] * ny * t)) };
+}
+// Strahl vom Finger in die Szene: nächstes getroffenes Dreieck → Teil (−1 = nichts getroffen)
+function pickPart(clientX, clientY) {
+  const m = state.mesh; if (!multiPart()) return -1;
+  const s = state.scale, { o, d } = cameraRay(clientX, clientY);
+  const ox = o[0] / s, oy = o[1] / s, oz = o[2] / s, dx = d[0], dy = d[1], dz = d[2], p = m.pos;
+  const clip = Number.isFinite(state.clipZ) ? state.clipZ / s : Infinity;
+  let best = Infinity, bestTri = -1;
+  for (let i = 0; i < p.length; i += 9) {
+    const ax = p[i], ay = p[i+1], az = p[i+2];
+    const e1x = p[i+3]-ax, e1y = p[i+4]-ay, e1z = p[i+5]-az, e2x = p[i+6]-ax, e2y = p[i+7]-ay, e2z = p[i+8]-az;
+    const px = dy*e2z - dz*e2y, py = dz*e2x - dx*e2z, pz = dx*e2y - dy*e2x, det = e1x*px + e1y*py + e1z*pz;
+    if (det > -1e-12 && det < 1e-12) continue;
+    const inv = 1 / det, tx = ox - ax, ty = oy - ay, tz = oz - az, uu = (tx*px + ty*py + tz*pz) * inv; if (uu < 0 || uu > 1) continue;
+    const qx = ty*e1z - tz*e1y, qy = tz*e1x - tx*e1z, qz = tx*e1y - ty*e1x, vv = (dx*qx + dy*qy + dz*qz) * inv; if (vv < 0 || uu + vv > 1) continue;
+    const t = (e2x*qx + e2y*qy + e2z*qz) * inv;
+    if (t > 1e-6 && t < best && oz + dz * t <= clip) { best = t; bestTri = i; }
+  }
+  if (bestTri < 0) return -1;
+  return m.parts.findIndex(pt => bestTri >= pt.start && bestTri < pt.end);
+}
+function partBox(pt) { const m = state.mesh; return bbox(m.pos, pt.start, pt.end); }
+function focusPart(i) {   // Ansicht auf ein Teil zentrieren, Blickwinkel bleibt; die anderen bleiben sichtbar
+  const m = state.mesh, pt = m && m.parts[i]; if (!pt) return;
+  const { mn, mx } = partBox(pt), s = state.scale, c = state.cam;
+  const r = Math.max(1, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) * s / 2), asp = canvas.clientWidth / Math.max(1, canvas.clientHeight);
+  c.target = [0, 1, 2].map(k => (mn[k] + mx[k]) / 2 * s);
+  c.dist = Math.max(r * 0.35, r / Math.sin(FOV / 2) / Math.min(1, asp) * 1.15); state.dirty = true;
+}
+function selectPart(i) {
+  state.sel = multiPart() && i >= 0 && i < state.mesh.parts.length ? i : -1;
+  syncRotUI(); updatePartsUI(); state.dirty = true;
+}
+function updatePartsUI() {
+  const sp = selectedPart();
+  document.querySelectorAll("#partsList li").forEach((li, i) => { li.classList.toggle("sel", i === state.sel); li.setAttribute("aria-current", i === state.sel ? "true" : "false"); });
+  $("rotTarget").hidden = !multiPart();
+  $("rotTargetName").textContent = sp ? sp.name : "ganze Platte";
+  $("rotAll").hidden = !sp;
+}
 
 /* ---------------- Eingabe ---------------- */
 const pointers = new Map(); let lastTap = 0, pinch = null, moved = 0;
@@ -1075,7 +1148,9 @@ function endPointer(e) {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId); pinch = null;
   if (e.type === "pointerup" && moved < 8 && pointers.size === 0) {
-    const now = performance.now(); if (now - lastTap < 320) { fitView(); lastTap = 0; } else lastTap = now;
+    const now = performance.now(), hit = multiPart() ? pickPart(e.clientX, e.clientY) : -1;
+    if (now - lastTap < 320) { lastTap = 0; if (hit >= 0) { selectPart(hit); focusPart(hit); } else fitView(); }   // Doppeltippen: auf das Teil zoomen
+    else { lastTap = now; if (multiPart()) selectPart(hit); }   // Tippen: Teil auswählen, ins Leere: Auswahl aufheben
   }
 }
 ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => canvas.addEventListener(t, endPointer));
@@ -1162,7 +1237,7 @@ function setMesh(pos, parts, keepScale) {
   const single = parts.length === 1;
   const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
     single ? parts[0].name : parts.length + " Modelle", parts.reduce((n, p) => n + (p.size || 0), 0));
-  mesh.parts = parts;
+  mesh.parts = parts; state.sel = -1;
   stats(mesh); initOrientation(mesh);
   state.mesh = mesh;
   if (!keepScale) { state.scale = 1; $("scale").value = 100; }
@@ -1202,7 +1277,7 @@ async function loadSources(sources, add) {
     const { pos, parts } = blocks.length === 1 ? { pos: blocks[0].pos, parts: blocks[0].parts } : combineBlocks(blocks);
     setMesh(pos, parts, add && cur && !cur.demo);
     if (failed.length) showToast("Nicht lesbar und übersprungen: " + failed.join(", "));
-    else if (parts.length > 1 && !add) showToast(parts.length + " Modelle geladen und nebeneinander angeordnet.", "info");
+    else if (parts.length > 1) showToast(parts.length + " Modelle auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info");
   } catch (err) {
     console.warn(err);
     showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
@@ -1287,9 +1362,11 @@ function updateInfo() {
       n.className = "p-name"; n.textContent = p.name; meta.className = "p-meta"; meta.textContent = fmtInt((p.end - p.start) / 9) + " △";
       b.type = "button"; b.textContent = "×"; b.title = "Entfernen"; b.setAttribute("aria-label", p.name + " entfernen");
       b.addEventListener("click", () => removePart(i));
+      li.addEventListener("click", (e) => { if (e.target === b) return; selectPart(i); focusPart(i); });
       li.append(n, meta, b); ul.appendChild(li);
     });
   }
+  updatePartsUI();
   const ok = fitsBed(); const chip = $("fit-chip");
   chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
   updateEstimate();
@@ -1727,31 +1804,59 @@ function eulerMatrix([rx, ry, rz]) {
   const Z = [Math.cos(c),-Math.sin(c),0, Math.sin(c),Math.cos(c),0, 0,0,1];
   return mul3(Z, mul3(Y, X));
 }
-function initOrientation(m) { m.base = I3.slice(); m.R = I3.slice(); state.rot = [0, 0, 0];
+/* Drehziel: das ausgewählte Teil oder die ganze Platte. Jedes Ziel hat eigene Winkel (rot), Basis (base, von „Flach hinlegen“)
+   und die bereits angewendete Drehung (R). Gedreht wird immer nur die Differenz zur aktuellen Lage. */
+const rotTarget = () => selectedPart() || state.mesh;
+function resetRotState(o) { o.rot = [0, 0, 0]; o.base = I3.slice(); o.R = I3.slice(); }
+function initOrientation(m) { resetRotState(m); (m.parts || []).forEach(resetRotState);
   state.live = { R: I3.slice(), off: [0, 0, 0] }; est.profile = null; syncRotUI(); }
 const transpose3 = (a) => [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]];
-/* Endgültig: Ausrichtung in die Punkte übernehmen, Maße, Normalen und Schätzung neu berechnen */
 function applyOrientation() {
   const m = state.mesh; if (!m || !m.R) return;
   cancelAnimationFrame(rotFrame); rotFrame = 0;
-  // Nur die Differenz zur aktuellen Lage anwenden – keine zweite Kopie aller Punkte nötig
-  const R = mul3(eulerMatrix(state.rot), m.base), D = mul3(R, transpose3(m.R)), p = m.pos;
+  const pt = selectedPart(); if (pt) { rotatePart(pt, true); return; }
+  // Ganze Platte
+  const R = mul3(eulerMatrix(m.rot), m.base), D = mul3(R, transpose3(m.R)), p = m.pos;
   for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
     p[i] = D[0]*x + D[1]*y + D[2]*z; p[i+1] = D[3]*x + D[4]*y + D[5]*z; p[i+2] = D[6]*x + D[7]*y + D[8]*z; }
   placeOnBed(p); stats(m); est.profile = null; m.R = R;
+  (m.parts || []).forEach(resetRotState);   // Teile beginnen nach einer Plattendrehung wieder bei 0°
   state.live = { R: I3.slice(), off: [0, 0, 0] };
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, p, gl.DYNAMIC_DRAW); uploadNormals();
   resetLayerView(); updateInfo();
   const s = state.scale; state.cam.target = [(m.min[0] + m.max[0]) / 2 * s, (m.min[1] + m.max[1]) / 2 * s, (m.min[2] + m.max[2]) / 2 * s];   // Zoom und Blickwinkel bleiben
   state.dirty = true;
 }
-/* Live beim Ziehen: nur eine Drehmatrix für den Shader und die neue Lage auf dem Bett – die Punkte bleiben unverändert */
+/* Ein Teil um seine eigene Mitte drehen und wieder aufs Bett stellen; die anderen Teile bleiben, wo sie sind.
+   final = false beim Ziehen am Regler: nur Punkte und Normalen dieses Teils neu hochladen. */
+function rotatePart(pt, final) {
+  const m = state.mesh, p = m.pos, a = pt.start, b = pt.end;
+  const R = mul3(eulerMatrix(pt.rot), pt.base), D = mul3(R, transpose3(pt.R));
+  const { mn, mx } = bbox(p, a, b), cx = (mn[0] + mx[0]) / 2, cy = (mn[1] + mx[1]) / 2, cz = (mn[2] + mx[2]) / 2;
+  let nz = Infinity, nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
+  for (let i = a; i < b; i += 3) { const x = p[i] - cx, y = p[i+1] - cy, z = p[i+2] - cz;
+    const X = D[0]*x + D[1]*y + D[2]*z, Y = D[3]*x + D[4]*y + D[5]*z, Z = D[6]*x + D[7]*y + D[8]*z;
+    p[i] = X; p[i+1] = Y; p[i+2] = Z;
+    if (Z < nz) nz = Z; if (X < nx0) nx0 = X; if (X > nx1) nx1 = X; if (Y < ny0) ny0 = Y; if (Y > ny1) ny1 = Y; }
+  const sx = cx - (nx0 + nx1) / 2, sy = cy - (ny0 + ny1) / 2, sz = -nz;   // Mitte behalten, Unterseite auf das Bett
+  for (let i = a; i < b; i += 3) { p[i] += sx; p[i+1] += sy; p[i+2] += sz; }
+  pt.R = R;
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, p.subarray(a, b));
+  if (final && state.smooth) uploadNormals();
+  else { gl.bindBuffer(gl.ARRAY_BUFFER, bufNor); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, faceNormals(p.subarray(a, b))); }
+  if (final) { stats(m); est.profile = null; resetLayerView(); updateInfo(); }
+  else { const { mn: gmn, mx: gmx } = bbox(p), s = state.scale, f = (v) => fmtNum(v, v < 100 ? 2 : 1);
+    $("dimX").textContent = f((gmx[0] - gmn[0]) * s); $("dimY").textContent = f((gmx[1] - gmn[1]) * s); $("dimZ").textContent = f((gmx[2] - gmn[2]) * s); }
+  state.dirty = true;
+}
+/* Live beim Ziehen: ganze Platte über eine Drehmatrix im Shader, ein einzelnes Teil direkt */
 let rotFrame = 0;
 function previewOrientation() {
   if (rotFrame) return;
   rotFrame = requestAnimationFrame(() => {
     rotFrame = 0; const m = state.mesh; if (!m || !m.R) return;
-    const D = mul3(mul3(eulerMatrix(state.rot), m.base), transpose3(m.R)), p = m.pos;
+    const pt = selectedPart(); if (pt) { rotatePart(pt, false); return; }
+    const D = mul3(mul3(eulerMatrix(m.rot), m.base), transpose3(m.R)), p = m.pos;
     let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
     for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
       const X = D[0]*x + D[1]*y + D[2]*z, Y = D[3]*x + D[4]*y + D[5]*z, Z = D[6]*x + D[7]*y + D[8]*z;
@@ -1762,26 +1867,29 @@ function previewOrientation() {
     state.dirty = true;
   });
 }
-function syncRotUI() { ["X", "Y", "Z"].forEach((a, i) => { $("rot" + a).value = state.rot[i]; $("rot" + a + "Out").value = Math.round(state.rot[i] * 10) / 10;
-  $("rot" + a).setAttribute("aria-valuetext", Math.round(state.rot[i]) + " Grad"); }); }
+function syncRotUI() { const t = rotTarget(); const rot = t && t.rot ? t.rot : [0, 0, 0];
+  ["X", "Y", "Z"].forEach((a, i) => { $("rot" + a).value = rot[i]; $("rot" + a + "Out").value = Math.round(rot[i] * 10) / 10;
+  $("rot" + a).setAttribute("aria-valuetext", Math.round(rot[i]) + " Grad"); }); }
 const wrapDeg = (d) => { d = ((d + 180) % 360 + 360) % 360 - 180; return d === -180 ? 180 : d; };
 ["X", "Y", "Z"].forEach((a, i) => {
   const el = $("rot" + a);
-  el.addEventListener("input", () => { state.rot[i] = +el.value; $("rot" + a + "Out").value = el.value; el.setAttribute("aria-valuetext", el.value + " Grad"); previewOrientation(); });
-  el.addEventListener("change", () => { state.rot[i] = +el.value; applyOrientation(); });
+  el.addEventListener("input", () => { const t = rotTarget(); if (!t) return; t.rot[i] = +el.value; $("rot" + a + "Out").value = el.value; el.setAttribute("aria-valuetext", el.value + " Grad"); previewOrientation(); });
+  el.addEventListener("change", () => { const t = rotTarget(); if (!t) return; t.rot[i] = +el.value; applyOrientation(); });
   const num = $("rot" + a + "Out");
-  num.addEventListener("change", () => { const v = parseFloat(String(num.value).replace(",", "."));
-    if (!Number.isFinite(v)) { num.value = state.rot[i]; return; }
-    state.rot[i] = wrapDeg(v); syncRotUI(); applyOrientation(); });
+  num.addEventListener("change", () => { const t = rotTarget(); if (!t) return; const v = parseFloat(String(num.value).replace(",", "."));
+    if (!Number.isFinite(v)) { num.value = t.rot[i]; return; }
+    t.rot[i] = wrapDeg(v); syncRotUI(); applyOrientation(); });
 });
 document.querySelectorAll("[data-rot90]").forEach(b => b.addEventListener("click", () => {
-  const i = "xyz".indexOf(b.dataset.rot90); state.rot[i] = wrapDeg(state.rot[i] + 90); syncRotUI(); applyOrientation(); }));
-$("rotReset").addEventListener("click", () => { const m = state.mesh; if (!m) return; m.base = I3.slice(); state.rot = [0, 0, 0]; syncRotUI(); applyOrientation(); });
+  const t = rotTarget(); if (!t) return; const i = "xyz".indexOf(b.dataset.rot90); t.rot[i] = wrapDeg(t.rot[i] + 90); syncRotUI(); applyOrientation(); }));
+$("rotReset").addEventListener("click", () => { const t = rotTarget(); if (!t) return; t.base = I3.slice(); t.rot = [0, 0, 0]; syncRotUI(); applyOrientation(); });
+$("rotAll").addEventListener("click", () => selectPart(-1));
 $("layFlat").addEventListener("click", () => {
-  const m = state.mesh; if (!m) return; const p = m.pos;
+  const m = state.mesh; if (!m) return; const p = m.pos, t = rotTarget(), pt = selectedPart();
+  const a = pt ? pt.start : 0, e = pt ? pt.end : p.length;
   // Flächen nach Normalenrichtung bündeln (≈ 2°) und die größte ebene Fläche nach unten drehen
   const bins = new Map();
-  for (let i = 0; i < p.length; i += 9) {
+  for (let i = a; i < e; i += 9) {
     const ux = p[i+3]-p[i], uy = p[i+4]-p[i+1], uz = p[i+5]-p[i+2], vx = p[i+6]-p[i], vy = p[i+7]-p[i+1], vz = p[i+8]-p[i+2];
     const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, l = Math.hypot(nx, ny, nz); if (l === 0) continue;
     const key = Math.round(nx / l * 30) + "," + Math.round(ny / l * 30) + "," + Math.round(nz / l * 30);
@@ -1797,8 +1905,9 @@ $("layFlat").addEventListener("click", () => {
     Ralign = [v[0]*v[0]*k + c, v[0]*v[1]*k - v[2], v[0]*v[2]*k + v[1],
               v[1]*v[0]*k + v[2], v[1]*v[1]*k + c, v[1]*v[2]*k - v[0],
               v[2]*v[0]*k - v[1], v[2]*v[1]*k + v[0], v[2]*v[2]*k + c]; }
-  m.base = mul3(Ralign, mul3(eulerMatrix(state.rot), m.base)); state.rot = [0, 0, 0]; syncRotUI(); applyOrientation();
-  showToast("Größte ebene Fläche liegt jetzt auf dem Druckbett.", "info");
+  // Die Fläche ist in der aktuellen Lage gemessen: Ralign kommt nach der bisherigen Drehung
+  t.base = mul3(Ralign, mul3(eulerMatrix(t.rot), t.base)); t.rot = [0, 0, 0]; syncRotUI(); applyOrientation();
+  showToast((pt ? "„" + pt.name + "“: " : "") + "Größte ebene Fläche liegt jetzt auf dem Druckbett.", "info");
 });
 
 // Bild speichern: Android-App über die Brücke (Galerie), sonst – z. B. iPhone – über das Teilen-Menü („Bild sichern“)
