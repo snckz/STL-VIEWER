@@ -46,12 +46,27 @@
                 <data android:mimeType="application/vnd.ms-3mfdocument" />
                 <data android:mimeType="application/ply" />
                 <data android:mimeType="model/ply" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
 
             <!-- "Teilen" an die App -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="model/*" />
+                <data android:mimeType="application/sla" />
+                <data android:mimeType="application/vnd.ms-pki.stl" />
+                <data android:mimeType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
+                <data android:mimeType="application/ply" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- Mehrere Dateien auf einmal teilen -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="model/*" />
                 <data android:mimeType="application/sla" />

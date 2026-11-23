@@ -77,6 +77,9 @@ button,input,select{font:inherit;color:inherit}
 .panel{position:relative;z-index:6;background:var(--bg-2);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:46%;transition:max-height .25s ease;
   padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
 .panel.collapsed{max-height:52px}
+.panel.dragging{transition:none}
+.panel.tall{max-height:85%}
+@media (max-width:899px){ .handle{touch-action:pan-x;cursor:grab} .panel.dragging .handle{cursor:grabbing} }
 .handle{display:flex;align-items:center;gap:4px;padding:6px max(10px, 0px) 0;}
 .tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 6px}
 .tab{flex:1;min-width:56px;padding:0 4px;height:40px;border:0;background:none;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
@@ -130,6 +133,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 select,.num{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;width:100%}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid2:has(> [hidden]){grid-template-columns:1fr}
+
+/* Mehrere Modelle */
+.icon-btn{width:40px;padding:0;flex:none}
+.parts-box{display:grid;gap:8px}
+.parts{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--line)}
+.parts li{display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid var(--line)}
+.parts .p-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.parts .p-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.parts button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;flex:none}
+.parts button:hover{color:var(--bad);border-color:var(--bad)}
 
 /* Update-Hinweis (Android-App) */
 .upd-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,8,11,.62);backdrop-filter:blur(3px);
@@ -233,13 +246,17 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
       </div>
       <div class="file">
         <span class="file-name" id="fileName">Beispielmodell</span>
-        <span class="file-meta" id="fileMeta">Öffne STL, 3MF, OBJ oder PLY</span>
+        <span class="file-meta" id="fileMeta">Öffne STL, 3MF, OBJ, PLY oder ZIP</span>
       </div>
+      <label class="btn icon-btn" for="addInput" role="button" tabindex="0" id="addBtn" title="Weitere Modelle hinzufügen" aria-label="Weitere Modelle hinzufügen" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </label>
       <label class="btn btn-primary" for="fileInput" role="button" tabindex="0" id="openBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         Öffnen
       </label>
-      <input type="file" id="fileInput" accept=".stl,.3mf,.obj,.ply,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/octet-stream" hidden>
+      <input type="file" id="fileInput" multiple accept=".stl,.3mf,.obj,.ply,.zip,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/zip,application/x-zip-compressed,application/octet-stream" hidden>
+      <input type="file" id="addInput" multiple accept=".stl,.3mf,.obj,.ply,.zip,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/zip,application/x-zip-compressed,application/octet-stream" hidden>
     </header>
 
     <nav class="tools" aria-label="Ansicht">
@@ -309,6 +326,10 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
         <div><dt>Dateigröße</dt><dd id="fsize">–</dd></div>
       </dl>
       <p class="note" id="headerNote" hidden></p>
+      <div class="parts-box" id="partsBox" hidden>
+        <div class="label" id="partsTitle">Modelle auf der Platte</div>
+        <ul class="parts" id="partsList"></ul>
+      </div>
       <div class="row app-ver" id="appVerRow" hidden>
         <span><span class="label">App-Version</span><br><span id="appVer">–</span></span>
         <button class="btn" id="updCheck">Nach Updates suchen</button>
@@ -744,7 +765,8 @@ async function readZip(buf) {
       if (typeof DecompressionStream === "undefined") throw new ViewerError("Dieses Gerät kann 3MF nicht entpacken. Bitte Android System WebView bzw. iOS aktualisieren.");
       return new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
     },
-    async text(n) { const st = this.stream(n); return st ? await new Response(st).text() : null; }
+    async text(n) { const st = this.stream(n); return st ? await new Response(st).text() : null; },
+    async bytes(n) { const st = this.stream(n); return st ? await new Response(st).arrayBuffer() : null; }
   };
 }
 
@@ -1083,60 +1105,143 @@ let hintTimer = setTimeout(hideHint, 7000);
 function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); }
 
 /* ---------------- Laden ---------------- */
-async function loadBuffer(buf, name, size) {
-  showLoading(true, "Modell wird gelesen …");
+const MODEL_RE = /\.(stl|3mf|obj|ply)$/i, MAX_PARTS = 200, PART_GAP = 5;
+const baseName = (n) => String(n).split(/[\\/]/).pop();
+// Eine Datei lesen; ZIP-Archive liefern alle enthaltenen Modelle
+async function parseSource(buf, name, depth = 0) {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  const sig = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+  const isZip = sig[0] === 0x50 && sig[1] === 0x4b && sig[2] === 3 && sig[3] === 4;
+  const isPly = sig[0] === 0x70 && sig[1] === 0x6c && sig[2] === 0x79;   // "ply"
+  if (ext === "3mf") return [{ name, size: buf.byteLength, parsed: await parse3MF(buf) }];
+  if (isZip || ext === "zip") {
+    if (!isZip) throw new ViewerError("„" + name + "“ ist keine gültige ZIP-Datei.");
+    const zip = await readZip(buf);
+    if (ext !== "zip" && zip.names.some(n => /\.model$/i.test(n))) return [{ name, size: buf.byteLength, parsed: await parse3MF(buf) }];   // 3MF ohne Endung
+    if (depth > 0) return [];
+    const entries = zip.names.filter(n => MODEL_RE.test(n) && !/(^|\/)(__MACOSX|\.)/.test(n)).sort((a, b) => a.localeCompare(b, "de", { numeric: true }));
+    if (!entries.length) throw new ViewerError("In „" + name + "“ wurde kein 3D-Modell gefunden (STL, 3MF, OBJ oder PLY).");
+    if (entries.length > MAX_PARTS) throw new ViewerError("Die ZIP-Datei enthält " + entries.length + " Modelle – höchstens " + MAX_PARTS + " lassen sich gleichzeitig anzeigen.");
+    const out = [];
+    for (let i = 0; i < entries.length; i++) {
+      showLoading(true, "Entpacke " + (i + 1) + " von " + entries.length + " …"); await new Promise(r => setTimeout(r, 0));
+      const b = await zip.bytes(entries[i]); out.push(...await parseSource(b, baseName(entries[i]), depth + 1));
+    }
+    return out;
+  }
+  let parsed;
+  if (ext === "ply" || isPly) parsed = parsePLY(buf);
+  else if (ext === "obj") parsed = parseOBJ(buf);
+  else { try { parsed = parseSTL(buf); } catch (e) { parsed = null; try { parsed = parseOBJ(buf); } catch (_) {} if (!parsed || !parsed.pos.length) throw e; } }
+  return [{ name, size: buf.byteLength, parsed }];
+}
+function bbox(pos, a = 0, b = pos.length) {
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = a; i < b; i += 3) for (let k = 0; k < 3; k++) { const v = pos[i + k]; if (v < mn[k]) mn[k] = v; if (v > mx[k]) mx[k] = v; }
+  return { mn, mx };
+}
+/* Mehrere Modelle nebeneinander anordnen (Reihen in Bettbreite, 5 mm Abstand) und zu einem Netz zusammenfügen.
+   blocks: [{ pos, parts:[{name, fmt, size, start, end}] }] – start/end beziehen sich auf block.pos */
+function combineBlocks(blocks) {
+  const maxW = Math.max(state.printer[0] || 256, ...blocks.map(b => { const { mn, mx } = bbox(b.pos); b.mn = mn; b.mx = mx; return mx[0] - mn[0]; }));
+  let x = 0, y = 0, rowD = 0, total = 0;
+  for (const b of blocks) {
+    const w = b.mx[0] - b.mn[0], d = b.mx[1] - b.mn[1];
+    if (x > 0 && x + w > maxW) { x = 0; y -= rowD + PART_GAP; rowD = 0; }
+    b.off = [x - b.mn[0], y - b.mx[1], -b.mn[2]];   // Reihen laufen nach hinten (−Y), Unterseite auf z = 0
+    x += w + PART_GAP; rowD = Math.max(rowD, d); total += b.pos.length;
+  }
+  const pos = new Float32Array(total), parts = []; let o = 0;
+  for (const b of blocks) {
+    const p = b.pos, [ox, oy, oz] = b.off;
+    for (let i = 0; i < p.length; i += 3) { pos[o + i] = p[i] + ox; pos[o + i + 1] = p[i + 1] + oy; pos[o + i + 2] = p[i + 2] + oz; }
+    for (const pt of b.parts) parts.push({ ...pt, start: pt.start + o, end: pt.end + o });
+    o += p.length; b.pos = null;
+  }
+  return { pos, parts };
+}
+// Fertiges Netz übernehmen: analysieren, hochladen, Ansicht einpassen
+function setMesh(pos, parts, keepScale) {
+  placeOnBed(pos);
+  const fmts = [...new Set(parts.map(p => p.fmt))];
+  const single = parts.length === 1;
+  const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
+    single ? parts[0].name : parts.length + " Modelle", parts.reduce((n, p) => n + (p.size || 0), 0));
+  mesh.parts = parts;
+  stats(mesh); initOrientation(mesh);
+  state.mesh = mesh;
+  if (!keepScale) { state.scale = 1; $("scale").value = 100; }
+  uploadMesh(); resetLayerView(); updateInfo(); fitView("iso");
+}
+/* Quellen laden: [{ name, size, read: async () => ArrayBuffer }]. add = zu den vorhandenen Modellen hinzufügen. */
+async function loadSources(sources, add) {
+  sources = sources.filter(Boolean); if (!sources.length) return;
+  const big = sources.find(f => f.size > 300 * 1048576);
+  if (big) { showToast("„" + big.name + "“ ist größer als 300 MB und lässt sich am Handy nicht sicher anzeigen."); return; }
+  if (sources.reduce((n, f) => n + (f.size || 0), 0) > 400 * 1048576) { showToast("Zusammen sind die Dateien größer als 400 MB – bitte weniger auf einmal öffnen."); return; }
+  showLoading(true, sources.length > 1 ? "Lese 1 von " + sources.length + " …" : "Modell wird gelesen …");
   await new Promise(r => setTimeout(r, 30));
+  const blocks = [], failed = [];
   try {
-    const ext = (name.split(".").pop() || "").toLowerCase();
-    const sig = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
-    const isZip = sig[0] === 0x50 && sig[1] === 0x4b && sig[2] === 3 && sig[3] === 4;
-    const isPly = sig[0] === 0x70 && sig[1] === 0x6c && sig[2] === 0x79;   // "ply"
-    let parsed;
-    if (ext === "3mf" || isZip) parsed = await parse3MF(buf);
-    else if (ext === "ply" || isPly) parsed = parsePLY(buf);
-    else if (ext === "obj") parsed = parseOBJ(buf);
-    else { try { parsed = parseSTL(buf); } catch (e) { parsed = null; try { parsed = parseOBJ(buf); } catch (_) {} if (!parsed || !parsed.pos.length) throw e; } }
+    const cur = state.mesh;
+    if (add && cur && !cur.demo) blocks.push({ pos: cur.pos, parts: cur.parts.map(p => ({ ...p })) });
+    for (let i = 0; i < sources.length; i++) {
+      const src = sources[i];
+      if (sources.length > 1) showLoading(true, "Lese " + (i + 1) + " von " + sources.length + ": " + src.name);
+      await new Promise(r => setTimeout(r, 0));
+      try {
+        const items = await parseSource(await src.read(), src.name);
+        for (const it of items) {
+          if (!it.parsed.pos.length) continue;
+          blocks.push({ pos: it.parsed.pos, parts: [{ name: it.name, fmt: it.parsed.fmt, header: it.parsed.header, size: it.size, start: 0, end: it.parsed.pos.length }] });
+        }
+      } catch (err) {
+        if (sources.length === 1 || err instanceof RangeError) throw err;
+        console.warn(err); failed.push(src.name);
+      }
+      if (blocks.reduce((n, b) => n + b.parts.length, 0) > MAX_PARTS) throw new ViewerError("Höchstens " + MAX_PARTS + " Modelle lassen sich gleichzeitig anzeigen.");
+    }
+    const added = blocks.filter(b => !(add && cur && !cur.demo && b === blocks[0]));
+    if (!added.length) throw new ViewerError(failed.length ? "Keine der Dateien ließ sich lesen." : "Die Datei enthält keine Dreiecke.");
     showLoading(true, "Netz wird analysiert …"); await new Promise(r => setTimeout(r, 16));
-    placeOnBed(parsed.pos);
-    const mesh = prepareMesh(parsed, name, size);
-    stats(mesh);
-    initOrientation(mesh);   // braucht eine Kopie der Punkte – bei Speichermangel scheitert es hier, bevor das alte Modell ersetzt wird
-    state.mesh = mesh; state.scale = 1; $("scale").value = 100;
-    uploadMesh(); resetLayerView(); updateInfo(); fitView("iso");
+    const { pos, parts } = blocks.length === 1 ? { pos: blocks[0].pos, parts: blocks[0].parts } : combineBlocks(blocks);
+    setMesh(pos, parts, add && cur && !cur.demo);
+    if (failed.length) showToast("Nicht lesbar und übersprungen: " + failed.join(", "));
+    else if (parts.length > 1 && !add) showToast(parts.length + " Modelle geladen und nebeneinander angeordnet.", "info");
   } catch (err) {
     console.warn(err);
     showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
   } finally { showLoading(false); }
 }
-async function loadFile(file) {
-  if (!file) return;
-  if (file.size > 300 * 1048576) { showToast("Die Datei ist größer als 300 MB und lässt sich am Handy nicht sicher anzeigen."); return; }
-  showLoading(true, "Datei wird geöffnet …");
-  try { await loadBuffer(await file.arrayBuffer(), file.name, file.size); }
-  catch (_) { showLoading(false); showToast("Die Datei konnte nicht geöffnet werden."); }
+// Einzelner Puffer (Android-Brücke, Tests)
+function loadBuffer(buf, name, size) { return loadSources([{ name, size, read: async () => buf }], false); }
+const fileSource = (f) => ({ name: f.name, size: f.size, read: () => f.arrayBuffer() });
+function loadFile(file) { return file ? loadSources([fileSource(file)], false) : undefined; }
+function removePart(idx) {
+  const m = state.mesh; if (!m || !m.parts || m.parts.length < 2) return;
+  const keep = m.parts.filter((_, i) => i !== idx), total = keep.reduce((n, p) => n + (p.end - p.start), 0);
+  const pos = new Float32Array(total), parts = []; let o = 0;
+  for (const p of keep) { pos.set(m.pos.subarray(p.start, p.end), o); parts.push({ ...p, start: o, end: o + (p.end - p.start) }); o += p.end - p.start; }
+  setMesh(pos, parts, true);
 }
-$("fileInput").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
-$("openBtn").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fileInput").click(); } });
+$("fileInput").addEventListener("change", (e) => { loadSources([...e.target.files].map(fileSource), false); e.target.value = ""; });
+$("addInput").addEventListener("change", (e) => { loadSources([...e.target.files].map(fileSource), true); e.target.value = ""; });
+["openBtn", "addBtn"].forEach(id => $(id).addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $(id === "openBtn" ? "fileInput" : "addInput").click(); } }));
 let dragDepth = 0;
 window.addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("dropOverlay").hidden = false; });
 window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("dropOverlay").hidden = true; } });
-window.addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("dropOverlay").hidden = true; loadFile(e.dataTransfer.files[0]); });
+window.addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("dropOverlay").hidden = true;
+  const m = state.mesh; loadSources([...e.dataTransfer.files].map(fileSource), !!(m && !m.demo && e.shiftKey)); });
 
 /* Schnittstelle für die Android-App: Datei aus "Öffnen mit …" */
 // Die App stellt die Datei unter einer eigenen URL bereit; sie wird direkt gestreamt (kein Base64, kein Doppelkopieren).
-window.loadModelUrl = async (name, url) => {
-  showLoading(true, "Datei wird geöffnet …");
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const buf = await res.arrayBuffer();
-    await loadBuffer(buf, name || "modell.stl", buf.byteLength);
-  } catch (err) {
-    console.warn(err); showLoading(false);
-    showToast(err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die geteilte Datei konnte nicht gelesen werden.");
-  }
-};
+const urlSource = (name, url) => ({ name: name || "modell.stl", size: 0, read: async () => {
+  let res; try { res = await fetch(url); } catch (_) { res = null; }
+  if (!res || !res.ok) throw new ViewerError("Die geteilte Datei „" + (name || "modell") + "“ konnte nicht gelesen werden.");
+  return res.arrayBuffer(); } });
+window.loadModelUrl = (name, url) => loadSources([urlSource(name, url)], false);
+window.loadModelUrls = (list) => loadSources((list || []).map(f => urlSource(f.name, f.url)), false);   // mehrere geteilte Dateien
 window.loadModelBase64 = (name, b64) => {
   try { const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     loadBuffer(u8.buffer, name || "modell.stl", u8.length); }
@@ -1146,7 +1251,7 @@ window.setLoading = (on, text) => showLoading(!!on, text);
 // Installierte Web-App am Computer/Android-Chrome: Dateien über „Öffnen mit“ (file_handlers im Manifest)
 if ("launchQueue" in window) {
   window.launchQueue.setConsumer(async (params) => {
-    if (params.files && params.files.length) { try { loadFile(await params.files[0].getFile()); } catch (_) { showToast("Die Datei konnte nicht geöffnet werden."); } }
+    if (params.files && params.files.length) { try { loadSources(await Promise.all(params.files.map(async h => fileSource(await h.getFile()))), false); } catch (_) { showToast("Die Datei konnte nicht geöffnet werden."); } }
   });
 }
 window.showMessage = (t) => showToast(t);
@@ -1178,6 +1283,18 @@ function updateInfo() {
   else mf.innerHTML = `<span class="chip ${m.manifold.open ? "bad" : "warn"}">${m.manifold.open ? fmtInt(m.manifold.open) + " offene Kanten" : fmtInt(m.manifold.nonManifold) + " Mehrfachkanten"}</span>`;
   const hn = $("headerNote");
   if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = (m.fmt === "3MF" ? "" : "Dateikopf: ") + m.header.slice(0, 120); } else hn.hidden = true;
+  const multi = m.parts && m.parts.length > 1; $("partsBox").hidden = !multi; $("addBtn").hidden = !!m.demo;
+  if (multi) {
+    $("partsTitle").textContent = m.parts.length + " Modelle auf der Platte";
+    const ul = $("partsList"); ul.textContent = "";
+    m.parts.forEach((p, i) => {
+      const li = document.createElement("li"), n = document.createElement("span"), meta = document.createElement("span"), b = document.createElement("button");
+      n.className = "p-name"; n.textContent = p.name; meta.className = "p-meta"; meta.textContent = fmtInt((p.end - p.start) / 9) + " △";
+      b.type = "button"; b.textContent = "×"; b.title = "Entfernen"; b.setAttribute("aria-label", p.name + " entfernen");
+      b.addEventListener("click", () => removePart(i));
+      li.append(n, meta, b); ul.appendChild(li);
+    });
+  }
   const ok = fitsBed(); const chip = $("fit-chip");
   chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
   updateEstimate();
@@ -1191,7 +1308,42 @@ function selectTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("
   $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true"); }
 tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t)); t.tabIndex = i ? -1 : 0;
   t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n); } }); });
-$("collapse").addEventListener("click", () => { const c = $("panel").classList.toggle("collapsed"); $("collapse").setAttribute("aria-expanded", String(!c)); });
+function setSheet(mode) {   // "collapsed" | "normal" | "tall"
+  const panel = $("panel"); panel.style.maxHeight = mode === "tall" ? "85%" : "";
+  panel.classList.toggle("collapsed", mode === "collapsed"); panel.classList.toggle("tall", mode === "tall");
+  $("collapse").setAttribute("aria-expanded", String(mode !== "collapsed"));
+}
+$("collapse").addEventListener("click", () => setSheet($("panel").classList.contains("collapsed") ? "normal" : "collapsed"));
+/* Griff ziehen: nach oben größer, nach unten einklappen – rastet bei eingeklappt, normal oder groß ein (nur Handy-Layout) */
+(() => {
+  const panel = $("panel"), handle = panel.querySelector(".handle"), narrow = matchMedia("(max-width:899px)");
+  let drag = null, suppressClick = false;
+  handle.addEventListener("pointerdown", (e) => {
+    if (!narrow.matches || (e.pointerType === "mouse" && e.button !== 0)) return;
+    drag = { id: e.pointerId, y: e.clientY, h: panel.getBoundingClientRect().height, moved: false };
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = e.clientY - drag.y;
+    if (!drag.moved) { if (Math.abs(dy) < 8) return; drag.moved = true; try { handle.setPointerCapture(e.pointerId); } catch (_) {} panel.classList.add("dragging"); panel.classList.remove("collapsed"); }
+    const appH = $("app").getBoundingClientRect().height;
+    panel.style.maxHeight = Math.max(52, Math.min(appH * 0.88, drag.h - dy)) + "px";
+    e.preventDefault();
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null; panel.classList.remove("dragging");
+    if (!d.moved) return;
+    suppressClick = true; setTimeout(() => (suppressClick = false), 0);
+    const appH = $("app").getBoundingClientRect().height, h = panel.getBoundingClientRect().height, dy = e.clientY - d.y;
+    const pts = [["collapsed", 60], ["normal", appH * 0.46], ["tall", appH * 0.85]];
+    let best = pts.reduce((a, b) => Math.abs(b[1] - h) < Math.abs(a[1] - h) ? b : a);
+    if (Math.abs(dy) > 40 && best[1] === pts.find(p => Math.abs(p[1] - d.h) < 30)?.[1]) best = pts[Math.max(0, Math.min(2, pts.findIndex(p => p === best) + (dy < 0 ? 1 : -1)))];   // kurzer Wisch reicht
+    setSheet(best[0]);
+  };
+  handle.addEventListener("pointerup", end); handle.addEventListener("pointercancel", end);
+  handle.addEventListener("click", (e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+})();
 function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
   const tools = document.querySelector(".tools"), stage = $("stage");
   tools.classList.remove("grid");
@@ -1769,8 +1921,9 @@ readPrinter(); setColor(rgbToHex(state.color)); setBg(state.bg);
 (function loadDemo() {
   const pos = demoKnot(); placeOnBed(pos);
   const mesh = prepareMesh({ pos, fmt: "Beispiel", header: "" }, "Beispielmodell", 0); stats(mesh);
+  mesh.demo = true; mesh.parts = [{ name: "Beispielmodell", fmt: "Beispiel", size: 0, start: 0, end: pos.length }];
   state.mesh = mesh; initOrientation(mesh); uploadMesh(); updateInfo();
-  $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen: STL, 3MF, OBJ oder PLY";
+  $("fileName").textContent = "Beispielmodell"; $("fileMeta").textContent = "Tippe auf Öffnen: STL, 3MF, OBJ, PLY oder ZIP";
   resize(); fitView("iso");
 })();
 requestAnimationFrame(frame);

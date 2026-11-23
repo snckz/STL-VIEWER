@@ -37,7 +37,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import android.content.ClipData;
+import org.json.JSONArray;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -64,7 +68,7 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private ValueCallback<Uri[]> pendingChooser;
-    private Uri pendingIntentUri;
+    private List<Uri> pendingIntentUris;
     private boolean pageReady = false;
     /** Geteilte Dateien, die der Viewer per fetch() abholen darf (id → Uri). */
     private final Map<String, Uri> sharedFiles = Collections.synchronizedMap(new HashMap<>());
@@ -147,10 +151,10 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
-                if (pendingIntentUri != null) {
-                    Uri u = pendingIntentUri;
-                    pendingIntentUri = null;
-                    openUri(u);
+                if (pendingIntentUris != null) {
+                    List<Uri> u = pendingIntentUris;
+                    pendingIntentUris = null;
+                    openUris(u);
                 }
             }
         });
@@ -163,6 +167,9 @@ public class MainActivity extends Activity {
                 Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
                 i.setType("*/*"); // STL hat keinen verlässlichen MIME-Typ – deshalb alle Dateien zulassen
+                if (params != null && params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                    i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);   // mehrere Modelle auf einmal auswählen
+                }
                 try {
                     startActivityForResult(i, REQ_PICK_FILE);
                 } catch (Exception e) {
@@ -227,28 +234,35 @@ public class MainActivity extends Activity {
         handleIntent(intent);
     }
 
+    @SuppressWarnings("deprecation")
     private void handleIntent(Intent intent) {
         if (intent == null) return;
-        Uri uri = null;
-        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            uri = intent.getData();
-        } else if (Intent.ACTION_SEND.equals(intent.getAction())) {
-            if (Build.VERSION.SDK_INT >= 33) {
-                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class);
-            } else {
-                uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
-            }
+        List<Uri> uris = new ArrayList<>();
+        String action = intent.getAction();
+        if (Intent.ACTION_VIEW.equals(action)) {
+            if (intent.getData() != null) uris.add(intent.getData());
+        } else if (Intent.ACTION_SEND.equals(action)) {
+            Uri u = Build.VERSION.SDK_INT >= 33 ? intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class) : intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (u != null) uris.add(u);
+        } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {   // mehrere Dateien geteilt
+            ArrayList<Uri> list = Build.VERSION.SDK_INT >= 33 ? intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri.class) : intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            if (list != null) for (Uri u : list) if (u != null) uris.add(u);
         }
-        if (uri == null) return;
-        if (pageReady) openUri(uri); else pendingIntentUri = uri;
+        if (uris.isEmpty()) return;
+        if (pageReady) openUris(uris); else pendingIntentUris = uris;
     }
 
-    /** Gibt eine geteilte/geöffnete Datei für den Viewer frei; der lädt sie per fetch() als Stream. */
-    private void openUri(final Uri uri) {
-        String id = UUID.randomUUID().toString();
-        sharedFiles.put(id, uri);
-        String name = displayName(uri);
-        js("window.loadModelUrl(" + JSONObject.quote(name) + "," + JSONObject.quote(BASE + "shared/" + id) + ")");
+    /** Gibt geteilte/geöffnete Dateien für den Viewer frei; er lädt sie per fetch() als Stream. */
+    private void openUris(List<Uri> uris) {
+        JSONArray list = new JSONArray();
+        for (Uri uri : uris) {
+            String id = UUID.randomUUID().toString();
+            sharedFiles.put(id, uri);
+            try {
+                list.put(new JSONObject().put("name", displayName(uri)).put("url", BASE + "shared/" + id));
+            } catch (Exception ignored) { }
+        }
+        js("window.loadModelUrls(" + list + ")");
     }
 
     private String displayName(Uri uri) {
@@ -267,8 +281,14 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != REQ_PICK_FILE || pendingChooser == null) return;
         Uri[] result = null;
-        if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-            result = new Uri[]{data.getData()};
+        if (resultCode == RESULT_OK && data != null) {
+            ClipData clip = data.getClipData();
+            if (clip != null && clip.getItemCount() > 0) {
+                result = new Uri[clip.getItemCount()];
+                for (int k = 0; k < result.length; k++) result[k] = clip.getItemAt(k).getUri();
+            } else if (data.getData() != null) {
+                result = new Uri[]{data.getData()};
+            }
         }
         pendingChooser.onReceiveValue(result);
         pendingChooser = null;

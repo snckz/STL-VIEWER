@@ -1,4 +1,7 @@
 <!-- Neuerungen der nächsten Version. Jede Zeile mit „- “ erscheint in der App im Update-Hinweis. -->
-- Große Dateien öffnen: 3MF, STL, OBJ und PLY mit 45 MB und mehr laden jetzt zuverlässig
-- Deutlich weniger Speicherbedarf – große 3MF-Projekte brauchen nur noch einen Bruchteil davon
-- 3MF-Dateien aus weiteren Programmen werden besser erkannt (z. B. mit anderen Einheiten)
+- ZIP-Dateien direkt öffnen: Alle STL-, 3MF-, OBJ- und PLY-Modelle darin werden geladen
+- Mehrere Dateien auf einmal auswählen – sie werden nebeneinander auf dem Druckbett angeordnet
+- Neuer Plus-Knopf oben: weitere Modelle hinzufügen, ohne die geladenen zu verlieren
+- Unter „Info“ siehst du alle Modelle der Platte und kannst einzelne entfernen
+- Druckzeit, Gewicht und Bett-Check gelten für die ganze Platte
+- Bedienleiste am Griff ziehen: nach oben größer, nach unten einklappen

@@ -50,6 +50,8 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/3D-Viewer`).
 
+- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet; unter **Info** lassen sich einzelne entfernen.
+
 Unterstützte Formate:
 
 | Format | Details |
@@ -58,6 +60,7 @@ Unterstützte Formate:
 | **3MF** | Projekte aus Bambu Studio, OrcaSlicer, PrusaSlicer, Cura, Fusion u. a. – mit mehreren Teilen, Unterbaugruppen und Einheiten (mm, cm, Zoll …). Geslicte 3MF mit nur G-Code werden erkannt. |
 | **OBJ** | Polygone werden trianguliert, Y-oben wird zu Z-oben gedreht |
 | **PLY** | ASCII und binär; reine Punktwolken ohne Flächen werden nicht angezeigt |
+| **ZIP** | alle enthaltenen STL-, 3MF-, OBJ- und PLY-Dateien |
 
 STEP/STP und andere CAD-Formate werden nicht unterstützt – sie enthalten keine Dreiecksnetze und müssten erst umgerechnet werden.
 
@@ -105,6 +108,7 @@ Den Keystore nie ins Repository hochladen – `.gitignore` schließt `*.keystore
 python3 test/make_fixtures.py
 node web/build.mjs
 node test/formats.mjs
+node test/multi.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 
