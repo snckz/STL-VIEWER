@@ -1,10 +1,4 @@
 <!-- Neuerungen der nächsten Version. Jede Zeile mit „- “ erscheint in der App im Update-Hinweis. -->
-- Schönere Darstellung: Studio-Licht, weiche Schatten unter den Modellen und ein Hintergrund mit sanftem Verlauf
-- ZIP-Auswahl: Beim Öffnen einer ZIP zeigt die App alle Ordner und Dateien – ganze ZIP, einzelne Ordner oder einzelne Modelle wählen
-- Weitere Modelle aus derselben ZIP jederzeit nachladen (Bereich „Modell“ → „Dateien wählen“)
-- Neu gestaltete Bedienung: vier klare Bereiche – Modell, Bearbeiten, Druck und Aussehen
-- Messen: zwei Punkte am Modell antippen und den Abstand in mm ablesen
-- Teile verschieben: ausgewähltes Teil einfach mit dem Finger über das Druckbett ziehen
-- Kopie, Anordnen und Entfernen direkt in der Leiste am ausgewählten Teil
-- Druck-Check: prüft Größe, Löcher im Netz, Überhänge und Auflagefläche – mit Ein-Tipp-Lösung
-- Export als STL oder 3MF (Teile bleiben einzeln) – teilen oder speichern
+- Intelligentes Messen: Ecken und Kanten rasten exakt ein, bei Bohrungen und Zapfen wird die Mitte genommen und der Durchmesser angezeigt
+- Zwischen Modell, Bearbeiten, Druck und Aussehen einfach nach links oder rechts wischen
+- Hinweise zur Bedienung erscheinen nur noch beim ersten Mal

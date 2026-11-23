@@ -44,7 +44,7 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 Die Bedienung ist in vier Bereiche aufgeteilt – **Modell**, **Bearbeiten**, **Druck** und **Aussehen** – dazu rechts die Werkzeugleiste mit **Einpassen**, **Ansicht**, **Messen** und **Export**.
 
 - **Ansehen:** ein Finger dreht, zwei Finger zoomen und verschieben, Doppeltipp passt das Modell ein. Unter **Ansicht**: vorne, oben, seitlich und schräg, Zoom-Knöpfe, Auto-Drehen.
-- **Messen:** zwei Punkte auf dem Modell antippen – Abstand in mm plus Abstand je Achse.
+- **Messen:** zwei Punkte auf dem Modell antippen – Abstand in mm plus Abstand je Achse. Mit **Einrasten** (Standard) werden Ecken und Kanten exakt getroffen; auf einer Bohrung oder einem Zapfen (oder an deren Rand) zählt die Mitte, und der Durchmesser wird angezeigt.
 - **Einfärben:** 14 Filamentfarben oder eine eigene Farbe, Glanz-Regler, drei Hintergründe.
 - **Infos:** Maße X/Y/Z in mm, Volumen, Oberfläche, Anzahl Dreiecke und Punkte, Format, Dateigröße.
 - **Netzprüfung:** zeigt, ob das Modell geschlossen ist oder offene Kanten und Mehrfachkanten hat.
@@ -117,6 +117,7 @@ node test/multi.mjs
 node test/select.mjs
 node test/edit.mjs
 node test/zippick.mjs
+node test/snap.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 

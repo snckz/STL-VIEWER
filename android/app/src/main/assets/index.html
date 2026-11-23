@@ -95,8 +95,12 @@ button,input,select{font:inherit;color:inherit}
 .mode-ico svg{width:22px;height:22px}
 .mode-text{display:grid;gap:1px;min-width:0}
 .mode-text b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mode-text small{font-size:12px;color:var(--muted);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mode-text small{font-size:12px;color:var(--muted);font-family:var(--font-mono);line-height:1.35}
 .modebar .btn{flex:none;min-height:38px;font-family:var(--font-body);font-size:13px}
+.mode-kind{color:var(--accent)!important;font-family:var(--font-body)!important;font-weight:600}
+.snap{flex:none;width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--bg-2);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.snap svg{width:19px;height:19px}
+.snap[aria-pressed="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--bg-2))}
 .mlabel{position:absolute;z-index:5;left:0;top:0;transform:translate(-50%,calc(-100% - 10px));pointer-events:none;padding:4px 10px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-mono);font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .selbar{--sel:#389aff;position:absolute;z-index:6;left:12px;right:12px;bottom:calc(14px + var(--sheet-overlap,0px));margin:0 auto;width:fit-content;max-width:calc(100% - 24px);display:flex;align-items:center;gap:4px;padding:6px 6px 6px 14px;border-radius:18px;
   background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--sel) 50%,transparent);box-shadow:0 14px 34px rgba(0,0,0,.4);animation:barIn .2s ease}
@@ -138,6 +142,11 @@ button,input,select{font:inherit;color:inherit}
 @media (max-width:400px){ .tab{font-size:11px;gap:3px} .tab svg{width:20px;height:20px} .tabs{gap:2px} .collapse{width:30px} .handle{padding-left:6px;padding-right:4px} }
 .pane{overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 18px;display:grid;gap:16px;align-content:start}
 .pane[hidden]{display:none!important}
+.pane{touch-action:pan-y}
+.pane.in-next{animation:paneNext .24s cubic-bezier(.2,.8,.2,1)}
+.pane.in-prev{animation:panePrev .24s cubic-bezier(.2,.8,.2,1)}
+@keyframes paneNext{from{opacity:0;transform:translateX(28px)}}
+@keyframes panePrev{from{opacity:0;transform:translateX(-28px)}}
 
 .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .dims{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -460,7 +469,8 @@ input[type=range]{accent-color:var(--accent);height:24px}
 
     <div class="modebar" id="modeBar" role="status" hidden>
       <span class="mode-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15.5 15.5 3l5.5 5.5L8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></svg></span>
-      <span class="mode-text"><b id="measureMain">Zwei Punkte antippen</b><small id="measureSub">am Modell, um den Abstand zu messen</small></span>
+      <span class="mode-text"><b id="measureMain">Zwei Punkte antippen</b><small id="measureSub">am Modell, um den Abstand zu messen</small><small class="mode-kind" id="measureKind" hidden></small></span>
+      <button class="snap" id="snapBtn" aria-pressed="true" title="Einrasten an Ecken, Kanten und Bohrungen" aria-label="Einrasten an Ecken, Kanten und Bohrungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v8a6 6 0 0 0 12 0V3"/><path d="M6 7h4M14 7h4"/></svg></button>
       <button class="btn mini" id="measureDone">Fertig</button>
     </div>
     <div class="mlabel" id="measureLabel" hidden></div>
@@ -1329,7 +1339,7 @@ function draw() {
   const up = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
   const far = c.dist + modelRadius() * 4 + 1200, near = Math.max(0.01, c.dist / 500);
   const proj = state.ortho ? (() => { const h = c.dist * Math.tan(FOV / 2); return M.ortho(h * asp, h, near, far); })() : M.persp(FOV, asp, near, far);
-  const vp = M.mul(proj, M.lookAt(e, c.target, up));
+  const vp = M.mul(proj, M.lookAt(e, c.target, up)); state.lastVP = vp;
   const fw = norm(sub(c.target, e)), rt = norm(cross(fw, up)), uv = cross(rt, fw);
   const key = norm([0, 1, 2].map(k => -fw[k] * 0.55 + uv[k] * 0.7 - rt[k] * 0.45)), fill = norm([0, 1, 2].map(k => -fw[k] * 0.6 - uv[k] * 0.15 + rt[k] * 0.75));
 
@@ -1399,9 +1409,16 @@ function drawMeasure(vp) {
   const pts = state.measure.on ? state.measure.pts : [], lab = $("measureLabel");
   if (!pts.length) { lab.hidden = true; return; }
   const s = state.scale, A = [0.95, 0.65, 0.25, 1], v = [];
-  const W = pts.map(p => p.map(c => c * s));
+  const W = pts.map(q => q.p.map(c => c * s));
   if (W.length === 2) v.push(...W[0], ...A, ...W[1], ...A);
   for (const w of W) v.push(...w, ...A);
+  // Erkannte Bohrungen/Zapfen als Kreis nachzeichnen
+  let circ = 0;
+  for (const q of pts) if (q.circle) {
+    const { center, axis, r } = q.circle, u = norm(Math.abs(axis[0]) < 0.9 ? cross(axis, [1, 0, 0]) : cross(axis, [0, 1, 0])), w = cross(axis, u);
+    for (let k = 0; k < 64; k++) for (const j of [k, k + 1]) { const t = j / 64 * Math.PI * 2;
+      v.push(...[0, 1, 2].map(i => (center[i] + (u[i] * Math.cos(t) + w[i] * Math.sin(t)) * r) * s), ...A); circ += 1; }
+  }
   gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
   gl.bindVertexArray(measVAO); gl.bindBuffer(gl.ARRAY_BUFFER, measBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.DYNAMIC_DRAW);
   gl.disable(gl.DEPTH_TEST);
@@ -1409,6 +1426,7 @@ function drawMeasure(vp) {
   if (lines) { gl.uniform1f(lineProg.u.uPtSize, 1); gl.uniform1i(lineProg.u.uRound, 0); gl.drawArrays(gl.LINES, 0, 2); }
   gl.uniform1f(lineProg.u.uPtSize, 15 * Math.min(window.devicePixelRatio || 1, 2.5)); gl.uniform1i(lineProg.u.uRound, 1);
   gl.drawArrays(gl.POINTS, lines, W.length);
+  if (circ) { gl.uniform1f(lineProg.u.uPtSize, 1); gl.uniform1i(lineProg.u.uRound, 0); gl.drawArrays(gl.LINES, lines + W.length, circ); }
   gl.uniform1i(lineProg.u.uRound, 0); gl.enable(gl.DEPTH_TEST);
   if (W.length < 2) { lab.hidden = true; return; }
   const mid = [0, 1, 2].map(k => (W[0][k] + W[1][k]) / 2);
@@ -1536,7 +1554,7 @@ function endPointer(e) {
   if (drag && drag.id === e.pointerId) finishMove();
   if (e.type === "pointerup" && moved < 8 && pointers.size === 0) {
     const now = performance.now();
-    if (state.measure.on) { addMeasurePoint(hitTest(e.clientX, e.clientY)); return; }
+    if (state.measure.on) { addMeasurePoint(snapMeasure(e.clientX, e.clientY)); return; }
     const hit = multiPart() ? pickPart(e.clientX, e.clientY) : -1;
     if (now - lastTap < 320) { lastTap = 0; if (hit >= 0) { selectPart(hit); focusPart(hit); } else fitView(); }   // Doppeltippen: auf das Teil zoomen
     else { lastTap = now; if (multiPart()) selectPart(hit); }   // Tippen: Teil auswählen, ins Leere: Auswahl aufheben
@@ -1575,35 +1593,192 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "m") setMeasure(!state.measure.on);
 });
 function stopSpinOnTouch() { if (state.spin) { state.spin = false; $("spin").setAttribute("aria-pressed", "false"); } }
-let hintTimer = setTimeout(hideHint, 7000);
-function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); }
+// Gesten-Hinweis nur beim allerersten Start zeigen
+const hintSeen = (() => { try { return localStorage.getItem("3dv-hint-seen") === "1"; } catch (_) { return false; } })();
+if (hintSeen) $("hint").classList.add("gone");
+let hintTimer = hintSeen ? 0 : setTimeout(hideHint, 9000);
+function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); try { localStorage.setItem("3dv-hint-seen", "1"); } catch (_) {} }
 
 /* ---------------- Messen ----------------
-   Zwei Punkte auf der Oberfläche antippen → Abstand und Abstand je Achse. Ein dritter Tipp beginnt neu. */
+   Zwei Punkte auf der Oberfläche antippen → Abstand und Abstand je Achse. Ein dritter Tipp beginnt neu.
+   Einrasten (Standard): In der Nähe einer Ecke oder Kante wird exakt diese genommen; auf einer Bohrung bzw. einem
+   Zapfen (oder an deren Rand) die Mitte samt Durchmesser. */
+const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
+state.measure.snap = store.get("3dv-snap") !== "0";
+const MEASURE_START = ["Ersten Punkt antippen", "Ecken, Kanten und Bohrungen rasten ein", ""];
 function setMeasure(on) {
   state.measure.on = on; state.measure.pts = []; $("measureLabel").hidden = true;
   $("measureBtn").setAttribute("aria-pressed", String(on)); $("modeBar").hidden = !on;
-  if (on) { finishMove(); closeViewMenu(); hideHint(); setMeasureText("Ersten Punkt antippen", "direkt auf dem Modell"); }
+  if (on) { finishMove(); closeViewMenu(); hideHint(); setMeasureText(...measureStartText()); }
   updatePartsUI(); state.dirty = true;
 }
-function setMeasureText(main, sub) { $("measureMain").textContent = main; $("measureSub").textContent = sub; }
-function clearMeasure() { if (!state.measure.pts.length) return; state.measure.pts = []; $("measureLabel").hidden = true; if (state.measure.on) setMeasureText("Ersten Punkt antippen", "direkt auf dem Modell"); state.dirty = true; }
-function addMeasurePoint(hit) {
+const measureStartText = () => state.measure.snap ? MEASURE_START : ["Ersten Punkt antippen", "direkt auf dem Modell", ""];
+function setMeasureText(main, sub, kind) { $("measureMain").textContent = main; $("measureSub").textContent = sub; const k = $("measureKind"); k.textContent = kind || ""; k.hidden = !kind; }
+function clearMeasure() { if (!state.measure.pts.length) return; state.measure.pts = []; $("measureLabel").hidden = true; if (state.measure.on) setMeasureText(...measureStartText()); state.dirty = true; }
+const KIND = { free: "Fläche", corner: "Ecke", edge: "Kante", hole: "Bohrung", pin: "Zapfen" };
+const kindText = (q) => q.circle ? KIND[q.kind] + " ⌀ " + fmtNum(q.circle.r * 2 * state.scale, 2) + " mm (Mitte)" : KIND[q.kind];
+function addMeasurePoint(q) {
   const ms = state.measure;
-  if (!hit) { setMeasureText(ms.pts.length === 1 ? "Daneben getippt" : "Kein Treffer", "Tippe direkt auf das Modell"); return; }
+  if (!q) { setMeasureText(ms.pts.length === 1 ? "Daneben getippt" : "Kein Treffer", "Tippe direkt auf das Modell", ""); return; }
   if (ms.pts.length >= 2) ms.pts = [];
-  ms.pts.push(hit.p);
-  if (ms.pts.length === 1) setMeasureText("Zweiten Punkt antippen", "Punkt 1 ist gesetzt");
-  else {
-    const s = state.scale, [a, b] = ms.pts, d = [0, 1, 2].map(k => Math.abs(b[k] - a[k]) * s), len = Math.hypot(d[0], d[1], d[2]);
-    const f = (v) => fmtNum(v, v < 100 ? 2 : 1);
-    setMeasureText(f(len) + " mm", "X " + f(d[0]) + " · Y " + f(d[1]) + " · Z " + f(d[2]));
+  ms.pts.push(q);
+  const f = (v) => fmtNum(v, v < 100 ? 2 : 1);
+  if (ms.pts.length === 1) {
+    if (q.circle) setMeasureText("⌀ " + f(q.circle.r * 2 * state.scale) + " mm", KIND[q.kind] + " · Mitte gesetzt – zweiten Punkt antippen", "");
+    else setMeasureText("Zweiten Punkt antippen", "Punkt 1: " + KIND[q.kind], "");
+  } else {
+    const s = state.scale, [a, b] = ms.pts.map(x => x.p), d = [0, 1, 2].map(k => Math.abs(b[k] - a[k]) * s), len = Math.hypot(d[0], d[1], d[2]);
+    setMeasureText(f(len) + " mm", "X " + f(d[0]) + " · Y " + f(d[1]) + " · Z " + f(d[2]), kindText(ms.pts[0]) + " → " + kindText(ms.pts[1]));
     $("measureLabel").textContent = f(len) + " mm";
   }
   state.dirty = true;
 }
 $("measureBtn").addEventListener("click", () => setMeasure(!state.measure.on));
 $("measureDone").addEventListener("click", () => setMeasure(false));
+$("snapBtn").setAttribute("aria-pressed", String(state.measure.snap));
+$("snapBtn").addEventListener("click", () => {
+  state.measure.snap = !state.measure.snap; store.set("3dv-snap", state.measure.snap ? "1" : "0");
+  $("snapBtn").setAttribute("aria-pressed", String(state.measure.snap));
+  showToast(state.measure.snap ? "Einrasten an: Ecken, Kanten und Bohrungen werden exakt getroffen." : "Einrasten aus: Es zählt genau der angetippte Punkt.", "info");
+  if (!state.measure.pts.length) setMeasureText(...measureStartText());
+});
+
+// Bildschirmposition eines Punkts (Modellkoordinaten) – gleiche Kamera wie beim Zeichnen
+function toScreen(P) {
+  const vp = state.lastVP, s = state.scale; if (!vp) return null;
+  const x = P[0] * s, y = P[1] * s, z = P[2] * s;
+  const cx = vp[0]*x + vp[4]*y + vp[8]*z + vp[12], cy = vp[1]*x + vp[5]*y + vp[9]*z + vp[13], cw = vp[3]*x + vp[7]*y + vp[11]*z + vp[15];
+  if (cw <= 1e-9) return null;
+  const r = canvas.getBoundingClientRect();
+  return [r.left + (cx / cw * 0.5 + 0.5) * r.width, r.top + (0.5 - cy / cw * 0.5) * r.height];
+}
+// Modellmillimeter pro Bildschirmpixel an einem Punkt
+function unitsPerPixel(P) {
+  const c = state.cam, s = state.scale, e = eye(), h = canvas.clientHeight || 1, t = Math.tan(FOV / 2);
+  const d = state.ortho ? c.dist : Math.max(1e-6, Math.hypot(P[0] * s - e[0], P[1] * s - e[1], P[2] * s - e[2]));
+  return 2 * d * t / h / s;
+}
+// Dreiecke im Umkreis eines Punkts mit Nachbarschaft über gemeinsame Kanten (Punkte werden auf 0,1 µm zusammengeführt)
+function localMesh(P, R) {
+  const p = state.mesh.pos, R2 = R * R, tris = [];
+  for (let i = 0; i < p.length; i += 9) {
+    const cx = (p[i] + p[i+3] + p[i+6]) / 3 - P[0], cy = (p[i+1] + p[i+4] + p[i+7]) / 3 - P[1], cz = (p[i+2] + p[i+5] + p[i+8]) / 3 - P[2];
+    const ex = Math.max(Math.abs(p[i] - p[i+3]), Math.abs(p[i] - p[i+6])), ey = Math.max(Math.abs(p[i+1] - p[i+4]), Math.abs(p[i+1] - p[i+7])), ez = Math.max(Math.abs(p[i+2] - p[i+5]), Math.abs(p[i+2] - p[i+8]));
+    const rr = R + ex + ey + ez; if (cx * cx + cy * cy + cz * cz <= rr * rr) tris.push(i);
+    if (tris.length > 60000) break;
+  }
+  const key = (i) => Math.round(p[i] * 1e4) + "," + Math.round(p[i+1] * 1e4) + "," + Math.round(p[i+2] * 1e4);
+  const vid = new Map(), edges = new Map(), T = [];
+  const id = (i) => { const k = key(i); let v = vid.get(k); if (v === undefined) { v = vid.size; vid.set(k, v); } return v; };
+  for (const i of tris) {
+    const ux = p[i+3]-p[i], uy = p[i+4]-p[i+1], uz = p[i+5]-p[i+2], vx = p[i+6]-p[i], vy = p[i+7]-p[i+1], vz = p[i+8]-p[i+2];
+    const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, l = Math.hypot(nx, ny, nz);
+    if (l === 0) continue;
+    const t = { i, v: [id(i), id(i + 3), id(i + 6)], n: [nx / l, ny / l, nz / l], a: l / 2, k: T.length };
+    T.push(t);
+    for (let e = 0; e < 3; e++) { const a = t.v[e], b = t.v[(e + 1) % 3], k = a < b ? a + "|" + b : b + "|" + a;
+      let E = edges.get(k); if (!E) edges.set(k, E = { a: t.i + e * 3, b: t.i + ((e + 1) % 3) * 3, tris: [] }); E.tris.push(t); }
+  }
+  return { T, edges, byTri: new Map(T.map(t => [t.i, t])) };
+}
+// Symmetrische 3×3-Matrix: Eigenwerte/-vektoren (Jacobi)
+function eigSym3(m) {
+  const a = [[m[0], m[1], m[2]], [m[1], m[4], m[5]], [m[2], m[5], m[8]]], v = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  for (let it = 0; it < 30; it++) {
+    let p = 0, q = 1; if (Math.abs(a[0][2]) > Math.abs(a[p][q])) { p = 0; q = 2; } if (Math.abs(a[1][2]) > Math.abs(a[p][q])) { p = 1; q = 2; }
+    if (Math.abs(a[p][q]) < 1e-12) break;
+    const th = (a[q][q] - a[p][p]) / (2 * a[p][q]), t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+    for (let k = 0; k < 3; k++) { const akp = a[k][p], akq = a[k][q]; a[k][p] = c * akp - s * akq; a[k][q] = s * akp + c * akq; }
+    for (let k = 0; k < 3; k++) { const apk = a[p][k], aqk = a[q][k]; a[p][k] = c * apk - s * aqk; a[q][k] = s * apk + c * aqk; }
+    for (let k = 0; k < 3; k++) { const vkp = v[k][p], vkq = v[k][q]; v[k][p] = c * vkp - s * vkq; v[k][q] = s * vkp + c * vkq; }
+  }
+  return [0, 1, 2].map(i => ({ val: a[i][i], vec: [v[0][i], v[1][i], v[2][i]] })).sort((x, y) => x.val - y.val);
+}
+/* Zylinderfläche (Bohrung/Zapfen) ab einem Dreieck erkennen: glatt zusammenhängende Nachbarn sammeln, Achse aus den
+   Normalen bestimmen und einen Kreis in die Punkte einpassen. Liefert Mitte (am Rand zur Kamera hin), Achse und Radius. */
+function fitCylinder(L, seed) {
+  if (!seed) return null;
+  const p = state.mesh.pos, seen = new Set([seed.k]), list = [seed], COS = Math.cos(40 * Math.PI / 180);
+  for (let h = 0; h < list.length && list.length < 6000; h++) {
+    const t = list[h];
+    for (let e = 0; e < 3; e++) {
+      const a = t.v[e], b = t.v[(e + 1) % 3], E = L.edges.get(a < b ? a + "|" + b : b + "|" + a); if (!E) continue;
+      for (const o of E.tris) if (!seen.has(o.k) && dot(o.n, t.n) > COS) { seen.add(o.k); list.push(o); }
+    }
+  }
+  if (list.length < 6) return null;
+  const C = [0, 0, 0, 0, 0, 0, 0, 0, 0]; let W = 0;
+  for (const t of list) { const n = t.n, w = t.a; W += w; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) C[r * 3 + c] += w * n[r] * n[c]; }
+  for (let k = 0; k < 9; k++) C[k] /= W;
+  const ev = eigSym3(C), axis = norm(ev[0].vec);
+  if (ev[0].val > 0.02 || ev[1].val < 0.12) return null;   // Normalen müssen rund um eine Achse verteilt sein
+  let off = 0; for (const t of list) if (Math.abs(dot(t.n, axis)) > 0.2) off += t.a; if (off > 0.1 * W) return null;
+  const u = norm(Math.abs(axis[0]) < 0.9 ? cross(axis, [1, 0, 0]) : cross(axis, [0, 1, 0])), v = cross(axis, u);
+  // Kreis einpassen (Kasa): x² + y² + D x + E y + F = 0
+  let Sx = 0, Sy = 0, Sxx = 0, Syy = 0, Sxy = 0, Sxz = 0, Syz = 0, Sz = 0, n = 0, amin = Infinity, amax = -Infinity;
+  const pts = [];
+  for (const t of list) for (let k = 0; k < 3; k++) { const i = t.i + k * 3, P = [p[i], p[i+1], p[i+2]];
+    const x = dot(P, u), y = dot(P, v), z = x * x + y * y, al = dot(P, axis); pts.push([x, y]);
+    Sx += x; Sy += y; Sxx += x * x; Syy += y * y; Sxy += x * y; Sxz += x * z; Syz += y * z; Sz += z; n++; if (al < amin) amin = al; if (al > amax) amax = al; }
+  const M3 = [Sxx, Sxy, Sx, Sxy, Syy, Sy, Sx, Sy, n], rhs = [-Sxz, -Syz, -Sz];
+  const det3 = (m) => m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) + m[2] * (m[3] * m[7] - m[4] * m[6]);
+  const D0 = det3(M3); if (Math.abs(D0) < 1e-18) return null;
+  const sol = [0, 1, 2].map(c => { const m = M3.slice(); for (let r = 0; r < 3; r++) m[r * 3 + c] = rhs[r]; return det3(m) / D0; });
+  const cx = -sol[0] / 2, cy = -sol[1] / 2, r = Math.sqrt(Math.max(0, cx * cx + cy * cy - sol[2]));
+  if (!(r > 0)) return null;
+  let err = 0; for (const [x, y] of pts) { const d = Math.hypot(x - cx, y - cy) - r; err += d * d; } err = Math.sqrt(err / pts.length);
+  if (err > Math.max(0.03 * r, 0.01)) return null;
+  // Bohrung oder Zapfen: Normalen zeigen bei einer Bohrung zur Achse hin
+  let inward = 0; for (const t of list) { const i = t.i, x = dot([p[i], p[i+1], p[i+2]], u) - cx, y = dot([p[i], p[i+1], p[i+2]], v) - cy; inward += t.a * -(dot(t.n, u) * x + dot(t.n, v) * y); }
+  // Mitte auf Höhe des Randes, der zur Kamera zeigt (so liegen Mitten mehrerer Bohrungen derselben Fläche auf einer Ebene)
+  const e = eye(), s = state.scale, ea = dot(e.map(c => c / s), axis), al = Math.abs(ea - amax) < Math.abs(ea - amin) ? amax : amin;
+  const center = [0, 1, 2].map(k => u[k] * cx + v[k] * cy + axis[k] * al);
+  return { center, axis, r, hole: inward > 0 };
+}
+// Angetippte Stelle auswerten: Bohrung/Zapfen → Ecke → Kante → Fläche
+function snapMeasure(sx, sy) {
+  let hit = hitTest(sx, sy);
+  if (!hit && state.measure.snap) for (const [dx, dy] of [[12, 0], [-12, 0], [0, 12], [0, -12], [9, 9], [-9, 9], [9, -9], [-9, -9], [22, 0], [-22, 0], [0, 22], [0, -22]]) { hit = hitTest(sx + dx, sy + dy); if (hit) break; }
+  if (!hit) return null;
+  const free = { p: hit.p, kind: "free" };
+  if (!state.measure.snap || !state.lastVP) return free;
+  const m = state.mesh, p = m.pos, s = state.scale, upp = unitsPerPixel(hit.p);
+  const L = localMesh(hit.p, Math.max(36 * upp, 26 / s));
+  const COS_FEAT = Math.cos(25 * Math.PI / 180), open = !!(m.manifold && m.manifold.open);
+  // Merkmalskanten (Knick > 25° oder offener Rand) in Fingernähe
+  let bestE = null, corners = new Map();
+  const reach = 40 * upp, near = (Q) => Math.hypot(Q[0] - hit.p[0], Q[1] - hit.p[1], Q[2] - hit.p[2]) <= reach;   // nur Sichtbares nahe der angetippten Fläche
+  for (const E of L.edges.values()) {
+    const feat = E.tris.length === 2 ? dot(E.tris[0].n, E.tris[1].n) < COS_FEAT : E.tris.length > 2 || (open && E.tris.length === 1);
+    if (!feat) continue;
+    const A = [p[E.a], p[E.a+1], p[E.a+2]], B = [p[E.b], p[E.b+1], p[E.b+2]], a = toScreen(A), b = toScreen(B); if (!a || !b) continue;
+    const dx = b[0] - a[0], dy = b[1] - a[1], ll = dx * dx + dy * dy, t = ll > 0 ? Math.max(0, Math.min(1, ((sx - a[0]) * dx + (sy - a[1]) * dy) / ll)) : 0;
+    const dist = Math.hypot(a[0] + dx * t - sx, a[1] + dy * t - sy), Q = [0, 1, 2].map(k => A[k] + (B[k] - A[k]) * t);
+    if (dist < 22 && near(Q) && (!bestE || dist < bestE.dist)) bestE = { E, A, B, t, dist };
+    // Ecken: Punkte, an denen sich Merkmalskanten in verschiedenen Richtungen treffen
+    const dir = norm(sub(B, A));
+    for (const [P, sc] of [[A, a], [B, b]]) { const k = P.join(","); let c = corners.get(k); if (!c) corners.set(k, c = { P, sc, dirs: [] }); c.dirs.push(dir); }
+  }
+  // 1. Bohrung / Zapfen: angetippte Fläche oder Fläche am angetippten Rand
+  const seeds = [L.byTri.get(hit.tri)]; if (bestE) seeds.push(...bestE.E.tris);
+  for (const sd of seeds) {
+    const cyl = fitCylinder(L, sd);
+    if (cyl && cyl.r * s <= 20) return { p: cyl.center, kind: cyl.hole ? "hole" : "pin", circle: cyl };
+  }
+  // 2. Ecke
+  let bestC = null;
+  for (const c of corners.values()) {
+    if (c.dirs.length < 2) continue;
+    let bent = false; for (let i = 1; i < c.dirs.length && !bent; i++) if (Math.abs(dot(c.dirs[0], c.dirs[i])) < 0.9) bent = true;
+    if (!bent) continue;
+    const d = Math.hypot(c.sc[0] - sx, c.sc[1] - sy);
+    if (d < 18 && near(c.P) && (!bestC || d < bestC.d)) bestC = { d, P: c.P };
+  }
+  if (bestC) return { p: bestC.P, kind: "corner" };
+  // 3. Kante
+  if (bestE) { const { A, B, t } = bestE; return { p: [0, 1, 2].map(k => A[k] + (B[k] - A[k]) * t), kind: "edge" }; }
+  return free;
+}
 
 /* ---------------- Laden ---------------- */
 const MODEL_RE = /\.(stl|3mf|obj|ply)$/i, MAX_PARTS = 200, PART_GAP = 5;
@@ -1731,7 +1906,7 @@ async function loadSources(sources, add) {
     if (lastZip.next) lastZip.cur = lastZip.next; else if (!add) lastZip.cur = null;
     updateZipRow();
     if (failed.length) showToast("Nicht lesbar und übersprungen: " + failed.join(", "));
-    else if (parts.length > 1) showToast(parts.length + " Teile auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info");
+    else if (parts.length > 1 && store.get("3dv-tip-parts") !== "1") { store.set("3dv-tip-parts", "1"); showToast(parts.length + " Teile auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info"); }
   } catch (err) {
     console.warn(err);
     showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
@@ -1982,10 +2157,31 @@ function updateInfo() {
 
 // Tabs
 const tabs = [...document.querySelectorAll(".tab")];
-function selectTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; $(x.getAttribute("aria-controls")).hidden = !on; });
+function selectTab(t, dir) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; const pn = $(x.getAttribute("aria-controls")); pn.hidden = !on;
+    if (on && dir) { pn.classList.remove("in-next", "in-prev"); void pn.offsetWidth; pn.classList.add(dir === "next" ? "in-next" : "in-prev"); } });
   $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true"); }
-tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t)); t.tabIndex = i ? -1 : 0;
-  t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n); } }); });
+tabs.forEach((t, i) => { t.addEventListener("click", () => { const cur = tabs.findIndex(x => x.getAttribute("aria-selected") === "true"); selectTab(t, i > cur ? "next" : i < cur ? "prev" : null); }); t.tabIndex = i ? -1 : 0;
+  t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n, d > 0 ? "next" : "prev"); } }); });
+
+/* Im Bedienbereich nach links/rechts wischen wechselt den Bereich (Regler, Auswahlfelder und Listen ausgenommen) */
+(() => {
+  let sw = null;
+  document.querySelectorAll("#panel .pane").forEach(pane => {
+    pane.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch" || e.target.closest("input[type=range], select, input[type=number], .seg, .swatches")) { sw = null; return; }
+      sw = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
+    });
+    pane.addEventListener("pointerup", (e) => {
+      if (!sw || e.pointerId !== sw.id) return;
+      const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = performance.now() - sw.t; sw = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6 || dt > 800) return;
+      const i = tabs.findIndex(t => t.getAttribute("aria-selected") === "true"), n = i + (dx < 0 ? 1 : -1);
+      if (n < 0 || n >= tabs.length) return;
+      selectTab(tabs[n], dx < 0 ? "next" : "prev");
+    });
+    pane.addEventListener("pointercancel", () => { sw = null; });
+  });
+})();
 function openTab(id) { selectTab($(id)); if (narrowMQ.matches && $("panel").classList.contains("collapsed")) setSheet("normal"); }
 const narrowMQ = matchMedia("(max-width:899px)");
 function setSheet(mode) {   // "collapsed" | "normal" | "tall"

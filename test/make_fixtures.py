@@ -77,3 +77,27 @@ with zipfile.ZipFile(os.path.join(_d, "folders.zip"), "w", zipfile.ZIP_DEFLATED)
     z.write(os.path.join(_d, "cube.obj"), "Projekt/Halter/Halter.obj")
     z.write(os.path.join(_d, "cube_le.ply"), "Projekt/Schraube.ply")
     z.writestr("Projekt/liesmich.txt", "kein Modell")
+
+# Platte 40 × 40 × 10 mm mit Durchgangsbohrung ⌀ 8 mm in der Mitte (geschlossenes Netz) – zum Testen des Einrastens
+import math, struct
+def plate_hole(path, W=40.0, H=10.0, R=4.0, N=48):
+    tris = []
+    ang = [i * 2 * math.pi / N for i in range(N)]
+    circ = [(R * math.cos(a), R * math.sin(a)) for a in ang]
+    def sq(a):   # Strahl aus der Mitte schneidet das Quadrat
+        c, s = math.cos(a), math.sin(a); t = (W / 2) / max(abs(c), abs(s)); return (c * t, s * t)
+    box = [sq(a) for a in ang]
+    for i in range(N):
+        j = (i + 1) % N
+        c0, c1, b0, b1 = circ[i], circ[j], box[i], box[j]
+        for z, up in ((H, True), (0.0, False)):   # Ober- und Unterseite
+            q = [(c0[0], c0[1], z), (b0[0], b0[1], z), (b1[0], b1[1], z), (c1[0], c1[1], z)]
+            if up: tris += [(q[0], q[1], q[2]), (q[0], q[2], q[3])]
+            else: tris += [(q[0], q[2], q[1]), (q[0], q[3], q[2])]
+        # Außenwand und Bohrungswand
+        tris += [((b0[0], b0[1], 0), (b1[0], b1[1], 0), (b1[0], b1[1], H)), ((b0[0], b0[1], 0), (b1[0], b1[1], H), (b0[0], b0[1], H))]
+        tris += [((c0[0], c0[1], 0), (c1[0], c1[1], H), (c1[0], c1[1], 0)), ((c0[0], c0[1], 0), (c0[0], c0[1], H), (c1[0], c1[1], H))]
+    with open(path, "wb") as f:
+        f.write(b"plate with hole".ljust(80, b" ")); f.write(struct.pack("<I", len(tris)))
+        for t in tris: f.write(struct.pack("<3f", 0, 0, 0)); [f.write(struct.pack("<3f", *v)) for v in t]; f.write(b"\0\0")
+plate_hole(os.path.join(_d, "plate_hole.stl"))
