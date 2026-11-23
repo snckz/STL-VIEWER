@@ -96,10 +96,19 @@ button,input,select{font:inherit;color:inherit}
 .mode-text{display:grid;gap:1px;min-width:0}
 .mode-text b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mode-text small{font-size:12px;color:var(--muted);font-family:var(--font-mono);line-height:1.35}
-.modebar .btn{flex:none;min-height:38px;font-family:var(--font-body);font-size:13px}
+.modebar .btn{flex:none;min-height:48px;font-family:var(--font-body);font-size:13px;padding:0 12px}
+.modebar{left:12px;right:84px;max-width:calc(100% - 96px)}
+.mode-text{flex:1 1 auto}
+.mode-text small{font-family:var(--font-body);font-variant-numeric:tabular-nums}
+.modebar .btn.mini{font-family:var(--font-body);font-weight:700}
+.mode-text b{white-space:normal}
+@media (max-width:480px){ .modebar .mode-ico{display:none} .modebar{gap:8px;padding-left:12px} }
 .mode-kind{color:var(--accent)!important;font-family:var(--font-body)!important;font-weight:600}
-.snap{flex:none;width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--bg-2);color:var(--muted);display:grid;place-items:center;cursor:pointer}
-.snap svg{width:19px;height:19px}
+.snap{flex:none;width:58px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg-2);color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:color .15s, background .15s, border-color .15s}
+.snap svg{width:21px;height:21px}
+.snap span{font-size:9.5px;font-weight:700;letter-spacing:.01em}
+.snap[aria-pressed="false"] .snap-spark{opacity:0}
+.snap[aria-pressed="false"] .snap-dot{opacity:.35}
 .snap[aria-pressed="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--bg-2))}
 .mlabel{position:absolute;z-index:5;left:0;top:0;transform:translate(-50%,calc(-100% - 10px));pointer-events:none;padding:4px 10px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-mono);font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .selbar{--sel:#389aff;position:absolute;z-index:6;left:12px;right:12px;bottom:calc(14px + var(--sheet-overlap,0px));margin:0 auto;width:fit-content;max-width:calc(100% - 24px);display:flex;align-items:center;gap:4px;padding:6px 6px 6px 14px;border-radius:18px;
@@ -470,7 +479,7 @@ input[type=range]{accent-color:var(--accent);height:24px}
     <div class="modebar" id="modeBar" role="status" hidden>
       <span class="mode-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15.5 15.5 3l5.5 5.5L8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></svg></span>
       <span class="mode-text"><b id="measureMain">Zwei Punkte antippen</b><small id="measureSub">am Modell, um den Abstand zu messen</small><small class="mode-kind" id="measureKind" hidden></small></span>
-      <button class="snap" id="snapBtn" aria-pressed="true" title="Einrasten an Ecken, Kanten und Bohrungen" aria-label="Einrasten an Ecken, Kanten und Bohrungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v8a6 6 0 0 0 12 0V3"/><path d="M6 7h4M14 7h4"/></svg></button>
+      <button class="snap" id="snapBtn" aria-pressed="true" title="Einrasten an Ecken, Kanten und Bohrungen" aria-label="Einrasten an Ecken, Kanten und Bohrungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="13.5" r="6"/><circle class="snap-dot" cx="10.5" cy="13.5" r="1.7" fill="currentColor" stroke="none"/><path d="M10.5 4.5v3M10.5 19.5v3M1.5 13.5h3M16.5 13.5h3"/><path class="snap-spark" d="M19.5 1.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" fill="currentColor" stroke-width="1"/></svg><span>Einrasten</span></button>
       <button class="btn mini" id="measureDone">Fertig</button>
     </div>
     <div class="mlabel" id="measureLabel" hidden></div>
@@ -1605,14 +1614,14 @@ function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); 
    Zapfen (oder an deren Rand) die Mitte samt Durchmesser. */
 const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
 state.measure.snap = store.get("3dv-snap") !== "0";
-const MEASURE_START = ["Ersten Punkt antippen", "Ecken, Kanten und Bohrungen rasten ein", ""];
+const MEASURE_START = ["Punkt antippen", "Ecken, Kanten & Bohrungen rasten ein", ""];
 function setMeasure(on) {
   state.measure.on = on; state.measure.pts = []; $("measureLabel").hidden = true;
   $("measureBtn").setAttribute("aria-pressed", String(on)); $("modeBar").hidden = !on;
   if (on) { finishMove(); closeViewMenu(); hideHint(); setMeasureText(...measureStartText()); }
   updatePartsUI(); state.dirty = true;
 }
-const measureStartText = () => state.measure.snap ? MEASURE_START : ["Ersten Punkt antippen", "direkt auf dem Modell", ""];
+const measureStartText = () => state.measure.snap ? MEASURE_START : ["Punkt antippen", "genau dort, wo du tippst", ""];
 function setMeasureText(main, sub, kind) { $("measureMain").textContent = main; $("measureSub").textContent = sub; const k = $("measureKind"); k.textContent = kind || ""; k.hidden = !kind; }
 function clearMeasure() { if (!state.measure.pts.length) return; state.measure.pts = []; $("measureLabel").hidden = true; if (state.measure.on) setMeasureText(...measureStartText()); state.dirty = true; }
 const KIND = { free: "Fläche", corner: "Ecke", edge: "Kante", hole: "Bohrung", pin: "Zapfen" };
@@ -1639,7 +1648,10 @@ $("snapBtn").setAttribute("aria-pressed", String(state.measure.snap));
 $("snapBtn").addEventListener("click", () => {
   state.measure.snap = !state.measure.snap; store.set("3dv-snap", state.measure.snap ? "1" : "0");
   $("snapBtn").setAttribute("aria-pressed", String(state.measure.snap));
-  showToast(state.measure.snap ? "Einrasten an: Ecken, Kanten und Bohrungen werden exakt getroffen." : "Einrasten aus: Es zählt genau der angetippte Punkt.", "info");
+  if (store.get("3dv-tip-snap") !== "1") {   // Erklärung nur beim ersten Umschalten
+    store.set("3dv-tip-snap", "1");
+    showToast(state.measure.snap ? "Einrasten an: Ecken, Kanten und Bohrungen werden exakt getroffen." : "Einrasten aus: Es zählt genau der angetippte Punkt. Nochmal tippen schaltet es wieder ein.", "info");
+  }
   if (!state.measure.pts.length) setMeasureText(...measureStartText());
 });
 

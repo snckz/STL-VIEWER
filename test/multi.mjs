@@ -52,11 +52,11 @@ const dragBy = async (dy) => p.evaluate(async (dy) => {
 }, dy);
 await p.evaluate(() => { toast.hidden = true; }); await p.click("#tab-print");
 const h0 = await h();
-await dragBy(-250); await p.waitForTimeout(400); const h1 = await h();
+await dragBy(-250); await p.waitForTimeout(800); const h1 = await h();
 check("Griff nach oben: Leiste groß (so hoch wie der Inhalt)", h1.t && h1.h > h0.h + 80, [h0, h1]);
-await dragBy(600); await p.waitForTimeout(400); const h2 = await h();
+await dragBy(600); await p.waitForTimeout(800); const h2 = await h();
 check("Griff ganz nach unten: eingeklappt", h2.c && h2.h <= 80, h2);
-await dragBy(-120); await p.waitForTimeout(400); const h3 = await h();
+await dragBy(-120); await p.waitForTimeout(800); const h3 = await h();
 check("kurz nach oben: wieder normal", !h3.c && !h3.t && Math.abs(h3.h - h3.app * 0.46) < 30, h3);
 await p.click("#tab-look");
 check("Tabs funktionieren weiter", await p.evaluate(() => !document.getElementById("pane-look").hidden), null);

@@ -51,7 +51,11 @@ await p.click("#snapBtn"); await V(() => toast.hidden = true);
 await p.waitForTimeout(400); c = await scr([19.2, -19.0, 10]); await tap(c[0], c[1]); await p.waitForTimeout(100);
 q = await pts();
 check("Einrasten aus: angetippter Punkt", q.length === 1 && q[0].kind === "free" && q[0].p.join() !== "20,-20,10", q);
-await p.click("#snapBtn"); await p.click("#measureDone");
+await p.click("#snapBtn"); await p.waitForTimeout(100);
+check("Einrasten-Hinweis kein zweites Mal", await V(() => toast.hidden), null);
+check("Knopf zeigt Zustand an", await V(() => snapBtn.getAttribute("aria-pressed") === "true" && snapBtn.textContent.includes("Einrasten")), null);
+if (shots) { await p.waitForTimeout(150); await p.screenshot({ path: shots + "/52_snapbtn.png", clip: { x: 0, y: 40, width: 412, height: 140 } }); }
+await p.click("#measureDone");
 
 // --- Wischen zwischen den Bereichen
 const swipe = (sel, dx) => V(([sel, dx]) => { const el = document.querySelector(sel), r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + 30;
