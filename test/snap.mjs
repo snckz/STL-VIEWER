@@ -82,6 +82,19 @@ check("Nach dem Wechsel keine Reste von Verschiebungen", await V(() => !document
 check("Nachbarbereiche vorbereitet, aber inaktiv", await V(() => { const sides = [...document.querySelectorAll(".pane.is-side")]; return sides.length === 2 && sides.every(x => x.inert && x.getAttribute("aria-hidden") === "true"); }), null);
 await p.click("#tab-model");
 
+// --- Review-Fälle: Tipp während des Einrastens, Fenster schnell zu und wieder auf
+await V(async () => { const el = document.querySelector("#pane-model .dims"), r = el.getBoundingClientRect(), x = r.left + 150, y = r.top + 20;
+  const fire = (type, xx) => { const t = new Touch({ identifier: 9, target: el, clientX: xx, clientY: y }); el.dispatchEvent(new TouchEvent(type, { touches: type === "touchend" ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); };
+  fire("touchstart", x); for (let i = 1; i <= 6; i++) { await new Promise(r => setTimeout(r, 16)); fire("touchmove", x - 15 * i); } fire("touchend", x - 90);
+  document.getElementById("tab-model").click(); });
+await p.waitForTimeout(700);
+check("Tipp während des Einrastens: Leiste und Bereich stimmen überein", await V(() => document.querySelector(".tab[aria-selected=true]").id === "tab-model" && !document.getElementById("pane-model").classList.contains("is-side") && !document.getElementById("pane-model").hidden), await cur());
+await p.click("#exportBtn"); await p.waitForTimeout(400);
+await V(() => { document.getElementById("expClose").click(); document.getElementById("exportBtn").click(); });
+await p.waitForTimeout(400);
+check("Export schnell zu und wieder auf: bleibt offen", await V(() => !expBackdrop.hidden && !expBackdrop.classList.contains("is-closing")), null);
+await p.click("#expClose"); await p.waitForTimeout(300);
+
 // --- Wischen zum Löschen in der Teile-Liste
 await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/cube.obj", "test/tall.stl"]); await p.waitForTimeout(700);
 check("Teile-Hinweis beim ersten Mal", await V(() => !toast.hidden && /Tippe ein Teil an/.test(toastText.textContent)), null);
@@ -118,6 +131,11 @@ check("Teile-Hinweis kein zweites Mal", await V(() => toast.hidden || !/Tippe ei
 await V(() => document.getElementById("gl").dispatchEvent(new PointerEvent("pointerdown", { pointerId: 9, clientX: 50, clientY: 300, bubbles: true, pointerType: "touch" })));
 await p.reload(); await p.waitForTimeout(500);
 check("Nach Neustart kein Gesten-Hinweis", await V(() => hint.classList.contains("gone")), null);
+
+// --- 320 px breit (z. B. iPhone SE mit vergrößerter Anzeige): „Bearbeiten“ ist nicht breiter als der Bildschirm und blättert
+const small = await (await b.newContext({ ...devices["iPhone SE"], viewport: { width: 320, height: 568 } })).newPage();
+await small.goto(url); await small.waitForTimeout(400); await small.click("#tab-edit");
+check("320 px: kein waagrechtes Scrollen im Bereich", await small.evaluate(() => { const pn = document.getElementById("pane-edit"); return pn.scrollWidth <= pn.clientWidth + 1; }), await small.evaluate(() => [document.getElementById("pane-edit").scrollWidth, document.getElementById("pane-edit").clientWidth]));
 
 check("keine JS-Fehler", errs.length === 0, errs);
 await b.close();

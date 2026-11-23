@@ -152,6 +152,9 @@ button,input,select{font:inherit;color:inherit}
 .pane{overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 18px;display:grid;gap:16px;align-content:start}
 .pane[hidden]{display:none!important}
 /* Bereiche blättern (Paket: Hauptseiten blättern) */
+.pane{overflow-x:hidden;touch-action:pan-y}
+.quick .btn{min-width:0;white-space:normal;text-align:center;line-height:1.2}
+@media (max-width:360px){ .rot-row{grid-template-columns:24px minmax(0,1fr) 54px auto;gap:8px} .rot-row .btn.mini{padding:0 8px} }
 .pane-pager{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow-x:clip;overflow-y:clip;touch-action:pan-y}
 .pane-track{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .pane.is-side{position:absolute;top:0;left:calc(100% + 24px);width:100%;height:100%;pointer-events:none}
@@ -342,8 +345,8 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .sheet-grab{flex:none;position:relative;width:44px;height:5px;margin:-12px auto -4px;border-radius:999px;background:rgba(255,255,255,.22)}
 .sheet-grab::before{content:"";position:absolute;inset:-10px -50vw -2px}
 .sheet-grab{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.upd.is-dragging{will-change:transform;animation:none}
-.upd.is-settling{transition:transform .26s cubic-bezier(.2,.9,.25,1);animation:none}
+.upd.is-dragging{will-change:transform}
+.upd.is-settling{transition:transform .26s cubic-bezier(.2,.9,.25,1)}
 .upd-backdrop.is-closing{animation:winFadeOut .18s ease-in forwards}
 .upd-backdrop.is-closing .upd{animation:winSink .18s ease-in forwards}
 @keyframes winFadeOut{to{opacity:0}}
@@ -1893,12 +1896,14 @@ function combineBlocks(blocks, pack) {
 }
 /* Fertiges Netz übernehmen: analysieren, hochladen, Ansicht einpassen.
    opt: keepRot (Drehwinkel der Teile behalten), keepPlace (nicht neu zentrieren), keepView (Kamera bleibt), sel (Auswahl danach) */
+let partUid = 0;
 function setMesh(pos, parts, keepScale, opt = {}) {
   if (!opt.keepPlace) placeOnBed(pos);
   const fmts = [...new Set(parts.map(p => p.fmt))];
   const single = parts.length === 1;
   const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
     single ? parts[0].name : parts.length + " Teile", parts.reduce((n, p) => n + (p.size || 0), 0));
+  for (const pt of parts) if (!pt.uid) pt.uid = ++partUid;   // feste Kennung je Teil (überlebt Kopieren der Teile-Liste)
   mesh.parts = parts; state.sel = -1; state.dragOff = null; if (opt.demo) mesh.demo = true;
   stats(mesh); initOrientation(mesh, opt.keepRot);
   const old = state.mesh;
@@ -2003,7 +2008,7 @@ function duplicatePart() {
   const o = m.pos.length, src = m.pos, [ox, oy] = off || [0, 0];
   for (let i = 0; i < len; i += 3) { pos[o + i] = src[pt.start + i] + ox; pos[o + i + 1] = src[pt.start + i + 1] + oy; pos[o + i + 2] = src[pt.start + i + 2]; }
   const parts = m.parts.map(p => ({ ...p }));
-  parts.push({ ...pt, name: copyName(pt.name, parts), start: o, end: o + len, rot: pt.rot.slice(), base: pt.base.slice(), R: pt.R.slice() });
+  parts.push({ ...pt, uid: 0, name: copyName(pt.name, parts), start: o, end: o + len, rot: pt.rot.slice(), base: pt.base.slice(), R: pt.R.slice() });
   const wasDemo = !!m.demo;
   setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: !!off, sel: parts.length - 1, demo: wasDemo });
   if (!off) arrangeParts(true);
@@ -2127,7 +2132,7 @@ function syncZip() {
 }
 function closeZip(result) {
   if (!zipPick) return; const { resolve, files } = zipPick; zipPick = null;
-  G.closeSheet($("zipBackdrop"), () => { if (!zipPick) $("zipTree").textContent = ""; });
+  G.closeSheet($("zipBackdrop"), () => { if (!zipPick) $("zipTree").textContent = ""; });   // nicht leeren, wenn inzwischen eine neue Auswahl offen ist
   resolve(result ? files.filter(f => !f.loaded && f.box.checked).map(f => f.path) : null);
 }
 $("zipAll").addEventListener("change", (e) => { if (!zipPick) return; zipPick.files.forEach(f => { if (!f.loaded) f.box.checked = e.target.checked; }); syncZip(); });
@@ -2180,7 +2185,9 @@ function updateInfo() {
   const multi = m.parts && m.parts.length > 1; $("partsBox").hidden = !multi; $("addBtn").hidden = !!m.demo;
   if (multi) {
     $("partsTitle").textContent = "Auf der Platte · " + m.parts.length + " Teile";
-    const ul = $("partsList"); partRowDetach.forEach(f => f()); partRowDetach = []; ul.textContent = "";
+    const ul = $("partsList"), oldRows = partRowDetach; partRowDetach = []; oldRows.forEach(f => f());
+    if (state.mesh !== m) return;   // ein laufendes Löschen hat die Platte inzwischen geändert – der innere Aufruf hat die Liste schon gebaut
+    ul.textContent = "";
     m.parts.forEach((p, i) => {
       const li = document.createElement("li"), c = document.createElement("div"), n = document.createElement("span"), meta = document.createElement("span"), b = document.createElement("button"), del = document.createElement("button");
       li.className = "swipe-row"; c.className = "swipe-content";
@@ -2191,7 +2198,8 @@ function updateInfo() {
       del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
       c.addEventListener("click", (e) => { if (e.target === b) return; selectPart(i); focusPart(i); });
       c.append(n, meta, b); li.append(c, del); ul.appendChild(li);
-      partRowDetach.push(G.attachSwipeRow(li, { content: c, action: del, onDelete: () => removePart(i) }));
+      // Beim Löschen das Teil über seine Kennung neu suchen – der Index kann sich inzwischen geändert haben
+      partRowDetach.push(G.attachSwipeRow(li, { content: c, action: del, onDelete: () => { const k = state.mesh && state.mesh.parts ? state.mesh.parts.findIndex(x => x.uid === p.uid) : -1; if (k >= 0) removePart(k); } }));
     });
   }
   updatePartsUI(); updateZipRow();
@@ -2396,9 +2404,10 @@ const G = (() => {
     if (reducedMotion()) { backdrop.hidden = true; resetSheetDrag(root); if (done) done(); return; }
     if (backdrop.classList.contains("is-closing")) return;
     backdrop.classList.add("is-closing");
-    window.setTimeout(() => { backdrop.hidden = true; backdrop.classList.remove("is-closing"); resetSheetDrag(root); if (done) done(); }, CLOSE_MS);
+    backdrop._closeTimer = window.setTimeout(() => { backdrop._closeTimer = 0; backdrop.hidden = true; backdrop.classList.remove("is-closing"); resetSheetDrag(root); if (done) done(); }, CLOSE_MS);
   }
-  function openSheet(backdrop) { backdrop.classList.remove("is-closing"); resetSheetDrag(backdrop.querySelector(".upd")); backdrop.hidden = false; }
+  // Öffnen bricht ein laufendes Schließen ab (sonst blendet dessen Timer das neue Fenster gleich wieder aus)
+  function openSheet(backdrop) { window.clearTimeout(backdrop._closeTimer); backdrop._closeTimer = 0; backdrop.classList.remove("is-closing"); resetSheetDrag(backdrop.querySelector(".upd")); backdrop.hidden = false; }
 
   /* --- swipeRow.ts --- */
   const ACTION_WIDTH = 84, R_SLOP = 8, FULL = 0.6, FULL_MIN = 160, R_FLICK = 0.35, R_VELOCITY_MS = 100, SNAP_MS = 260, R_EASE = "cubic-bezier(.2, .8, .2, 1)", R_CLICK_GUARD_MS = 400;
@@ -2539,7 +2548,9 @@ function layoutPanes() {
   });
 }
 function markTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; }); }
+let tabSwipe = null;
 function selectTab(t, dir) {
+  if (tabSwipe) tabSwipe.finish();   // laufendes Einrasten zuerst abschließen (Paket: finish)
   tabIndex = tabs.indexOf(t); markTab(t); layoutPanes();
   const pn = $(t.getAttribute("aria-controls"));
   if (dir) { pn.classList.remove("in-next", "in-prev"); void pn.offsetWidth; pn.classList.add(dir === "next" ? "in-next" : "in-prev"); }
@@ -2551,7 +2562,7 @@ layoutPanes();
 // Blättern per Wischen (Paket: TabPager + categorySwipe)
 (() => {
   const pager = document.querySelector(".pane-pager"), track = pager.querySelector(".pane-track");
-  G.attachCategorySwipe(pager, (step) => { const n = tabs[tabIndex + step]; if (n) selectTab(n); }, {
+  tabSwipe = G.attachCategorySwipe(pager, (step) => { const n = tabs[tabIndex + step]; if (n) selectTab(n); }, {
     pager: { track: () => track, side: (step) => track.querySelector(':scope > .pane.is-side[data-dir="' + step + '"]') },
     canStep: (step) => !!tabs[tabIndex + step],
     onSettle: (step) => { const n = tabs[tabIndex + step]; if (n) markTab(n); },   // Leiste sofort umschalten
@@ -3320,7 +3331,7 @@ function resetExport() {
   $("expSub").textContent = "Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.";
   ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = false));
 }
-function closeExport() { G.closeSheet($("expBackdrop"), resetExport); }
+function closeExport() { G.closeSheet($("expBackdrop"), () => { if ($("expBackdrop").hidden) resetExport(); }); }
 async function makeExport(kind) {
   const m = state.mesh; if (!m) return;
   ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = true));
