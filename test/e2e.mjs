@@ -12,7 +12,7 @@ await page.goto("file://" + root + "/dist/index.html");
 await page.waitForTimeout(800);
 const r = {};
 const info = async () => page.evaluate(() => ({ name: document.getElementById("fileName").textContent, x: dimX.textContent, y: dimY.textContent, z: dimZ.textContent,
-  vol: vol.textContent, area: area.textContent, tris: tris.textContent, verts: verts.textContent, mf: manifold.textContent, fit: document.getElementById("fit-chip").textContent,
+  vol: vol.textContent, area: area.textContent, tris: tris.textContent, verts: verts.textContent, mf: manifold.textContent, fit: document.querySelector("#checks .check b").textContent,
   w: estWeight.textContent, fil: estLen.textContent, time: estTime.textContent, toast: toast.hidden ? null : toastText.textContent }));
 r.demo = await info();
 await page.screenshot({ path: shots + "/01_demo.png" });
@@ -31,7 +31,7 @@ await page.click("#toastClose").catch(() => {});
 // Zurück zum Würfel, Farbe, Skalierung, Rotation, Zoom
 await page.setInputFiles("#fileInput", root + "/test/cube20.stl"); await page.waitForTimeout(300);
 const d0 = await page.evaluate(() => __viewer.state.cam.dist);
-await page.click("#zoomIn"); const d1 = await page.evaluate(() => __viewer.state.cam.dist);
+await page.click("#viewMenuBtn"); await page.click("#zoomIn"); const d1 = await page.evaluate(() => __viewer.state.cam.dist);
 await page.click("#zoomOut"); await page.click("#zoomOut"); const d2 = await page.evaluate(() => __viewer.state.cam.dist);
 r.zoom = { d0, d1, d2, ok: d1 < d0 && d2 > d1 };
 // Wischgeste (Touch-Drehen) über Pointer-Events simulieren
@@ -44,13 +44,13 @@ const pd0 = await page.evaluate(() => __viewer.state.cam.dist);
 await page.evaluate(() => { const c = document.getElementById("gl"); const ev = (t, id, x, y) => c.dispatchEvent(new PointerEvent(t, { pointerId: id, clientX: x, clientY: y, bubbles: true, pointerType: "touch" }));
   ev("pointerdown", 1, 180, 300); ev("pointerdown", 2, 220, 300); for (let i = 1; i <= 8; i++) { ev("pointermove", 1, 180 - i * 10, 300); ev("pointermove", 2, 220 + i * 10, 300); } ev("pointerup", 1, 100, 300); ev("pointerup", 2, 300, 300); });
 r.pinch = { pd0, pd1: await page.evaluate(() => __viewer.state.cam.dist) };
-await page.click("#fit"); await page.click("#tab-color"); await page.click('.sw[aria-label="Blau"]');
+await page.click("#fit"); await page.click("#tab-look"); await page.click('.sw[aria-label="Blau"]');
 r.color = await page.evaluate(() => __viewer.state.color.map(v => +v.toFixed(3)));
 await page.screenshot({ path: shots + "/04_color.png" });
-await page.click("#tab-view"); await page.check('#optWire', {force:true}); await page.check('#optOverhang', {force:true}); await page.click('[data-view="front"]');
+await page.click("#tab-look"); await page.check('#optWire', {force:true}); await page.check('#optOverhang', {force:true}); await page.click("#viewMenuBtn"); await page.click('[data-view="front"]');
 r.switches = await page.evaluate(() => [__viewer.state.wire, __viewer.state.overhang]);
 await page.screenshot({ path: shots + "/05_view.png" });
-await page.click("#tab-rotate"); await page.click('[data-scale="200"]');
+await page.click("#tab-edit"); await page.click('[data-scale="200"]');
 r.scaled = await info();
 await page.click('[data-rot90="x"]'); r.rotX = await info();
 await page.click("#tab-print"); await page.selectOption("#printer", "bambuMini");

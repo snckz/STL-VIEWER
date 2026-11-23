@@ -21,7 +21,7 @@
 
 Voraussetzung: Android 8.0 oder neuer mit OpenGL ES 3.0 (praktisch alle Geräte ab 2017).
 
-Ab Version 1.0.11 meldet die App neue Versionen selbst: Beim Start erscheint ein Hinweis mit den Neuerungen, „Jetzt aktualisieren“ lädt das Update und öffnet die Installation. Unter **Info** kannst du auch selbst nach Updates suchen.
+Ab Version 1.0.11 meldet die App neue Versionen selbst: Beim Start erscheint ein Hinweis mit den Neuerungen, „Jetzt aktualisieren“ lädt das Update und öffnet die Installation. Unter **Modell** kannst du auch selbst nach Updates suchen.
 
 > Google Play Protect kann bei Apps außerhalb des Play Store nachfragen. Das ist normal für frei verteilte APKs.
 
@@ -33,7 +33,7 @@ Ab Version 1.0.11 meldet die App neue Versionen selbst: Beim Start erscheint ein
 2. **Zum Home-Bildschirm** wählen und **Hinzufügen** tippen.
 3. Der 3D Viewer startet ab jetzt vom Home-Bildschirm wie eine App – im Vollbild und auch ohne Internet.
 
-Dateien öffnest du über **Öffnen** in der App (Dateien, iCloud Drive, Downloads). Das Kamera-Symbol öffnet das Teilen-Menü, dort **Bild sichern** wählen. Voraussetzung: iOS/iPadOS 16.4 oder neuer.
+Dateien öffnest du über **Öffnen** in der App (Dateien, iCloud Drive, Downloads). Über **Export** speicherst du STL/3MF-Dateien oder ein Bild der Ansicht („In Dateien sichern“ bzw. „Bild sichern“). Voraussetzung: iOS/iPadOS 16.4 oder neuer.
 
 > Warum keine App aus dem App Store? Apple erlaubt Apps außerhalb des App Store nur mit kostenpflichtigem Entwicklerkonto. Die Web-App bietet dieselben Funktionen und braucht das nicht. Updates kommen automatisch beim nächsten Start mit Internet.
 
@@ -41,16 +41,21 @@ Die Web-App funktioniert genauso am Computer (Chrome/Edge: Symbol „Installiere
 
 ## Funktionen
 
-- **Ansehen:** ein Finger dreht, zwei Finger zoomen und verschieben, Doppeltipp passt das Modell ein. Ansichten von vorne, oben, seitlich und schräg, Auto-Drehen.
+Die Bedienung ist in vier Bereiche aufgeteilt – **Modell**, **Bearbeiten**, **Druck** und **Aussehen** – dazu rechts die Werkzeugleiste mit **Einpassen**, **Ansicht**, **Messen** und **Export**.
+
+- **Ansehen:** ein Finger dreht, zwei Finger zoomen und verschieben, Doppeltipp passt das Modell ein. Unter **Ansicht**: vorne, oben, seitlich und schräg, Zoom-Knöpfe, Auto-Drehen.
+- **Messen:** zwei Punkte auf dem Modell antippen – Abstand in mm plus Abstand je Achse.
 - **Einfärben:** 14 Filamentfarben oder eine eigene Farbe, Glanz-Regler, drei Hintergründe.
 - **Infos:** Maße X/Y/Z in mm, Volumen, Oberfläche, Anzahl Dreiecke und Punkte, Format, Dateigröße.
 - **Netzprüfung:** zeigt, ob das Modell geschlossen ist oder offene Kanten und Mehrfachkanten hat.
 - **Drehen:** Modell frei um X, Y und Z drehen (Regler oder Gradzahl eintippen), +90°-Knöpfe, „Flach hinlegen“ legt die größte ebene Fläche aufs Bett. Größe ändern, auch Zoll → mm.
 - **Druckvorschau:** geschätzte Druckzeit, Material, Kosten und Schichtanzahl für über 60 Drucker – FDM (Bambu Lab, Prusa, Creality, Elegoo, Anycubic, QIDI, Sovol, Flashforge, Snapmaker, Voron) und Resin (Anycubic Photon, Elegoo Mars/Saturn/Jupiter, Phrozen, Creality Halot, UniFormation, Formlabs, Prusa SL1S). FDM: Schichthöhe, Füllung, Wände, Stützen, Filament. Resin: Harzart, Schichthöhe, Stützen, hohl drucken, Harzverbrauch in ml. Ein Schichtregler zeigt, wie weit der Druck nach welcher Zeit ist. Warnung, wenn das Modell nicht aufs Bett passt.
+- **Druck-Check:** prüft vor dem Slicen, ob das Modell aufs Bett passt, Löcher im Netz hat, Stützen braucht, genug Auflagefläche hat oder kippen kann und ob Teile schweben – mit Ein-Tipp-Lösung wie „Passend verkleinern“, „Stützen an“, „Flach hinlegen“ oder „Anordnen“.
+- **Export:** die Platte als STL (alle Teile in einer Datei) oder 3MF (jedes Teil einzeln, für Bambu Studio, OrcaSlicer, PrusaSlicer) – mit Drehung, Position und Größe. Android: teilen oder „Speichern unter …“; iPhone: Teilen-Menü bzw. „In Dateien sichern“. Außerdem ein Bild der Ansicht.
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/3D-Viewer`).
 
-- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet; unter **Info** lassen sich einzelne entfernen. Ein Teil antippen wählt es aus (blau markiert), Doppeltippen zoomt darauf; im Tab **Drehen** wird dann nur dieses Teil gedreht.
+- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet. Ein Teil antippen wählt es aus (blau markiert), Doppeltippen zoomt darauf. Ein ausgewähltes Teil lässt sich mit dem Finger verschieben, kopieren, entfernen oder unter **Bearbeiten** einzeln drehen. **Anordnen** verteilt alle Teile platzsparend auf dem Bett.
 
 Unterstützte Formate:
 
@@ -110,6 +115,7 @@ node web/build.mjs
 node test/formats.mjs
 node test/multi.mjs
 node test/select.mjs
+node test/edit.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 

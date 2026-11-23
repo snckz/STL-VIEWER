@@ -62,6 +62,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
 
     private static final int REQ_PICK_FILE = 41;
+    private static final int REQ_SAVE_FILE = 42;
     private static final String HOST = "appassets.androidplatform.net";
     private static final String BASE = "https://" + HOST + "/";
     private static final String SHARED_PREFIX = "/shared/";
@@ -72,6 +73,9 @@ public class MainActivity extends Activity {
     private boolean pageReady = false;
     /** Geteilte Dateien, die der Viewer per fetch() abholen darf (id → Uri). */
     private final Map<String, Uri> sharedFiles = Collections.synchronizedMap(new HashMap<>());
+
+    /** Zuletzt exportierte Datei im Cache (nur eine gleichzeitig). */
+    private volatile File exportFile;
 
     private long updateDownloadId = -1;
     private String updateFallbackUrl = null;
@@ -279,6 +283,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_SAVE_FILE) { onSaveResult(resultCode, data); return; }
         if (requestCode != REQ_PICK_FILE || pendingChooser == null) return;
         Uri[] result = null;
         if (resultCode == RESULT_OK && data != null) {
@@ -306,6 +311,38 @@ public class MainActivity extends Activity {
         io.shutdownNow();
         if (webView != null) webView.destroy();
         super.onDestroy();
+    }
+
+    // ---------------- Export ----------------
+
+    private static String safeFileName(String name) {
+        String n = name == null ? "" : name.replaceAll("[^\\w.\\-]", "_").replaceAll("^\\.+", "");
+        if (n.isEmpty()) n = "modell.stl";
+        return n.length() > 100 ? n.substring(n.length() - 100) : n;
+    }
+
+    /** Gespeicherten Export per „Speichern unter“ (Speicherzugriffs-Framework) an den gewählten Ort kopieren. */
+    private void onSaveResult(int resultCode, Intent data) {
+        final File src = exportFile;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null || src == null) {
+            js("window.exportSaved && window.exportSaved(null)");
+            return;
+        }
+        final Uri target = data.getData();
+        io.execute(() -> {
+            boolean ok = false;
+            try (InputStream in = new java.io.FileInputStream(src);
+                 OutputStream out = getContentResolver().openOutputStream(target, "w")) {
+                if (out != null) {
+                    byte[] buf = new byte[256 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    ok = true;
+                }
+            } catch (Exception ignored) { }
+            final boolean done = ok;
+            main.post(() -> js("window.exportSaved && window.exportSaved(" + done + ")"));
+        });
     }
 
     // ---------------- Updates ----------------
@@ -409,6 +446,71 @@ public class MainActivity extends Activity {
         public void openReleasePage(String url) {
             if (url == null || !url.startsWith("https://github.com/")) return;
             main.post(() -> openInBrowser(url));
+        }
+
+        /** Neue Exportdatei im Cache anlegen (ältere werden entfernt). Rückgabe: Kennung für fileAppend/fileShare/fileSave. */
+        @JavascriptInterface
+        public String fileBegin(String name) {
+            try {
+                File dir = ExportProvider.exportDir(MainActivity.this);
+                if (!dir.isDirectory() && !dir.mkdirs()) return "";
+                File[] old = dir.listFiles();
+                if (old != null) for (File o : old) o.delete();
+                File f = new File(dir, safeFileName(name));
+                try (FileOutputStream out = new FileOutputStream(f)) { out.flush(); }
+                exportFile = f;
+                return f.getName();
+            } catch (Exception e) { return ""; }
+        }
+
+        /** Base64-Stück an die Exportdatei anhängen. */
+        @JavascriptInterface
+        public boolean fileAppend(String token, String base64) {
+            File f = exportFile;
+            if (f == null || token == null || !token.equals(f.getName()) || base64 == null) return false;
+            try (FileOutputStream out = new FileOutputStream(f, true)) {
+                out.write(Base64.decode(base64, Base64.DEFAULT));
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        /** Exportdatei über das Android-Teilen-Menü weitergeben. */
+        @JavascriptInterface
+        public void fileShare(String token, String mime) {
+            final File f = exportFile;
+            if (f == null || token == null || !token.equals(f.getName())) return;
+            main.post(() -> {
+                try {
+                    Uri u = ExportProvider.uriFor(f);
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
+                    send.putExtra(Intent.EXTRA_STREAM, u);
+                    send.putExtra(Intent.EXTRA_TITLE, f.getName());
+                    send.setClipData(ClipData.newRawUri(f.getName(), u));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, f.getName() + " teilen"));
+                } catch (Exception e) {
+                    toast("Teilen ist nicht möglich.");
+                }
+            });
+        }
+
+        /** „Speichern unter …“: Android fragt nach Ordner und Dateinamen (z. B. Downloads). */
+        @JavascriptInterface
+        public void fileSave(String token, String mime) {
+            final File f = exportFile;
+            if (f == null || token == null || !token.equals(f.getName())) return;
+            main.post(() -> {
+                try {
+                    Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
+                    i.putExtra(Intent.EXTRA_TITLE, f.getName());
+                    startActivityForResult(i, REQ_SAVE_FILE);
+                } catch (Exception e) {
+                    toast("Kein Dateimanager gefunden.");
+                }
+            });
         }
 
         @JavascriptInterface

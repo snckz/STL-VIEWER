@@ -77,5 +77,12 @@
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
+
+        <!-- Exportierte Dateien (STL/3MF) schreibgeschützt an andere Apps weitergeben -->
+        <provider
+            android:name=".ExportProvider"
+            android:authorities="at.modellblick.export"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

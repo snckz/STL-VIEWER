@@ -41,13 +41,13 @@ check("Doppeltippen: OBJ-Würfel ausgewählt und herangezoomt", cam.sel === 2 &&
 if (shots) await p.screenshot({ path: shots + "/26_focus.png" });
 // Teil drehen: nur der Zylinder liegt danach
 await p.evaluate(() => { toast.hidden = true; });
-await p.click("#tab-info"); await p.click("#partsList li:nth-child(2) .p-name"); await p.waitForTimeout(300);
+await p.click("#tab-model"); await p.click("#partsList li:nth-child(2) .p-name"); await p.waitForTimeout(300);
 const before = await p.evaluate(() => { const m = __viewer.state.mesh; return m.parts.map(pt => [pt.start, pt.end]); });
 const box = (i) => p.evaluate((i) => { const m = __viewer.state.mesh, pt = m.parts[i]; const mn = [1e9,1e9,1e9], mx = [-1e9,-1e9,-1e9];
   for (let k = pt.start; k < pt.end; k += 3) for (let j = 0; j < 3; j++) { mn[j] = Math.min(mn[j], m.pos[k+j]); mx[j] = Math.max(mx[j], m.pos[k+j]); }
   return { size: mx.map((v, j) => +(v - mn[j]).toFixed(2)), c: [(mn[0]+mx[0])/2, (mn[1]+mx[1])/2].map(v => +v.toFixed(2)), minZ: +mn[2].toFixed(3) }; }, i);
 const b0 = await box(0), b1 = await box(1), vol0 = await p.evaluate(() => vol.textContent);
-await p.click("#tab-rotate");
+await p.click("#tab-edit");
 check("Drehen-Tab zeigt das Ziel", await p.evaluate(() => !rotTarget.hidden && rotTargetName.textContent === "tall.stl" && !rotAll.hidden), null);
 await p.click('[data-rot90="y"]'); await p.waitForTimeout(300);
 const a0 = await box(0), a1 = await box(1);
@@ -72,7 +72,7 @@ const a4 = await box(1);
 check("Flach hinlegen: Zylinder auf Stirnfläche", a4.size[2] === 300, a4);
 // Ganze Platte wieder als Ziel
 await p.click("#rotAll"); await p.waitForTimeout(200);
-check("„Ganze Platte“ hebt Auswahl auf", await sel() === -1 && await p.evaluate(() => rotTargetName.textContent === "ganze Platte" && rotYOut.value === "0"), null);
+check("„Ganze Platte“ hebt Auswahl auf", await sel() === -1 && await p.evaluate(() => rotTargetName.textContent === "alle Teile zusammen" && rotYOut.value === "0"), null);
 await p.click('[data-rot90="z"]'); await p.waitForTimeout(300);
 check("Platte gedreht: Breite ↔ Tiefe", await p.evaluate(() => [dimX.textContent, dimY.textContent]).then(v => v[0] === "60,00"), await p.evaluate(() => [dimX.textContent, dimY.textContent]));
 // Einzelmodell: kein Auswahl-Modus

@@ -8,7 +8,7 @@ await p.goto("file://" + process.cwd() + "/dist/index.html"); await p.waitForTim
 const dims = () => p.evaluate(() => [dimX.textContent, dimY.textContent, dimZ.textContent, vol.textContent, estTime.textContent, estWeight.textContent]);
 const r = {}; let fails = 0; const check = (name, cond, got) => { if (!cond) { fails++; console.log("FEHLER", name, JSON.stringify(got)); } else console.log("ok   ", name); };
 await p.setInputFiles("#fileInput", "test/tall.stl"); await p.waitForTimeout(400);
-await p.click("#tab-rotate");
+await p.click("#tab-edit");
 await p.click('[data-rot90="y"]'); r.y90 = await dims();
 check("Y +90° legt Zylinder hin", r.y90[0] === "300,0" && r.y90[2] === "60,00", r.y90);
 await p.click("#rotReset"); r.reset = await dims();

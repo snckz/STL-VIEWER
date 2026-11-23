@@ -43,7 +43,7 @@ button,input,select{font:inherit;color:inherit}
 .brand svg{flex:none}
 .file{min-width:0;flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(8px)}
 .file-name{max-width:100%;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.file-meta{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.file-meta{max-width:100%;font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;white-space:nowrap;transition:background .15s, border-color .15s, transform .1s}
 .btn:hover{border-color:#4a5363}
 .btn:active{transform:scale(.97)}
@@ -51,40 +51,80 @@ button,input,select{font:inherit;color:inherit}
 .btn-primary:hover{background:#f5b45f;border-color:#f5b45f}
 .btn svg{width:18px;height:18px}
 
-/* Ansichts-Leiste */
-.tools{position:absolute;z-index:4;right:max(12px, calc(env(safe-area-inset-right,0px) + 8px));top:72px;display:flex;flex-direction:column;gap:6px}
-.tool{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(8px);display:grid;place-items:center;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:600;transition:border-color .15s, background .15s}
+/* Werkzeugleiste rechts: wenige, klar beschriftete Knöpfe */
+.tools{position:absolute;z-index:7;right:max(12px, calc(env(safe-area-inset-right,0px) + 8px));top:72px;display:flex;flex-direction:column;gap:8px}
+.tool{flex:none;width:58px;height:56px;border-radius:15px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--fg);box-shadow:0 6px 18px rgba(0,0,0,.22);transition:border-color .15s, background .15s, color .15s, transform .1s}
+.tool span{font-size:10.5px;font-weight:600;letter-spacing:.01em;color:var(--muted);transition:color .15s}
+.tool svg{width:21px;height:21px}
 .tool:hover{border-color:#4a5363}
-.tool[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.tool svg{width:20px;height:20px}
-.tools hr{border:0;height:1px;background:var(--line);margin:2px 6px}
-.tool{flex:none}
-@media (max-height:900px){ .tool{width:38px;height:38px} .tools{gap:5px} }
-/* Wenig Platz (kleine Handys): Knöpfe in mehrere Spalten von rechts nach links umbrechen – Zeilenzahl setzt das Skript */
-.tools.grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows), auto);direction:rtl;gap:5px}
+.tool:active{transform:scale(.95)}
+.tool[aria-pressed="true"],.tool[aria-expanded="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tool[aria-pressed="true"] span,.tool[aria-expanded="true"] span{color:var(--accent-ink)}
+@media (max-height:640px){ .tool{width:52px;height:50px} .tool span{font-size:10px} .tools{gap:6px} }
+/* Wenig Platz (Querformat): Knöpfe in mehrere Spalten von rechts nach links umbrechen – Zeilenzahl setzt das Skript */
+.tools.grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows), auto);direction:rtl;gap:6px}
 .tools.grid > *{direction:ltr}
-.tools.grid hr{display:none}
-@media (max-width:420px){ .tabs .tab{min-width:0;flex:1 1 0;padding:0 2px;font-size:13px} .tabs{padding:0 2px} .handle .collapse{width:34px;margin-right:2px} }
+.tool-wrap{position:relative}
+.pop{position:absolute;right:calc(100% + 10px);top:0;width:218px;padding:12px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:0 18px 44px rgba(0,0,0,.5);display:grid;gap:8px;animation:popIn .16s ease}
+.pop-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.pop-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pop-btn{min-height:42px;border-radius:11px;border:1px solid var(--line);background:var(--bg-2);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 10px;transition:border-color .15s, background .15s}
+.pop-btn:hover{border-color:#4a5363}
+.pop-btn svg{width:18px;height:18px}
+.pop-btn.wide{margin-top:4px}
+.pop-btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@keyframes popIn{from{opacity:0;transform:translateX(6px) scale(.98)}}
 
-.hint{position:absolute;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:66px;bottom:14px;width:fit-content;max-width:calc(100% - 82px);font-size:12px;line-height:1.4;color:var(--muted);background:color-mix(in srgb,var(--bg) 80%,transparent);padding:6px 12px;border-radius:10px;transition:opacity .4s}
+/* Hinweis-Leisten über der 3D-Ansicht */
+.modebar{position:absolute;z-index:6;top:66px;left:16px;right:86px;margin:0 auto;width:fit-content;max-width:calc(100% - 102px);display:flex;align-items:center;gap:12px;padding:8px 8px 8px 14px;border-radius:16px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);box-shadow:0 12px 30px rgba(0,0,0,.35);animation:barIn .2s ease}
+.mode-ico{color:var(--accent);display:grid;flex:none}
+.mode-ico svg{width:22px;height:22px}
+.mode-text{display:grid;gap:1px;min-width:0}
+.mode-text b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-text small{font-size:12px;color:var(--muted);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modebar .btn{flex:none;min-height:38px;font-family:var(--font-body);font-size:13px}
+.mlabel{position:absolute;z-index:5;left:0;top:0;transform:translate(-50%,calc(-100% - 10px));pointer-events:none;padding:4px 10px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-family:var(--font-mono);font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.selbar{--sel:#389aff;position:absolute;z-index:6;left:12px;right:12px;bottom:calc(14px + var(--sheet-overlap,0px));margin:0 auto;width:fit-content;max-width:calc(100% - 24px);display:flex;align-items:center;gap:4px;padding:6px 6px 6px 14px;border-radius:18px;
+  background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--sel) 50%,transparent);box-shadow:0 14px 34px rgba(0,0,0,.4);animation:barIn .2s ease}
+.sel-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--sel);box-shadow:0 0 0 4px color-mix(in srgb,var(--sel) 25%,transparent);margin-right:6px}
+.sel-text{display:grid;min-width:0;flex:1 1 auto;margin-right:4px}
+.sel-text b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.sel-text small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sel-btn{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:56px;height:48px;border-radius:12px;border:0;background:none;color:var(--fg);font-size:10.5px;font-weight:600;cursor:pointer;transition:background .15s}
+.sel-btn svg{width:20px;height:20px}
+.sel-btn:hover{background:var(--bg-2)}
+.sel-btn.danger{color:var(--bad)}
+.sel-close{flex:none;width:36px;height:36px;margin-left:2px;border-radius:50%;border:0;background:var(--bg-2);color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
+@keyframes barIn{from{opacity:0;transform:translateY(8px)}}
+@media (max-width:380px){ .sel-btn{width:48px} .sel-btn span{font-size:10px} .sel-text small{display:none} }
+
+.hint{position:absolute;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:86px;bottom:calc(14px + var(--sheet-overlap,0px));width:fit-content;max-width:calc(100% - 82px);font-size:12px;line-height:1.4;color:var(--muted);background:color-mix(in srgb,var(--bg) 80%,transparent);padding:6px 12px;border-radius:10px;transition:opacity .4s}
 .hint.gone{opacity:0;pointer-events:none}
 
 /* Panel */
 .panel{position:relative;z-index:6;background:var(--bg-2);border-top:1px solid var(--line);display:flex;flex-direction:column;max-height:46%;transition:max-height .25s ease;
   padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
-.panel.collapsed{max-height:52px}
+.panel.collapsed{max-height:calc(68px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.panel.collapsed .pane{visibility:hidden}
 .panel.dragging{transition:none}
 .panel.tall{max-height:85%}
 @media (max-width:899px){ .handle{touch-action:pan-x;cursor:grab} .panel.dragging .handle{cursor:grabbing} }
-.handle{display:flex;align-items:center;gap:4px;padding:6px max(10px, 0px) 0;}
-.tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 6px}
-.tab{flex:1;min-width:56px;padding:0 4px;height:40px;border:0;background:none;border-radius:8px;color:var(--muted);font-weight:600;cursor:pointer;position:relative}
-.tab[aria-selected="true"]{color:var(--fg)}
-.tab[aria-selected="true"]::after{content:"";position:absolute;left:30%;right:30%;bottom:2px;height:3px;border-radius:3px;background:var(--accent)}
-.collapse{width:40px;height:40px;border:0;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;margin-right:6px}
+.handle{display:flex;align-items:center;gap:4px;padding:8px 8px 0;position:relative}
+.tabs{display:flex;gap:4px;flex:1;min-width:0}
+.tab{flex:1 1 0;min-width:0;height:56px;border:0;background:none;border-radius:13px;color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 2px;transition:color .15s, background .15s}
+.tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab svg{width:22px;height:22px}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.tab-dot{position:absolute;top:8px;left:calc(50% + 9px);width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--bg-2)}
+.collapse{flex:none;width:40px;height:40px;border:0;border-radius:10px;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center}
 .collapse svg{transition:transform .25s}
 .panel.collapsed .collapse svg{transform:rotate(180deg)}
-.pane{overflow-y:auto;padding:12px 16px 16px;display:grid;gap:14px;align-content:start}
+@media (max-width:400px){ .tab{font-size:11px;gap:3px} .tab svg{width:20px;height:20px} .tabs{gap:2px} .collapse{width:30px} .handle{padding-left:6px;padding-right:4px} }
+.pane{overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 18px;display:grid;gap:16px;align-content:start}
 .pane[hidden]{display:none!important}
 
 .label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -99,7 +139,7 @@ button,input,select{font:inherit;color:inherit}
 .kv dt,.kv dd{margin:0;padding:9px 0;border-bottom:1px solid var(--line)}
 .kv dt{color:var(--muted)}
 .kv dd{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:12px;font-family:var(--font-body);font-weight:600}
+.chip{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:12px;font-family:var(--font-body);font-weight:600}
 .chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .chip.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
 .chip.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
@@ -129,6 +169,65 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 select,.num{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 10px;width:100%}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid2:has(> [hidden]){grid-template-columns:1fr}
+.grid2 > .wide{grid-column:1 / -1}
+
+/* Abschnitte */
+.sec{display:grid;gap:10px;padding-top:16px;border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent)}
+.pane > .sec:first-child,.pane > [hidden] + .sec,.pane > .target + .sec,.pane > .tip + .sec,.pane > .estimate + .sec{border-top:0;padding-top:0}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:22px}
+.sec-head output{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-align:right}
+.sec-title{margin:0;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.sec-title label{cursor:inherit}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;padding:6px 2px;border-radius:8px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fact{background:var(--surface);border-radius:12px;padding:10px 12px;display:grid;gap:5px;align-content:start;min-width:0}
+.fact small{color:var(--muted);font-size:11px}
+.fact > span{font-family:var(--font-mono);font-size:16px;font-variant-numeric:tabular-nums}
+.fact .chip{font-size:12px}
+.more{border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent)}
+.more summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:48px;font-weight:600;color:var(--muted)}
+.more summary::-webkit-details-marker{display:none}
+.more summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);transition:transform .2s}
+.more[open] summary::after{transform:rotate(225deg) translateY(-1px)}
+.more[open] summary{color:var(--fg)}
+.more .kv{margin-bottom:10px}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quick .btn{min-height:46px}
+.quick.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.quick.three .btn{flex-direction:column;gap:5px;min-height:64px;padding:0 6px;font-size:12.5px}
+.quick.three .btn svg{width:20px;height:20px}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none;border-color:var(--line)}
+.target{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.target.on{background:color-mix(in srgb,#389aff 12%,var(--surface));border-color:color-mix(in srgb,#389aff 45%,transparent)}
+.target.on b{color:#8cc4ff}
+.note.tip{padding:10px 12px;border-radius:12px;background:var(--surface);color:var(--fg);opacity:.85}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.check{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface)}
+.check .ci{width:30px;height:30px;border-radius:50%;display:grid;place-items:center}
+.check .ci svg{width:17px;height:17px}
+.check.ok .ci{color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,transparent)}
+.check.warn .ci{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.check.bad .ci{color:var(--bad);background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.check.bad{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bad) 40%,transparent)}
+.check b{display:block;font-weight:600;line-height:1.3}
+.check small{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px}
+.check .btn{min-height:36px;padding:0 11px;font-size:12.5px}
+@media (max-width:380px){ .check{grid-template-columns:30px minmax(0,1fr)} .check .btn{grid-column:2;justify-self:start} }
+.menu{display:grid;gap:8px}
+.menu-item{display:flex;align-items:center;gap:14px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg-2);cursor:pointer;min-height:68px;transition:border-color .15s, transform .1s}
+.menu-item:hover{border-color:#4a5363}
+.menu-item:active{transform:scale(.985)}
+.menu-item:disabled{opacity:.5;cursor:progress}
+.menu-item b{display:block;font-size:15px}
+.menu-item small{display:block;color:var(--muted);font-size:12.5px;line-height:1.4;margin-top:2px}
+.mi-ico{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.mi-ico svg{width:22px;height:22px}
+.exp-ready{display:grid;gap:10px}
+.file-pill{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:var(--bg-2);border:1px solid var(--line)}
+.file-pill b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-pill small{flex:none;font-family:var(--font-mono);color:var(--muted)}
+.exp-ready .btn{min-height:50px;text-decoration:none}
+.upd-actions.one{grid-template-columns:1fr}
 
 /* Mehrere Modelle */
 .icon-btn{width:40px;padding:0;flex:none}
@@ -142,7 +241,6 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .parts li{cursor:pointer;margin:0 -8px;padding:0 8px;border-radius:10px;transition:background .15s}
 .parts li.sel{background:color-mix(in srgb,#389aff 16%,transparent)}
 .parts li.sel .p-name{color:#7fbcff;font-weight:600}
-.rot-target{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface)}
 .rt-label{display:grid;gap:2px;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .rt-label b{font-size:14px;letter-spacing:0;text-transform:none;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -218,22 +316,20 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .pwa .top{padding-top:calc(10px + env(safe-area-inset-top, 0px))}
 .pwa .tools{top:calc(72px + env(safe-area-inset-top, 0px))}
 .pwa .toast{top:calc(70px + env(safe-area-inset-top, 0px))}
+.pwa .modebar{top:calc(66px + env(safe-area-inset-top, 0px))}
 @media (min-width:900px){ .pwa .tools{top:calc(76px + env(safe-area-inset-top, 0px))} .pwa .panel{padding-top:calc(60px + env(safe-area-inset-top, 0px))} }
 .app{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .app input,.app select{-webkit-user-select:text;user-select:text}
-/* iPhone: eingeklappte Leiste inkl. Home-Indikator-Bereich, Inhalt darunter vollständig verbergen */
-.pwa .panel.collapsed{max-height:calc(52px + env(safe-area-inset-bottom, 0px));overflow:hidden}
-.pwa .panel.collapsed .pane{visibility:hidden}
 /* iPhone-Home-Bildschirm-App: volle Bildschirmhöhe (iOS meldet sonst die Höhe ohne Statusleiste) */
 .pwa .app{height:var(--app-h, 100%)}
 .pwa body{background:var(--bg-2)}
-/* Bedienleiste als Sheet mit Griff, durchgehend bis zum unteren Rand */
+/* Handy: Bedienbereich als Sheet mit Griff, durchgehend bis zum unteren Rand */
 @media (max-width:899px){
-  .pwa .panel{border-top:0;border-radius:18px 18px 0 0;margin-top:-18px;box-shadow:0 -10px 30px rgba(0,0,0,.28)}
-  .pwa .handle{position:relative;padding-top:14px}
-  .pwa .handle::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:var(--line)}
-  .pwa .panel.collapsed{max-height:calc(60px + env(safe-area-inset-bottom, 0px))}
-  .pwa .hint{bottom:32px}
+  .app{--sheet-overlap:20px}
+  .panel{border-top:0;border-radius:20px 20px 0 0;margin-top:-20px;box-shadow:0 -10px 30px rgba(0,0,0,.28)}
+  .handle{padding-top:16px}
+  .handle::before{content:"";position:absolute;top:6px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--line)}
+  .panel.collapsed{max-height:calc(76px + env(safe-area-inset-bottom,0px))}
 }
 </style>
 
@@ -260,24 +356,71 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
       <input type="file" id="addInput" multiple accept=".stl,.3mf,.obj,.ply,.zip,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/zip,application/x-zip-compressed,application/octet-stream" hidden>
     </header>
 
-    <nav class="tools" aria-label="Ansicht">
-      <button class="tool" data-view="iso" title="Schrägansicht">3D</button>
-      <button class="tool" data-view="front" title="Vorderansicht">V</button>
-      <button class="tool" data-view="top" title="Draufsicht">O</button>
-      <button class="tool" data-view="side" title="Seitenansicht">S</button>
-      <hr>
-      <button class="tool" id="zoomIn" title="Hineinzoomen" aria-label="Hineinzoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button class="tool" id="zoomOut" title="Herauszoomen" aria-label="Herauszoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
-      <button class="tool" id="fit" title="Modell einpassen" aria-label="Modell einpassen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-      <button class="tool" id="spin" title="Automatisch drehen" aria-label="Automatisch drehen" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
-      <button class="tool" id="shot" title="Bild speichern" aria-label="Bild speichern" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    <nav class="tools" aria-label="Werkzeuge">
+      <button class="tool" id="fit" title="Alles einpassen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Einpassen</span></button>
+      <div class="tool-wrap">
+        <button class="tool" id="viewMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="viewMenu" title="Ansichten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span>Ansicht</span></button>
+        <div class="pop" id="viewMenu" hidden>
+          <div class="pop-title">Blickrichtung</div>
+          <div class="pop-grid">
+            <button class="pop-btn" data-view="iso">3D</button>
+            <button class="pop-btn" data-view="front">Vorne</button>
+            <button class="pop-btn" data-view="top">Oben</button>
+            <button class="pop-btn" data-view="side">Seite</button>
+          </div>
+          <div class="pop-title">Zoom</div>
+          <div class="pop-grid two">
+            <button class="pop-btn" id="zoomOut" aria-label="Herauszoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+            <button class="pop-btn" id="zoomIn" aria-label="Hineinzoomen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+          <button class="pop-btn wide" id="spin" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Automatisch drehen</button>
+        </div>
+      </div>
+      <button class="tool" id="measureBtn" aria-pressed="false" title="Abstand messen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15.5 15.5 3l5.5 5.5L8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></svg><span>Messen</span></button>
+      <button class="tool" id="exportBtn" title="Exportieren und teilen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Export</span></button>
     </nav>
 
-    <div class="hint" id="hint">Ziehen dreht · zwei Finger zoomen und schieben · Doppeltipp passt ein</div>
+    <div class="modebar" id="modeBar" role="status" hidden>
+      <span class="mode-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15.5 15.5 3l5.5 5.5L8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/></svg></span>
+      <span class="mode-text"><b id="measureMain">Zwei Punkte antippen</b><small id="measureSub">am Modell, um den Abstand zu messen</small></span>
+      <button class="btn mini" id="measureDone">Fertig</button>
+    </div>
+    <div class="mlabel" id="measureLabel" hidden></div>
+
+    <div class="selbar" id="selBar" hidden>
+      <span class="sel-dot" aria-hidden="true"></span>
+      <span class="sel-text"><b id="selName">–</b><small>Ziehen verschiebt das Teil</small></span>
+      <button class="sel-btn" id="selCopy" title="Kopie anlegen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Kopie</span></button>
+      <button class="sel-btn" id="selRotate" title="Teil drehen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg><span>Drehen</span></button>
+      <button class="sel-btn danger" id="selRemove" title="Teil entfernen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span>Entfernen</span></button>
+      <button class="sel-close" id="selClose" aria-label="Auswahl aufheben">×</button>
+    </div>
+
+    <div class="hint" id="hint">Ziehen dreht die Ansicht · zwei Finger zoomen · Doppeltippen passt ein</div>
 
     <div class="overlay drop" id="dropOverlay" hidden><div class="box">Datei hier ablegen</div></div>
     <div class="overlay" id="loading" hidden><div class="box"><div class="spinner"></div><div id="loadingText">Modell wird geladen …</div></div></div>
     <div class="toast" id="toast" role="alert" hidden><p id="toastText"></p><button id="toastClose" aria-label="Meldung schließen">×</button></div>
+    <div class="upd-backdrop" id="expBackdrop" hidden>
+      <section class="upd sheet" id="expDialog" role="dialog" aria-modal="true" aria-labelledby="expTitle" tabindex="-1">
+        <div class="upd-head">
+          <h2 id="expTitle">Exportieren &amp; teilen</h2>
+          <p class="upd-ver" id="expSub">Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.</p>
+        </div>
+        <div class="menu" id="expChoices">
+          <button class="menu-item" id="expStl"><span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></span><span><b>STL-Datei</b><small>Für jeden Slicer – alle Teile in einer Datei</small></span></button>
+          <button class="menu-item" id="exp3mf"><span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span><span><b>3MF-Datei</b><small>Für Bambu Studio, Orca &amp; Prusa – Teile bleiben einzeln</small></span></button>
+          <button class="menu-item" id="shot"><span class="mi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>Bild der Ansicht</b><small>Als PNG speichern oder teilen</small></span></button>
+        </div>
+        <div class="exp-ready" id="expReady" hidden>
+          <div class="file-pill"><b id="expFile">–</b><small id="expSize">–</small></div>
+          <button class="btn btn-primary" id="expShare">Teilen</button>
+          <button class="btn" id="expSave" hidden>Speichern unter …</button>
+          <a class="btn" id="expDownload" download hidden>Herunterladen</a>
+        </div>
+        <div class="upd-actions one"><button class="btn" id="expClose">Schließen</button></div>
+      </section>
+    </div>
     <div class="upd-backdrop" id="updBackdrop" hidden>
       <section class="upd" id="updDialog" role="dialog" aria-modal="true" aria-labelledby="updTitle" tabindex="-1">
         <div class="upd-head">
@@ -300,104 +443,91 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 
   <aside class="panel" id="panel">
     <div class="handle">
-      <div class="tabs" role="tablist" aria-label="Werkzeuge">
-        <button class="tab" role="tab" id="tab-info" aria-controls="pane-info" aria-selected="true">Info</button>
-        <button class="tab" role="tab" id="tab-color" aria-controls="pane-color" aria-selected="false">Farbe</button>
-        <button class="tab" role="tab" id="tab-view" aria-controls="pane-view" aria-selected="false">Ansicht</button>
-        <button class="tab" role="tab" id="tab-rotate" aria-controls="pane-rotate" aria-selected="false">Drehen</button>
-        <button class="tab" role="tab" id="tab-print" aria-controls="pane-print" aria-selected="false">Druck</button>
+      <div class="tabs" role="tablist" aria-label="Bereiche">
+        <button class="tab" role="tab" id="tab-model" aria-controls="pane-model" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span>Modell</span></button>
+        <button class="tab" role="tab" id="tab-edit" aria-controls="pane-edit" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Bearbeiten</span></button>
+        <button class="tab" role="tab" id="tab-print" aria-controls="pane-print" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 17v4h10v-4"/></svg><span>Druck</span><i class="tab-dot" id="printDot" hidden></i></button>
+        <button class="tab" role="tab" id="tab-look" aria-controls="pane-look" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><span>Aussehen</span></button>
       </div>
       <button class="collapse" id="collapse" aria-label="Bereich ein-/ausklappen" aria-expanded="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
 
-    <section class="pane" id="pane-info" role="tabpanel" aria-labelledby="tab-info">
-      <div class="label">Abmessungen</div>
+    <section class="pane" id="pane-model" role="tabpanel" aria-labelledby="tab-model">
       <div class="dims">
-        <div class="dim"><b class="x">X · Breite</b><span id="dimX">–</span><small>mm</small></div>
-        <div class="dim"><b class="y">Y · Tiefe</b><span id="dimY">–</span><small>mm</small></div>
-        <div class="dim"><b class="z">Z · Höhe</b><span id="dimZ">–</span><small>mm</small></div>
+        <div class="dim"><b class="x">Breite · X</b><span id="dimX">–</span><small>mm</small></div>
+        <div class="dim"><b class="y">Tiefe · Y</b><span id="dimY">–</span><small>mm</small></div>
+        <div class="dim"><b class="z">Höhe · Z</b><span id="dimZ">–</span><small>mm</small></div>
       </div>
-      <dl class="kv">
-        <div><dt>Volumen</dt><dd id="vol">–</dd></div>
-        <div><dt>Oberfläche</dt><dd id="area">–</dd></div>
-        <div><dt>Dreiecke</dt><dd id="tris">–</dd></div>
-        <div><dt>Punkte (eindeutig)</dt><dd id="verts">–</dd></div>
-        <div><dt>Geschlossenes Netz</dt><dd id="manifold">–</dd></div>
-        <div><dt>Format</dt><dd id="fmt">–</dd></div>
-        <div><dt>Dateigröße</dt><dd id="fsize">–</dd></div>
-      </dl>
-      <p class="note" id="headerNote" hidden></p>
-      <div class="parts-box" id="partsBox" hidden>
-        <div class="label" id="partsTitle">Modelle auf der Platte</div>
+      <div class="facts">
+        <div class="fact"><small>Volumen</small><span id="vol">–</span></div>
+        <div class="fact"><small>Geschlossenes Netz</small><span id="manifold">–</span></div>
+      </div>
+      <div class="sec" id="partsBox" hidden>
+        <div class="sec-head"><h3 class="sec-title" id="partsTitle">Auf der Platte</h3><button class="link-btn" id="arrangeBtn2">Anordnen</button></div>
         <ul class="parts" id="partsList"></ul>
+        <p class="note">Tippe ein Teil an, um es auszuwählen. Doppeltippen zoomt darauf.</p>
       </div>
+      <details class="more">
+        <summary>Weitere Details</summary>
+        <dl class="kv">
+          <div><dt>Oberfläche</dt><dd id="area">–</dd></div>
+          <div><dt>Dreiecke</dt><dd id="tris">–</dd></div>
+          <div><dt>Punkte (eindeutig)</dt><dd id="verts">–</dd></div>
+          <div><dt>Format</dt><dd id="fmt">–</dd></div>
+          <div><dt>Dateigröße</dt><dd id="fsize">–</dd></div>
+        </dl>
+        <p class="note" id="headerNote" hidden></p>
+      </details>
       <div class="row app-ver" id="appVerRow" hidden>
         <span><span class="label">App-Version</span><br><span id="appVer">–</span></span>
         <button class="btn" id="updCheck">Nach Updates suchen</button>
       </div>
     </section>
 
-    <section class="pane" id="pane-color" role="tabpanel" aria-labelledby="tab-color" hidden>
-      <div class="label">Filamentfarbe</div>
-      <div class="swatches" id="swatches" role="radiogroup" aria-label="Farbe"></div>
-      <div class="range">
-        <div class="range-head"><label for="gloss">Glanz</label><output id="glossOut">40 %</output></div>
-        <input type="range" id="gloss" min="0" max="100" value="40">
+    <section class="pane" id="pane-edit" role="tabpanel" aria-labelledby="tab-edit" hidden>
+      <div class="target" id="rotTarget" hidden>
+        <span class="rt-label">Bearbeitet wird<b id="rotTargetName">ganze Platte</b></span>
+        <button class="btn mini" id="rotAll" hidden>Alle Teile</button>
       </div>
-      <div class="label">Hintergrund</div>
-      <div class="seg" id="bgSeg">
-        <button class="btn" data-bg="dark" aria-pressed="true">Dunkel</button>
-        <button class="btn" data-bg="grey" aria-pressed="false">Grau</button>
-        <button class="btn" data-bg="light" aria-pressed="false">Hell</button>
-      </div>
-    </section>
-
-    <section class="pane" id="pane-view" role="tabpanel" aria-labelledby="tab-view" hidden>
-      <div class="switches">
-        <label class="switch"><span>Drahtgitter<small>Dreiecke des Netzes einblenden</small></span><input type="checkbox" id="optWire"></label>
-        <label class="switch"><span>Glatte Schattierung<small>Rundungen weicher darstellen</small></span><input type="checkbox" id="optSmooth"></label>
-        <label class="switch"><span>Überhänge markieren<small>Flächen steiler als 45° rot – brauchen Stützen</small></span><input type="checkbox" id="optOverhang"></label>
-        <label class="switch"><span>Druckbett anzeigen<small>Raster in 10-mm-Schritten</small></span><input type="checkbox" id="optBed" checked></label>
-        <label class="switch"><span>Orthografisch<small>Ohne Perspektive, gut zum Vergleichen</small></span><input type="checkbox" id="optOrtho"></label>
-      </div>
-      <div class="range">
-        <div class="range-head"><label for="clip">Schnittansicht (Höhe)</label><output id="clipOut">aus</output></div>
-        <input type="range" id="clip" min="0" max="1000" value="1000">
-      </div>
-    </section>
-
-    <section class="pane" id="pane-rotate" role="tabpanel" aria-labelledby="tab-rotate" hidden>
-      <div class="rot-target" id="rotTarget" hidden>
-        <span class="rt-label">Drehen<b id="rotTargetName">ganze Platte</b></span>
-        <button class="btn mini" id="rotAll" hidden>Ganze Platte</button>
-      </div>
-      <div class="rot-list">
-        <div class="rot-row">
-          <label class="axis x" for="rotX">X</label>
-          <input type="range" id="rotX" min="-180" max="180" step="1" value="0" aria-label="Drehung um X" aria-valuetext="0 Grad">
-          <input class="num deg-in" type="number" id="rotXOut" step="any" value="0" inputmode="numeric" aria-label="X-Winkel in Grad">
-          <button class="btn mini" data-rot90="x" aria-label="X um 90° drehen">+90°</button>
+      <p class="note tip" id="editHint" hidden>Tippe im 3D-Fenster ein Teil an, um nur dieses zu drehen oder zu verschieben.</p>
+      <div class="sec">
+        <h3 class="sec-title">Drehen</h3>
+        <div class="quick">
+          <button class="btn" id="layFlat" title="Größte ebene Fläche nach unten aufs Druckbett"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16h12l-2-8H8z"/></svg>Flach hinlegen</button>
+          <button class="btn" id="rotReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Zurücksetzen</button>
         </div>
-        <div class="rot-row">
-          <label class="axis y" for="rotY">Y</label>
-          <input type="range" id="rotY" min="-180" max="180" step="1" value="0" aria-label="Drehung um Y" aria-valuetext="0 Grad">
-          <input class="num deg-in" type="number" id="rotYOut" step="any" value="0" inputmode="numeric" aria-label="Y-Winkel in Grad">
-          <button class="btn mini" data-rot90="y" aria-label="Y um 90° drehen">+90°</button>
-        </div>
-        <div class="rot-row">
-          <label class="axis z" for="rotZ">Z</label>
-          <input type="range" id="rotZ" min="-180" max="180" step="1" value="0" aria-label="Drehung um Z" aria-valuetext="0 Grad">
-          <input class="num deg-in" type="number" id="rotZOut" step="any" value="0" inputmode="numeric" aria-label="Z-Winkel in Grad">
-          <button class="btn mini" data-rot90="z" aria-label="Z um 90° drehen">+90°</button>
+        <div class="rot-list">
+          <div class="rot-row">
+            <label class="axis x" for="rotX">X</label>
+            <input type="range" id="rotX" min="-180" max="180" step="1" value="0" aria-label="Drehung um X" aria-valuetext="0 Grad">
+            <input class="num deg-in" type="number" id="rotXOut" step="any" value="0" inputmode="numeric" aria-label="X-Winkel in Grad">
+            <button class="btn mini" data-rot90="x" aria-label="X um 90° drehen">+90°</button>
+          </div>
+          <div class="rot-row">
+            <label class="axis y" for="rotY">Y</label>
+            <input type="range" id="rotY" min="-180" max="180" step="1" value="0" aria-label="Drehung um Y" aria-valuetext="0 Grad">
+            <input class="num deg-in" type="number" id="rotYOut" step="any" value="0" inputmode="numeric" aria-label="Y-Winkel in Grad">
+            <button class="btn mini" data-rot90="y" aria-label="Y um 90° drehen">+90°</button>
+          </div>
+          <div class="rot-row">
+            <label class="axis z" for="rotZ">Z</label>
+            <input type="range" id="rotZ" min="-180" max="180" step="1" value="0" aria-label="Drehung um Z" aria-valuetext="0 Grad">
+            <input class="num deg-in" type="number" id="rotZOut" step="any" value="0" inputmode="numeric" aria-label="Z-Winkel in Grad">
+            <button class="btn mini" data-rot90="z" aria-label="Z um 90° drehen">+90°</button>
+          </div>
         </div>
       </div>
-      <div class="seg">
-        <button class="btn" id="layFlat" title="Größte ebene Fläche nach unten aufs Druckbett">Flach hinlegen</button>
-        <button class="btn" id="rotReset">Zurücksetzen</button>
+      <div class="sec">
+        <h3 class="sec-title">Platte</h3>
+        <div class="quick three">
+          <button class="btn" id="dupBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Kopie</button>
+          <button class="btn" id="arrangeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Anordnen</button>
+          <button class="btn" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Entfernen</button>
+        </div>
+        <p class="note" id="plateHint">Ein ausgewähltes Teil verschiebst du, indem du es im 3D-Fenster mit dem Finger ziehst.</p>
       </div>
-      <p class="note">Für genaue Winkel die Gradzahl antippen und eintippen. „Flach hinlegen“ legt die größte ebene Fläche aufs Bett, meist die beste Lage zum Drucken.</p>
-      <div class="field">
-        <div class="range-head"><label class="label" for="scale">Größe</label><output id="scaleOut">100 %</output></div>
+      <div class="sec">
+        <div class="sec-head"><h3 class="sec-title"><label for="scale">Größe</label></h3><output id="scaleOut">100 %</output></div>
         <input class="num" type="number" id="scale" min="1" max="10000" step="1" value="100" inputmode="decimal" aria-describedby="scaleOut">
         <div class="seg">
           <button class="btn" data-scale="50">50 %</button>
@@ -409,14 +539,6 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     </section>
 
     <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
-      <div class="grid2">
-        <div class="field"><label class="label" for="printer">Drucker</label>
-          <select id="printer"><option value="bambu">Bambu Lab X1 Carbon / P1S / P1P</option></select></div>
-        <div class="field"><label class="label" for="material">Material</label>
-          <select id="material"></select></div>
-      </div>
-      <div class="row"><span>Passt aufs Druckbett</span><span id="fit-chip" class="chip na">–</span></div>
-
       <div class="estimate">
         <div class="est-main"><small>Geschätzte Druckzeit</small><span id="estTime">–</span><small id="estPrep">–</small></div>
         <div class="est-grid">
@@ -425,34 +547,84 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
           <div class="stat"><small>Schichten</small><span id="estLayers">–</span><small id="estLayerH">–</small></div>
         </div>
       </div>
-
-      <div class="grid2">
-        <div class="field"><label class="label" for="layerH">Schichthöhe</label>
-          <select id="layerH"></select></div>
-        <div class="field" data-fdm><label class="label" for="walls">Wände</label>
-          <select id="walls">
-            <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
-            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-          </select></div>
+      <div class="sec">
+        <h3 class="sec-title">Druck-Check</h3>
+        <ul class="checks" id="checks"></ul>
       </div>
-      <label class="switch" data-resin hidden><span>Hohl drucken<small>2 mm Wandstärke – spart viel Harz (Ablauflöcher im Slicer setzen)</small></span><input type="checkbox" id="optHollow"></label>
-      <div class="range" data-fdm>
-        <div class="range-head"><label for="infill">Füllung</label><output id="infillOut">15 %</output></div>
-        <input type="range" id="infill" min="0" max="100" step="5" value="15">
+      <div class="sec">
+        <h3 class="sec-title">Drucker &amp; Material</h3>
+        <div class="grid2">
+          <div class="field wide"><label class="label" for="printer">Drucker</label>
+            <select id="printer"><option value="bambu">Bambu Lab X1 Carbon / P1S / P1P</option></select></div>
+          <div class="field wide"><label class="label" for="material">Material</label>
+            <select id="material"></select></div>
+        </div>
       </div>
-      <label class="switch"><span>Stützstrukturen<small id="supportHint">Unter Überhängen steiler als 45°</small></span><input type="checkbox" id="optSupport"></label>
-      <div class="field">
-        <label class="label" for="price" id="priceLabel">Filamentpreis (€ pro kg)</label>
-        <input class="num" type="number" id="price" min="0" max="1000" step="0.5" value="20" inputmode="decimal">
+      <div class="sec">
+        <h3 class="sec-title">Einstellungen</h3>
+        <div class="grid2">
+          <div class="field"><label class="label" for="layerH">Schichthöhe</label>
+            <select id="layerH"></select></div>
+          <div class="field" data-fdm><label class="label" for="walls">Wände</label>
+            <select id="walls">
+              <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            </select></div>
+        </div>
+        <div class="range" data-fdm>
+          <div class="range-head"><label for="infill">Füllung</label><output id="infillOut">15 %</output></div>
+          <input type="range" id="infill" min="0" max="100" step="5" value="15">
+        </div>
+        <div class="switches">
+          <label class="switch"><span>Stützstrukturen<small id="supportHint">Unter Überhängen steiler als 45°</small></span><input type="checkbox" id="optSupport"></label>
+          <label class="switch" data-resin hidden><span>Hohl drucken<small>2 mm Wandstärke – spart viel Harz (Ablauflöcher im Slicer setzen)</small></span><input type="checkbox" id="optHollow"></label>
+        </div>
+        <div class="field">
+          <label class="label" for="price" id="priceLabel">Filamentpreis (€ pro kg)</label>
+          <input class="num" type="number" id="price" min="0" max="1000" step="0.5" value="20" inputmode="decimal">
+        </div>
       </div>
-
-      <div class="range">
-        <div class="range-head"><label for="layerSlider">Schichtvorschau</label><output id="layerOut">alle Schichten</output></div>
+      <div class="sec">
+        <div class="sec-head"><h3 class="sec-title"><label for="layerSlider">Schichtvorschau</label></h3><output id="layerOut">alle Schichten</output></div>
         <input type="range" id="layerSlider" min="1" max="100" step="1" value="100">
       </div>
       <p class="sr-only" id="estLive" aria-live="polite"></p>
       <p class="note" data-resin hidden>Beim Resin-Druck hängt die Zeit fast nur von der Höhe ab: Jede Schicht wird auf einmal belichtet. Mehrere Modelle nebeneinander dauern deshalb kaum länger als eines.</p>
-      <p class="note">Grobe Schätzung aus Form, Druckerprofil und Einstellungen, etwa ±30 %. Den genauen Wert liefert dein Slicer. Die Schichtvorschau zeigt, wie weit der Druck nach einer bestimmten Zeit ist.</p>
+      <p class="note">Grobe Schätzung aus Form, Druckerprofil und Einstellungen, etwa ±30 %. Den genauen Wert liefert dein Slicer.</p>
+    </section>
+
+    <section class="pane" id="pane-look" role="tabpanel" aria-labelledby="tab-look" hidden>
+      <div class="sec">
+        <h3 class="sec-title">Farbe</h3>
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Farbe"></div>
+        <div class="range">
+          <div class="range-head"><label for="gloss">Glanz</label><output id="glossOut">40 %</output></div>
+          <input type="range" id="gloss" min="0" max="100" value="40">
+        </div>
+      </div>
+      <div class="sec">
+        <h3 class="sec-title">Darstellung</h3>
+        <div class="switches">
+          <label class="switch"><span>Überhänge markieren<small>Flächen steiler als 45° rot – brauchen Stützen</small></span><input type="checkbox" id="optOverhang"></label>
+          <label class="switch"><span>Druckbett anzeigen<small>Raster in 10-mm-Schritten</small></span><input type="checkbox" id="optBed" checked></label>
+          <label class="switch"><span>Glatte Schattierung<small>Rundungen weicher darstellen</small></span><input type="checkbox" id="optSmooth"></label>
+          <label class="switch"><span>Drahtgitter<small>Dreiecke des Netzes einblenden</small></span><input type="checkbox" id="optWire"></label>
+          <label class="switch"><span>Ohne Perspektive<small>Orthografisch – gut zum Vergleichen von Maßen</small></span><input type="checkbox" id="optOrtho"></label>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h3 class="sec-title"><label for="clip">Schnittansicht</label></h3><output id="clipOut">aus</output></div>
+        <input type="range" id="clip" min="0" max="1000" value="1000">
+        <p class="note">Schneidet das Modell in der Höhe auf, um ins Innere zu schauen.</p>
+      </div>
+      <div class="sec">
+        <h3 class="sec-title">Hintergrund</h3>
+        <div class="seg" id="bgSeg">
+          <button class="btn" data-bg="dark" aria-pressed="true">Dunkel</button>
+          <button class="btn" data-bg="grey" aria-pressed="false">Grau</button>
+          <button class="btn" data-bg="light" aria-pressed="false">Hell</button>
+        </div>
+      </div>
     </section>
   </aside>
 </div>
@@ -498,7 +670,7 @@ function program(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, shad
   for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
   return { p, u }; }
 
-let meshProg, lineProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf;
+let meshProg, lineProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf, measVAO, measBuf;
 const MESH_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
 uniform mat4 uVP; uniform float uScale; uniform mat3 uRot; uniform vec3 uOff;
@@ -549,10 +721,11 @@ void main(){
 
 const LINE_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec4 aCol;
-uniform mat4 uVP; out vec4 vCol;
-void main(){ vCol = aCol; gl_Position = uVP * vec4(aPos, 1.0); }`;
+uniform mat4 uVP; uniform float uPtSize; out vec4 vCol;
+void main(){ vCol = aCol; gl_Position = uVP * vec4(aPos, 1.0); gl_PointSize = uPtSize; }`;
 const LINE_FS = `#version 300 es
-precision mediump float; in vec4 vCol; out vec4 o; void main(){ o = vCol; }`;
+precision mediump float; in vec4 vCol; uniform int uRound; out vec4 o;
+void main(){ if (uRound == 1) { float d = length(gl_PointCoord - 0.5) * 2.0; if (d > 1.0) discard; o = d > 0.62 ? vec4(0.1, 0.07, 0.02, 1.0) : vCol; return; } o = vCol; }`;
 
 /* Alle GPU-Ressourcen anlegen – auch erneut nach Kontextverlust (Android verwirft ihn gern im Hintergrund) */
 function initGL() {
@@ -563,6 +736,11 @@ function initGL() {
   gl.bindVertexArray(null);
   bedVAO = gl.createVertexArray(); bedBuf = gl.createBuffer();
   gl.bindVertexArray(bedVAO); gl.bindBuffer(gl.ARRAY_BUFFER, bedBuf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 28, 12);
+  gl.bindVertexArray(null);
+  measVAO = gl.createVertexArray(); measBuf = gl.createBuffer();
+  gl.bindVertexArray(measVAO); gl.bindBuffer(gl.ARRAY_BUFFER, measBuf);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0);
   gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 28, 12);
   gl.bindVertexArray(null);
@@ -585,7 +763,9 @@ const state = {
   rot: [0, 0, 0], live: { R: [1,0,0, 0,1,0, 0,0,1], off: [0, 0, 0] },
   scale: 1, printer: [256, 256, 256],
   cam: { theta: -Math.PI / 4, phi: 0.5, dist: 200, target: [0, 0, 20] },
-  spin: false, dirty: true
+  spin: false, dirty: true,
+  measure: { on: false, pts: [] },   // Messpunkte in Modellkoordinaten (unskaliert)
+  dragOff: null                      // Verschiebung des ausgewählten Teils während des Ziehens
 };
 let savedPrinter = "bambu";
 const printPrefs = { fdm: { material: "pla", layerH: "0.2", price: 20 }, resin: { material: "std", layerH: "0.05", price: 30 } };
@@ -1052,7 +1232,9 @@ function draw() {
     if (sp) {
       const a = sp.start / 3, b = sp.end / 3, n = m.triCount * 3;
       gl.uniform1i(u.uSel, 0); if (a > 0) gl.drawArrays(gl.TRIANGLES, 0, a); if (b < n) gl.drawArrays(gl.TRIANGLES, b, n - b);
-      gl.uniform1i(u.uSel, 1); gl.uniform3fv(u.uSelColor, srgbToLin(selColor())); gl.drawArrays(gl.TRIANGLES, a, b - a);
+      gl.uniform1i(u.uSel, 1); gl.uniform3fv(u.uSelColor, srgbToLin(selColor()));
+      if (state.dragOff) gl.uniform3fv(u.uOff, [0, 1, 2].map(k => state.live.off[k] + state.dragOff[k]));
+      gl.drawArrays(gl.TRIANGLES, a, b - a);
     } else { gl.uniform1i(u.uSel, 0); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3); }
   }
   if (state.bed) {
@@ -1063,7 +1245,32 @@ function draw() {
     gl.drawArrays(gl.LINES, 0, bedLineCount);
     gl.depthMask(true); gl.disable(gl.BLEND);
   }
+  drawMeasure(vp);
   gl.bindVertexArray(null);
+}
+/* Messlinie und -punkte immer obenauf zeichnen; die Beschriftung folgt der Linienmitte auf dem Bildschirm */
+function drawMeasure(vp) {
+  const pts = state.measure.on ? state.measure.pts : [], lab = $("measureLabel");
+  if (!pts.length) { lab.hidden = true; return; }
+  const s = state.scale, A = [0.95, 0.65, 0.25, 1], v = [];
+  const W = pts.map(p => p.map(c => c * s));
+  if (W.length === 2) v.push(...W[0], ...A, ...W[1], ...A);
+  for (const w of W) v.push(...w, ...A);
+  gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
+  gl.bindVertexArray(measVAO); gl.bindBuffer(gl.ARRAY_BUFFER, measBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.DYNAMIC_DRAW);
+  gl.disable(gl.DEPTH_TEST);
+  const lines = W.length === 2 ? 2 : 0;
+  if (lines) { gl.uniform1f(lineProg.u.uPtSize, 1); gl.uniform1i(lineProg.u.uRound, 0); gl.drawArrays(gl.LINES, 0, 2); }
+  gl.uniform1f(lineProg.u.uPtSize, 15 * Math.min(window.devicePixelRatio || 1, 2.5)); gl.uniform1i(lineProg.u.uRound, 1);
+  gl.drawArrays(gl.POINTS, lines, W.length);
+  gl.uniform1i(lineProg.u.uRound, 0); gl.enable(gl.DEPTH_TEST);
+  if (W.length < 2) { lab.hidden = true; return; }
+  const mid = [0, 1, 2].map(k => (W[0][k] + W[1][k]) / 2);
+  const cx = vp[0]*mid[0] + vp[4]*mid[1] + vp[8]*mid[2] + vp[12], cy = vp[1]*mid[0] + vp[5]*mid[1] + vp[9]*mid[2] + vp[13], cw = vp[3]*mid[0] + vp[7]*mid[1] + vp[11]*mid[2] + vp[15];
+  if (cw <= 0) { lab.hidden = true; return; }
+  lab.hidden = false;
+  lab.style.left = ((cx / cw) * 0.5 + 0.5) * canvas.clientWidth + "px";
+  lab.style.top = (0.5 - (cy / cw) * 0.5) * canvas.clientHeight + "px";
 }
 function srgbToLin(c) { return c.map(v => Math.pow(v, 1.12)); }
 // Markierfarbe: Blau – außer das Modell ist selbst bläulich, dann Orange
@@ -1082,9 +1289,9 @@ function cameraRay(clientX, clientY) {
   if (state.ortho) { const h = c.dist * t; return { o: [0, 1, 2].map(k => e[k] + right[k] * nx * h * asp + u[k] * ny * h), d: f }; }
   return { o: e, d: norm([0, 1, 2].map(k => f[k] + right[k] * nx * t * asp + u[k] * ny * t)) };
 }
-// Strahl vom Finger in die Szene: nächstes getroffenes Dreieck → Teil (−1 = nichts getroffen)
-function pickPart(clientX, clientY) {
-  const m = state.mesh; if (!multiPart()) return -1;
+// Strahl vom Finger in die Szene: nächstes getroffenes Dreieck samt Trefferpunkt (Modellkoordinaten) oder null
+function hitTest(clientX, clientY) {
+  const m = state.mesh; if (!m) return null;
   const s = state.scale, { o, d } = cameraRay(clientX, clientY);
   const ox = o[0] / s, oy = o[1] / s, oz = o[2] / s, dx = d[0], dy = d[1], dz = d[2], p = m.pos;
   const clip = Number.isFinite(state.clipZ) ? state.clipZ / s : Infinity;
@@ -1099,8 +1306,17 @@ function pickPart(clientX, clientY) {
     const t = (e2x*qx + e2y*qy + e2z*qz) * inv;
     if (t > 1e-6 && t < best && oz + dz * t <= clip) { best = t; bestTri = i; }
   }
-  if (bestTri < 0) return -1;
-  return m.parts.findIndex(pt => bestTri >= pt.start && bestTri < pt.end);
+  if (bestTri < 0) return null;
+  const part = m.parts ? m.parts.findIndex(pt => bestTri >= pt.start && bestTri < pt.end) : -1;
+  return { tri: bestTri, part, p: [ox + dx * best, oy + dy * best, oz + dz * best] };
+}
+function pickPart(clientX, clientY) { if (!multiPart()) return -1; const h = hitTest(clientX, clientY); return h ? h.part : -1; }
+// Strahl mit der waagrechten Ebene z = zw (Modellkoordinaten) schneiden – zum Verschieben auf dem Druckbett
+function planePoint(clientX, clientY, zw) {
+  const s = state.scale, { o, d } = cameraRay(clientX, clientY);
+  if (Math.abs(d[2]) < 1e-4) return null;
+  const t = (zw * s - o[2]) / d[2]; if (t <= 0) return null;
+  return [(o[0] + d[0] * t) / s, (o[1] + d[1] * t) / s];
 }
 function partBox(pt) { const m = state.mesh; return bbox(m.pos, pt.start, pt.end); }
 function focusPart(i) {   // Ansicht auf ein Teil zentrieren, Blickwinkel bleibt; die anderen bleiben sichtbar
@@ -1111,28 +1327,51 @@ function focusPart(i) {   // Ansicht auf ein Teil zentrieren, Blickwinkel bleibt
   c.dist = Math.max(r * 0.35, r / Math.sin(FOV / 2) / Math.min(1, asp) * 1.15); state.dirty = true;
 }
 function selectPart(i) {
+  finishMove();
   state.sel = multiPart() && i >= 0 && i < state.mesh.parts.length ? i : -1;
   syncRotUI(); updatePartsUI(); state.dirty = true;
 }
 function updatePartsUI() {
-  const sp = selectedPart();
+  const sp = selectedPart(), multi = multiPart(), m = state.mesh;
   document.querySelectorAll("#partsList li").forEach((li, i) => { li.classList.toggle("sel", i === state.sel); li.setAttribute("aria-current", i === state.sel ? "true" : "false"); });
-  $("rotTarget").hidden = !multiPart();
-  $("rotTargetName").textContent = sp ? sp.name : "ganze Platte";
+  $("rotTarget").hidden = !multi; $("rotTarget").classList.toggle("on", !!sp);
+  $("rotTargetName").textContent = sp ? sp.name : "alle Teile zusammen";
   $("rotAll").hidden = !sp;
+  $("editHint").hidden = !multi || !!sp;
+  // Auswahl-Leiste über der 3D-Ansicht
+  const bar = $("selBar"); bar.hidden = !sp || state.measure.on;
+  if (sp) { $("selName").textContent = sp.name; bar.style.setProperty("--sel", rgbToHex(selColor())); hideHint(); }
+  // Platte: Kopie / Anordnen / Entfernen
+  const canCopy = !!m && (sp || !multi);
+  $("dupBtn").disabled = !canCopy; $("arrangeBtn").disabled = !multi; $("delBtn").disabled = !sp;
+  $("plateHint").textContent = !multi ? "„Kopie“ legt das Modell ein zweites Mal auf die Platte."
+    : sp ? "Ziehe das markierte Teil im 3D-Fenster mit dem Finger, um es zu verschieben."
+    : "Tippe ein Teil an – dann kannst du es verschieben, kopieren oder entfernen.";
 }
 
 /* ---------------- Eingabe ---------------- */
-const pointers = new Map(); let lastTap = 0, pinch = null, moved = 0;
+const pointers = new Map(); let lastTap = 0, pinch = null, moved = 0, drag = null;
 canvas.addEventListener("pointerdown", (e) => {
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, btn: e.button, shift: e.shiftKey });
-  moved = 0; pinch = null; stopSpinOnTouch(); hideHint();
+  moved = 0; pinch = null; stopSpinOnTouch(); hideHint(); closeViewMenu();
+  if (pointers.size > 1) { finishMove(); return; }
+  // Auf das ausgewählte Teil getippt und gezogen: Teil verschieben statt Ansicht drehen
+  const sp = selectedPart();
+  if (sp && !state.measure.on && e.button === 0 && !e.shiftKey) {
+    const h = hitTest(e.clientX, e.clientY);
+    if (h && h.part === state.sel) { const q = planePoint(e.clientX, e.clientY, h.p[2]); if (q) drag = { id: e.pointerId, z: h.p[2], start: q }; }
+  }
 });
 canvas.addEventListener("pointermove", (e) => {
   const p = pointers.get(e.pointerId); if (!p) return;
   const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
   const c = state.cam;
+  if (drag && drag.id === e.pointerId && pointers.size === 1) {
+    if (moved < 6) return;
+    const q = planePoint(e.clientX, e.clientY, drag.z); if (!q) return;
+    state.dragOff = [q[0] - drag.start[0], q[1] - drag.start[1], 0]; canvas.style.cursor = "move"; state.dirty = true; return;
+  }
   if (pointers.size === 1) {
     if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
     else { c.theta -= dx * 0.008; c.phi += dy * 0.008; }
@@ -1147,11 +1386,23 @@ canvas.addEventListener("pointermove", (e) => {
 function endPointer(e) {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId); pinch = null;
+  if (drag && drag.id === e.pointerId) finishMove();
   if (e.type === "pointerup" && moved < 8 && pointers.size === 0) {
-    const now = performance.now(), hit = multiPart() ? pickPart(e.clientX, e.clientY) : -1;
+    const now = performance.now();
+    if (state.measure.on) { addMeasurePoint(hitTest(e.clientX, e.clientY)); return; }
+    const hit = multiPart() ? pickPart(e.clientX, e.clientY) : -1;
     if (now - lastTap < 320) { lastTap = 0; if (hit >= 0) { selectPart(hit); focusPart(hit); } else fitView(); }   // Doppeltippen: auf das Teil zoomen
     else { lastTap = now; if (multiPart()) selectPart(hit); }   // Tippen: Teil auswählen, ins Leere: Auswahl aufheben
   }
+}
+// Verschiebung übernehmen: Punkte einmal verschieben und hochladen (während des Ziehens nur per Shader versetzt)
+function finishMove() {
+  const off = state.dragOff, pt = selectedPart(); drag = null; state.dragOff = null; canvas.style.cursor = "";
+  if (!off || !pt || (Math.abs(off[0]) < 1e-6 && Math.abs(off[1]) < 1e-6)) { state.dirty = true; return; }
+  const m = state.mesh, p = m.pos;
+  for (let i = pt.start; i < pt.end; i += 3) { p[i] += off[0]; p[i + 1] += off[1]; }
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferSubData(gl.ARRAY_BUFFER, pt.start * 4, p.subarray(pt.start, pt.end));
+  stats(m); est.profile = null; clearMeasure(); resetLayerView(); updateInfo();
 }
 ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => canvas.addEventListener(t, endPointer));
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -1166,13 +1417,46 @@ function pan(dx, dy) {
 }
 function zoom(f) { state.cam.dist *= f; clampCam(); state.dirty = true; }
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (!$("updBackdrop").hidden || !$("expBackdrop").hidden) return;
+    if (!$("viewMenu").hidden) closeViewMenu(true); else if (state.measure.on) setMeasure(false); else if (state.sel >= 0) selectPart(-1);
+    return;
+  }
   if (e.target.closest && e.target.closest("input,select")) return;
   if (e.key === "+" || e.key === "=") zoom(0.85); else if (e.key === "-") zoom(1.18);
   else if (e.key === "f" || e.key === "0") fitView();
+  else if (e.key === "m") setMeasure(!state.measure.on);
 });
 function stopSpinOnTouch() { if (state.spin) { state.spin = false; $("spin").setAttribute("aria-pressed", "false"); } }
 let hintTimer = setTimeout(hideHint, 7000);
 function hideHint() { $("hint").classList.add("gone"); clearTimeout(hintTimer); }
+
+/* ---------------- Messen ----------------
+   Zwei Punkte auf der Oberfläche antippen → Abstand und Abstand je Achse. Ein dritter Tipp beginnt neu. */
+function setMeasure(on) {
+  state.measure.on = on; state.measure.pts = []; $("measureLabel").hidden = true;
+  $("measureBtn").setAttribute("aria-pressed", String(on)); $("modeBar").hidden = !on;
+  if (on) { finishMove(); closeViewMenu(); hideHint(); setMeasureText("Ersten Punkt antippen", "direkt auf dem Modell"); }
+  updatePartsUI(); state.dirty = true;
+}
+function setMeasureText(main, sub) { $("measureMain").textContent = main; $("measureSub").textContent = sub; }
+function clearMeasure() { if (!state.measure.pts.length) return; state.measure.pts = []; $("measureLabel").hidden = true; if (state.measure.on) setMeasureText("Ersten Punkt antippen", "direkt auf dem Modell"); state.dirty = true; }
+function addMeasurePoint(hit) {
+  const ms = state.measure;
+  if (!hit) { setMeasureText(ms.pts.length === 1 ? "Daneben getippt" : "Kein Treffer", "Tippe direkt auf das Modell"); return; }
+  if (ms.pts.length >= 2) ms.pts = [];
+  ms.pts.push(hit.p);
+  if (ms.pts.length === 1) setMeasureText("Zweiten Punkt antippen", "Punkt 1 ist gesetzt");
+  else {
+    const s = state.scale, [a, b] = ms.pts, d = [0, 1, 2].map(k => Math.abs(b[k] - a[k]) * s), len = Math.hypot(d[0], d[1], d[2]);
+    const f = (v) => fmtNum(v, v < 100 ? 2 : 1);
+    setMeasureText(f(len) + " mm", "X " + f(d[0]) + " · Y " + f(d[1]) + " · Z " + f(d[2]));
+    $("measureLabel").textContent = f(len) + " mm";
+  }
+  state.dirty = true;
+}
+$("measureBtn").addEventListener("click", () => setMeasure(!state.measure.on));
+$("measureDone").addEventListener("click", () => setMeasure(false));
 
 /* ---------------- Laden ---------------- */
 const MODEL_RE = /\.(stl|3mf|obj|ply)$/i, MAX_PARTS = 200, PART_GAP = 5;
@@ -1211,11 +1495,14 @@ function bbox(pos, a = 0, b = pos.length) {
   return { mn, mx };
 }
 /* Mehrere Modelle nebeneinander anordnen (Reihen in Bettbreite, 5 mm Abstand) und zu einem Netz zusammenfügen.
-   blocks: [{ pos, parts:[{name, fmt, size, start, end}] }] – start/end beziehen sich auf block.pos */
-function combineBlocks(blocks) {
+   blocks: [{ pos, parts:[{name, fmt, size, start, end}] }] – start/end beziehen sich auf block.pos.
+   pack = true: große Teile zuerst setzen (dichter), die Reihenfolge der Teile in der Liste bleibt gleich. */
+function combineBlocks(blocks, pack) {
   const maxW = Math.max(state.printer[0] || 256, ...blocks.map(b => { const { mn, mx } = bbox(b.pos); b.mn = mn; b.mx = mx; return mx[0] - mn[0]; }));
+  const order = blocks.slice();
+  if (pack) order.sort((a, b) => (b.mx[1] - b.mn[1]) - (a.mx[1] - a.mn[1]) || (b.mx[0] - b.mn[0]) - (a.mx[0] - a.mn[0]));
   let x = 0, y = 0, rowD = 0, total = 0;
-  for (const b of blocks) {
+  for (const b of order) {
     const w = b.mx[0] - b.mn[0], d = b.mx[1] - b.mn[1];
     if (x > 0 && x + w > maxW) { x = 0; y -= rowD + PART_GAP; rowD = 0; }
     b.off = [x - b.mn[0], y - b.mx[1], -b.mn[2]];   // Reihen laufen nach hinten (−Y), Unterseite auf z = 0
@@ -1230,18 +1517,21 @@ function combineBlocks(blocks) {
   }
   return { pos, parts };
 }
-// Fertiges Netz übernehmen: analysieren, hochladen, Ansicht einpassen
-function setMesh(pos, parts, keepScale) {
-  placeOnBed(pos);
+/* Fertiges Netz übernehmen: analysieren, hochladen, Ansicht einpassen.
+   opt: keepRot (Drehwinkel der Teile behalten), keepPlace (nicht neu zentrieren), keepView (Kamera bleibt), sel (Auswahl danach) */
+function setMesh(pos, parts, keepScale, opt = {}) {
+  if (!opt.keepPlace) placeOnBed(pos);
   const fmts = [...new Set(parts.map(p => p.fmt))];
   const single = parts.length === 1;
   const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
-    single ? parts[0].name : parts.length + " Modelle", parts.reduce((n, p) => n + (p.size || 0), 0));
-  mesh.parts = parts; state.sel = -1;
-  stats(mesh); initOrientation(mesh);
+    single ? parts[0].name : parts.length + " Teile", parts.reduce((n, p) => n + (p.size || 0), 0));
+  mesh.parts = parts; state.sel = -1; state.dragOff = null;
+  stats(mesh); initOrientation(mesh, opt.keepRot);
   state.mesh = mesh;
   if (!keepScale) { state.scale = 1; $("scale").value = 100; }
-  uploadMesh(); resetLayerView(); updateInfo(); fitView("iso");
+  if (Number.isInteger(opt.sel) && opt.sel >= 0 && opt.sel < parts.length && parts.length > 1) state.sel = opt.sel;
+  clearMeasure(); uploadMesh(); resetLayerView(); updateInfo(); syncRotUI();
+  if (!opt.keepView) fitView("iso");
 }
 /* Quellen laden: [{ name, size, read: async () => ArrayBuffer }]. add = zu den vorhandenen Modellen hinzufügen. */
 async function loadSources(sources, add) {
@@ -1277,7 +1567,7 @@ async function loadSources(sources, add) {
     const { pos, parts } = blocks.length === 1 ? { pos: blocks[0].pos, parts: blocks[0].parts } : combineBlocks(blocks);
     setMesh(pos, parts, add && cur && !cur.demo);
     if (failed.length) showToast("Nicht lesbar und übersprungen: " + failed.join(", "));
-    else if (parts.length > 1) showToast(parts.length + " Modelle auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info");
+    else if (parts.length > 1) showToast(parts.length + " Teile auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info");
   } catch (err) {
     console.warn(err);
     showToast(err instanceof ViewerError ? err.message : err instanceof RangeError ? "Für diese Datei reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht gelesen werden. Ist sie beschädigt oder zu groß für den Speicher?");
@@ -1288,11 +1578,57 @@ function loadBuffer(buf, name, size) { return loadSources([{ name, size, read: a
 const fileSource = (f) => ({ name: f.name, size: f.size, read: () => f.arrayBuffer() });
 function loadFile(file) { return file ? loadSources([fileSource(file)], false) : undefined; }
 function removePart(idx) {
-  const m = state.mesh; if (!m || !m.parts || m.parts.length < 2) return;
+  const m = state.mesh; if (!m || !m.parts || m.parts.length < 2 || !m.parts[idx]) return;
+  finishMove();
+  const name = m.parts[idx].name;
   const keep = m.parts.filter((_, i) => i !== idx), total = keep.reduce((n, p) => n + (p.end - p.start), 0);
   const pos = new Float32Array(total), parts = []; let o = 0;
   for (const p of keep) { pos.set(m.pos.subarray(p.start, p.end), o); parts.push({ ...p, start: o, end: o + (p.end - p.start) }); o += p.end - p.start; }
-  setMesh(pos, parts, true);
+  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: true });
+  showToast("„" + name + "“ entfernt.", "info");
+}
+// Alle Teile neu und platzsparend auf dem Bett verteilen (stellt dabei auch schwebende Teile aufs Bett)
+function arrangeParts(quiet) {
+  const m = state.mesh; if (!multiPart()) return;
+  finishMove();
+  const sel = state.sel;
+  const blocks = m.parts.map(p => { const pos = m.pos.slice(p.start, p.end); return { pos, parts: [{ ...p, start: 0, end: pos.length }] }; });
+  const { pos, parts } = combineBlocks(blocks, true);
+  setMesh(pos, parts, true, { keepRot: true, sel });
+  if (!quiet) showToast("Teile neu angeordnet.", "info");
+}
+const copyName = (name, parts) => { const base = name.replace(/ \(\d+\)$/, ""); let n = 2; while (parts.some(p => p.name === base + " (" + n + ")")) n++; return base + " (" + n + ")"; };
+/* Ausgewähltes Teil (oder das einzige Modell) kopieren. Die Kopie kommt auf einen freien Platz daneben;
+   ist keiner frei, wird die ganze Platte neu angeordnet. */
+function duplicatePart() {
+  const m = state.mesh; if (!m || !m.parts) return;
+  finishMove();
+  const idx = selectedPart() ? state.sel : m.parts.length === 1 ? 0 : -1; if (idx < 0) return;
+  const pt = m.parts[idx], len = pt.end - pt.start;
+  if (m.parts.length >= MAX_PARTS) { showToast("Höchstens " + MAX_PARTS + " Teile passen auf eine Platte."); return; }
+  if ((m.pos.length + len) / 9 > 8e6) { showToast("Für eine weitere Kopie ist das Modell zu groß – das würde den Speicher sprengen."); return; }
+  const s = state.scale, [bx, by] = state.printer, G = PART_GAP / s;
+  const { mn, mx } = bbox(m.pos, pt.start, pt.end), w = mx[0] - mn[0], d = mx[1] - mn[1];
+  const boxes = m.parts.map(p => bbox(m.pos, p.start, p.end));
+  const hx = bx / 2 / s, hy = by / 2 / s;
+  const cands = [[w + G, 0], [-(w + G), 0], [0, -(d + G)], [0, d + G], [w + G, -(d + G)], [-(w + G), -(d + G)], [w + G, d + G], [-(w + G), d + G]];
+  let off = null;
+  for (const [ox, oy] of cands) {
+    const x0 = mn[0] + ox, x1 = mx[0] + ox, y0 = mn[1] + oy, y1 = mx[1] + oy;
+    if (x0 < -hx || x1 > hx || y0 < -hy || y1 > hy) continue;
+    if (boxes.some(b => x0 < b.mx[0] + G * 0.9 && x1 > b.mn[0] - G * 0.9 && y0 < b.mx[1] + G * 0.9 && y1 > b.mn[1] - G * 0.9)) continue;
+    off = [ox, oy]; break;
+  }
+  const pos = new Float32Array(m.pos.length + len); pos.set(m.pos);
+  const o = m.pos.length, src = m.pos, [ox, oy] = off || [0, 0];
+  for (let i = 0; i < len; i += 3) { pos[o + i] = src[pt.start + i] + ox; pos[o + i + 1] = src[pt.start + i + 1] + oy; pos[o + i + 2] = src[pt.start + i + 2]; }
+  const parts = m.parts.map(p => ({ ...p }));
+  parts.push({ ...pt, name: copyName(pt.name, parts), start: o, end: o + len, rot: pt.rot.slice(), base: pt.base.slice(), R: pt.R.slice() });
+  const wasDemo = !!m.demo;
+  setMesh(pos, parts, true, { keepRot: true, keepPlace: true, keepView: !!off, sel: parts.length - 1 });
+  if (!off) arrangeParts(true);
+  if (wasDemo) state.mesh.demo = true;
+  showToast("Kopie angelegt" + (off ? "." : " – die Platte wurde neu angeordnet, damit alles Platz hat."), "info");
 }
 $("fileInput").addEventListener("change", (e) => { loadSources([...e.target.files].map(fileSource), false); e.target.value = ""; });
 $("addInput").addEventListener("change", (e) => { loadSources([...e.target.files].map(fileSource), true); e.target.value = ""; });
@@ -1355,7 +1691,7 @@ function updateInfo() {
   if (m.header && !/^solid$/i.test(m.header)) { hn.hidden = false; hn.textContent = (m.fmt === "3MF" ? "" : "Dateikopf: ") + m.header.slice(0, 120); } else hn.hidden = true;
   const multi = m.parts && m.parts.length > 1; $("partsBox").hidden = !multi; $("addBtn").hidden = !!m.demo;
   if (multi) {
-    $("partsTitle").textContent = m.parts.length + " Modelle auf der Platte";
+    $("partsTitle").textContent = "Auf der Platte · " + m.parts.length + " Teile";
     const ul = $("partsList"); ul.textContent = "";
     m.parts.forEach((p, i) => {
       const li = document.createElement("li"), n = document.createElement("span"), meta = document.createElement("span"), b = document.createElement("button");
@@ -1367,8 +1703,7 @@ function updateInfo() {
     });
   }
   updatePartsUI();
-  const ok = fitsBed(); const chip = $("fit-chip");
-  chip.className = "chip " + (ok ? "ok" : "bad"); chip.textContent = ok ? "Ja" : "Nein, zu groß";
+  m.bedInfo = null;   // Auflage/Schweben für den Druck-Check neu berechnen
   updateEstimate();
   $("scaleOut").textContent = fmtNum(state.scale * 100, state.scale * 100 % 1 ? 1 : 0) + " %";
   state.dirty = true;
@@ -1380,6 +1715,8 @@ function selectTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("
   $("panel").classList.remove("collapsed"); $("collapse").setAttribute("aria-expanded", "true"); }
 tabs.forEach((t, i) => { t.addEventListener("click", () => selectTab(t)); t.tabIndex = i ? -1 : 0;
   t.addEventListener("keydown", (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); selectTab(n); } }); });
+function openTab(id) { selectTab($(id)); if (narrowMQ.matches && $("panel").classList.contains("collapsed")) setSheet("normal"); }
+const narrowMQ = matchMedia("(max-width:899px)");
 function setSheet(mode) {   // "collapsed" | "normal" | "tall"
   const panel = $("panel"); panel.style.maxHeight = mode === "tall" ? "85%" : "";
   panel.classList.toggle("collapsed", mode === "collapsed"); panel.classList.toggle("tall", mode === "tall");
@@ -1399,7 +1736,7 @@ $("collapse").addEventListener("click", () => setSheet($("panel").classList.cont
     const dy = e.clientY - drag.y;
     if (!drag.moved) { if (Math.abs(dy) < 8) return; drag.moved = true; try { handle.setPointerCapture(e.pointerId); } catch (_) {} panel.classList.add("dragging"); panel.classList.remove("collapsed"); }
     const appH = $("app").getBoundingClientRect().height;
-    panel.style.maxHeight = Math.max(52, Math.min(appH * 0.88, drag.h - dy)) + "px";
+    panel.style.maxHeight = Math.max(70, Math.min(appH * 0.88, drag.h - dy)) + "px";
     e.preventDefault();
   });
   const end = (e) => {
@@ -1408,7 +1745,7 @@ $("collapse").addEventListener("click", () => setSheet($("panel").classList.cont
     if (!d.moved) return;
     suppressClick = true; setTimeout(() => (suppressClick = false), 0);
     const appH = $("app").getBoundingClientRect().height, h = panel.getBoundingClientRect().height, dy = e.clientY - d.y;
-    const pts = [["collapsed", 60], ["normal", appH * 0.46], ["tall", appH * 0.85]];
+    const pts = [["collapsed", 76], ["normal", appH * 0.46], ["tall", appH * 0.85]];
     let best = pts.reduce((a, b) => Math.abs(b[1] - h) < Math.abs(a[1] - h) ? b : a);
     if (Math.abs(dy) > 40 && best[1] === pts.find(p => Math.abs(p[1] - d.h) < 30)?.[1]) best = pts[Math.max(0, Math.min(2, pts.findIndex(p => p === best) + (dy < 0 ? 1 : -1)))];   // kurzer Wisch reicht
     setSheet(best[0]);
@@ -1419,10 +1756,10 @@ $("collapse").addEventListener("click", () => setSheet($("panel").classList.cont
 function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
   const tools = document.querySelector(".tools"), stage = $("stage");
   tools.classList.remove("grid");
-  const free = stage.clientHeight - tools.offsetTop - 12;
+  const free = stage.clientHeight - tools.offsetTop - 84;   // unten Platz für Auswahl-Leiste und Hinweise lassen
   if (tools.offsetHeight > free) {
-    const btn = tools.querySelector(".tool").offsetHeight + 5;
-    tools.style.setProperty("--rows", Math.max(2, Math.floor((free + 5) / btn)));
+    const btn = tools.querySelector(".tool").offsetHeight + 8;
+    tools.style.setProperty("--rows", Math.max(2, Math.floor((free + 8) / btn)));
     tools.classList.add("grid");
   }
 }
@@ -1454,9 +1791,20 @@ $("clip").addEventListener("input", (e) => { const m = state.mesh; const f = e.t
   state.clipZ = f >= 1 || !m ? Infinity : m.max[2] * state.scale * f; state.layerPreview = false;
   $("clipOut").textContent = Number.isFinite(state.clipZ) ? fmtNum(state.clipZ, 1) + " mm" : "aus";
   $("layerSlider").value = $("layerSlider").max; $("layerOut").textContent = "alle Schichten"; state.dirty = true; });
-document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => fitView(b.dataset.view)));
+// Ansicht-Menü (Blickrichtung, Zoom, automatisch drehen)
+function closeViewMenu(focusBtn) { if ($("viewMenu").hidden) return; $("viewMenu").hidden = true; $("viewMenuBtn").setAttribute("aria-expanded", "false"); if (focusBtn) $("viewMenuBtn").focus(); }
+$("viewMenuBtn").addEventListener("click", (e) => { e.stopPropagation(); const open = $("viewMenu").hidden; $("viewMenu").hidden = !open; $("viewMenuBtn").setAttribute("aria-expanded", String(open)); hideHint(); });
+document.addEventListener("pointerdown", (e) => { if (!e.target.closest || !e.target.closest(".tool-wrap")) closeViewMenu(); });
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => { fitView(b.dataset.view); closeViewMenu(); }));
 $("zoomIn").addEventListener("click", () => zoom(0.8)); $("zoomOut").addEventListener("click", () => zoom(1.25)); $("fit").addEventListener("click", () => fitView());
-$("spin").addEventListener("click", () => { state.spin = !state.spin; $("spin").setAttribute("aria-pressed", String(state.spin)); hideHint(); });
+$("spin").addEventListener("click", () => { state.spin = !state.spin; $("spin").setAttribute("aria-pressed", String(state.spin)); hideHint(); if (state.spin) closeViewMenu(); });
+
+// Bearbeiten: Auswahl-Leiste und Platte
+$("selClose").addEventListener("click", () => selectPart(-1));
+$("selRotate").addEventListener("click", () => openTab("tab-edit"));
+$("selCopy").addEventListener("click", duplicatePart); $("dupBtn").addEventListener("click", duplicatePart);
+$("selRemove").addEventListener("click", () => removePart(state.sel)); $("delBtn").addEventListener("click", () => removePart(state.sel));
+$("arrangeBtn").addEventListener("click", () => arrangeParts()); $("arrangeBtn2").addEventListener("click", () => arrangeParts());
 
 // Druck: Drucker- und Materialprofile
 // FDM: Geschwindigkeiten in mm/s, Beschleunigung in mm/s², Fluss in mm³/s, Zeiten in s – angelehnt an die Standardprofile der Slicer.
@@ -1759,7 +2107,91 @@ function updateEstimate() {
   const ls = $("layerSlider"); const atMax = +ls.value >= +ls.max;
   if (!atMax && state.layerPreview && Number.isFinite(state.clipZ) && est.prevLayerH !== r.lh) ls.value = Math.max(1, Math.round((state.clipZ + est.zOffset) / r.lh));   // Höhe halten
   ls.max = r.layers; if (atMax || +ls.value > r.layers) ls.value = r.layers;
-  updateLayerView(); announceEstimate(r);
+  updateLayerView(); announceEstimate(r); updateChecks(r);
+}
+
+/* ---------------- Druck-Check ----------------
+   Prüft vor dem Slicen die typischen Stolpersteine und bietet – wo möglich – eine Ein-Tipp-Lösung an. */
+// Je Teil: tiefster Punkt, Höhe und Auflagefläche (nach unten zeigende Flächen direkt auf dem tiefsten Punkt)
+function bedInfo(m) {
+  if (m.bedInfo) return m.bedInfo;
+  const p = m.pos, list = (m.parts && m.parts.length ? m.parts : [{ name: m.name, start: 0, end: p.length }]).map(pt => {
+    let zmin = Infinity, zmax = -Infinity;
+    for (let i = pt.start + 2; i < pt.end; i += 3) { const z = p[i]; if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
+    let contact = 0; const lim = zmin + 0.05;
+    for (let i = pt.start; i < pt.end; i += 9) {
+      if (p[i+2] > lim || p[i+5] > lim || p[i+8] > lim) continue;
+      const ux = p[i+3]-p[i], uy = p[i+4]-p[i+1], vx = p[i+6]-p[i], vy = p[i+7]-p[i+1];
+      contact += Math.abs(ux*vy - uy*vx) / 2;
+    }
+    return { name: pt.name, zmin, h: zmax - zmin, contact };
+  });
+  return (m.bedInfo = list);
+}
+const ICONS = { ok: '<path d="m5 12.5 4.5 4.5L19 7.5"/>', warn: '<path d="M12 7v6.5M12 17.2v.1"/>', bad: '<path d="M7 7l10 10M17 7 7 17"/>' };
+function updateChecks(r) {
+  const m = state.mesh, ul = $("checks"); if (!m || !ul) return;
+  const s = state.scale, pr = currentPrinter(), [bx, by, bz] = state.printer, items = [];
+  const add = (kind, title, text, act, run) => items.push({ kind, title, text, act, run });
+  const dims = [0, 1, 2].map(k => (m.max[k] - m.min[k]) * s), f1 = (v) => fmtNum(v, v < 100 ? 1 : 0);
+  const prName = pr.name.split(/[\/(]/)[0].trim();
+  // 1. Größe
+  if (fitsBed()) add("ok", "Passt auf das Druckbett", f1(dims[0]) + " × " + f1(dims[1]) + " × " + f1(dims[2]) + " mm – Platz: " + bx + " × " + by + " × " + bz + " mm");
+  else {
+    const k = Math.min(bx / dims[0], by / dims[1], bz / dims[2]) * 0.98;
+    add("bad", "Zu groß für den " + prName, f1(dims[0]) + " × " + f1(dims[1]) + " × " + f1(dims[2]) + " mm – maximal " + bx + " × " + by + " × " + bz + " mm",
+      "Passend verkleinern", () => setScale(Math.floor(state.scale * k * 1000) / 10));
+  }
+  // 2. Lage: Teile außerhalb des Bettes oder schwebend
+  if (multiPart() && fitsBed()) {
+    const out = m.min[0] * s < -bx / 2 - 0.5 || m.max[0] * s > bx / 2 + 0.5 || m.min[1] * s < -by / 2 - 0.5 || m.max[1] * s > by / 2 + 0.5;
+    if (out) add("warn", "Teile ragen über das Druckbett", "Mindestens ein Teil liegt außerhalb der Druckfläche.", "Anordnen", () => arrangeParts());
+  }
+  const info = bedInfo(m), floating = info.filter(i => i.zmin * s > 0.05);
+  if (floating.length) add("warn", floating.length === 1 ? "„" + floating[0].name + "“ schwebt" : floating.length + " Teile schweben", "Sie berühren das Druckbett nicht.", "Aufs Bett legen", () => arrangeParts());
+  // 3. Netz
+  if (m.manifold) {
+    if (m.manifold.open) add("bad", "Netz hat Löcher", fmtInt(m.manifold.open) + " offene Kanten. Die meisten Slicer reparieren das automatisch – sonst z. B. mit Microsofts 3D-Builder.");
+    else if (m.manifold.nonManifold) add("warn", "Netz hat Mehrfachkanten", fmtInt(m.manifold.nonManifold) + " Kanten gehören zu mehr als zwei Flächen. Meist unkritisch.");
+    else add("ok", "Geschlossenes Netz", "Keine Löcher – sauber druckbar.");
+  }
+  // 4. Überhänge / Stützen
+  const sup = $("optSupport").checked;
+  if (r && r.type === "resin") {
+    if (!sup) add("warn", "Ohne Stützen", "Beim Resin-Druck braucht fast jedes Modell Stützen.", "Stützen an", () => { $("optSupport").checked = true; $("optSupport").dispatchEvent(new Event("change")); });
+    else add("ok", "Stützen eingeplant", "Das Modell wird dafür um ca. " + RESIN_LIFT_MM + " mm angehoben.");
+  } else if (r) {
+    const oh = r.overhangCm2 || 0;
+    if (oh >= 0.5 && !sup) add("warn", "Überhänge brauchen Stützen", fmtNum(oh, 1) + " cm² hängen steiler als 45° über.", "Stützen an", () => { $("optSupport").checked = true; $("optSupport").dispatchEvent(new Event("change")); });
+    else if (oh >= 0.5) add("ok", "Stützen eingeplant", fmtNum(oh, 1) + " cm² Überhänge werden gestützt.");
+    else add("ok", "Keine kritischen Überhänge", "Druckbar ohne Stützen.");
+  }
+  // 5. Haftung (nur FDM): Auflagefläche und Kippgefahr
+  if (pr.type === "fdm") {
+    const flatAct = (i) => () => { if (multiPart()) selectPart(i); $("layFlat").click(); };
+    let worst = null;
+    info.forEach((it, i) => { const c = it.contact * s * s, h = it.h * s, ratio = h / Math.sqrt(Math.max(c, 1e-6));
+      const lvl = c < 3 ? 2 : (h > 20 && ratio > 9) ? 1 : 0; if (lvl && (!worst || lvl > worst.lvl)) worst = { lvl, i, c, it }; });
+    const nm = (w) => multiPart() ? "„" + w.it.name + "“: " : "";
+    if (worst && worst.lvl === 2) add("bad", "Kaum Auflagefläche", nm(worst) + "steht nur auf Punkten oder Kanten (" + fmtNum(worst.c, 1) + " mm²) und löst sich leicht.", "Flach hinlegen", flatAct(worst.i));
+    else if (worst) add("warn", "Hoch und schmal – kann kippen", nm(worst) + "im Slicer einen Rand (Brim) aktivieren oder flach hinlegen.", "Flach hinlegen", flatAct(worst.i));
+    else { const c = info.reduce((n, it) => n + it.contact, 0) * s * s; add("ok", "Gute Auflage", fmtNum(c / 100, c < 1000 ? 1 : 0) + " cm² liegen auf dem Druckbett."); }
+  }
+  // 6. Sehr klein → evtl. falsche Einheit
+  if (Math.max(...dims) < 5) add("warn", "Sehr klein", "Nur " + f1(Math.max(...dims)) + " mm groß – wurde in Zoll exportiert?", "Zoll → mm", () => setScale(state.scale * 2540));
+
+  ul.textContent = "";
+  for (const it of items) {
+    const li = document.createElement("li"); li.className = "check " + it.kind;
+    li.innerHTML = '<span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[it.kind] + '</svg></span><span><b></b><small></small></span>';
+    li.querySelector("b").textContent = it.title; li.querySelector("small").textContent = it.text;
+    li.querySelector(".ci").setAttribute("aria-label", it.kind === "ok" ? "In Ordnung" : it.kind === "warn" ? "Hinweis" : "Problem"); li.querySelector(".ci").setAttribute("role", "img");
+    if (it.act) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = it.act; b.addEventListener("click", it.run); li.appendChild(b); }
+    ul.appendChild(li);
+  }
+  const bad = items.some(i => i.kind === "bad");
+  $("printDot").hidden = !bad || !!m.demo;
+  $("tab-print").setAttribute("aria-label", "Druck" + (bad ? " – Probleme gefunden" : ""));
 }
 
 let announceTimer;
@@ -1808,7 +2240,7 @@ function eulerMatrix([rx, ry, rz]) {
    und die bereits angewendete Drehung (R). Gedreht wird immer nur die Differenz zur aktuellen Lage. */
 const rotTarget = () => selectedPart() || state.mesh;
 function resetRotState(o) { o.rot = [0, 0, 0]; o.base = I3.slice(); o.R = I3.slice(); }
-function initOrientation(m) { resetRotState(m); (m.parts || []).forEach(resetRotState);
+function initOrientation(m, keepRot) { resetRotState(m); (m.parts || []).forEach(p => { if (!keepRot || !p.rot) resetRotState(p); });
   state.live = { R: I3.slice(), off: [0, 0, 0] }; est.profile = null; syncRotUI(); }
 const transpose3 = (a) => [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]];
 function applyOrientation() {
@@ -1819,7 +2251,7 @@ function applyOrientation() {
   const R = mul3(eulerMatrix(m.rot), m.base), D = mul3(R, transpose3(m.R)), p = m.pos;
   for (let i = 0; i < p.length; i += 3) { const x = p[i], y = p[i+1], z = p[i+2];
     p[i] = D[0]*x + D[1]*y + D[2]*z; p[i+1] = D[3]*x + D[4]*y + D[5]*z; p[i+2] = D[6]*x + D[7]*y + D[8]*z; }
-  placeOnBed(p); stats(m); est.profile = null; m.R = R;
+  placeOnBed(p); stats(m); est.profile = null; m.R = R; clearMeasure();
   (m.parts || []).forEach(resetRotState);   // Teile beginnen nach einer Plattendrehung wieder bei 0°
   state.live = { R: I3.slice(), off: [0, 0, 0] };
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferData(gl.ARRAY_BUFFER, p, gl.DYNAMIC_DRAW); uploadNormals();
@@ -1844,7 +2276,7 @@ function rotatePart(pt, final) {
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, p.subarray(a, b));
   if (final && state.smooth) uploadNormals();
   else { gl.bindBuffer(gl.ARRAY_BUFFER, bufNor); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, faceNormals(p.subarray(a, b))); }
-  if (final) { stats(m); est.profile = null; resetLayerView(); updateInfo(); }
+  if (final) { stats(m); est.profile = null; clearMeasure(); resetLayerView(); updateInfo(); }
   else { const { mn: gmn, mx: gmx } = bbox(p), s = state.scale, f = (v) => fmtNum(v, v < 100 ? 2 : 1);
     $("dimX").textContent = f((gmx[0] - gmn[0]) * s); $("dimY").textContent = f((gmx[1] - gmn[1]) * s); $("dimZ").textContent = f((gmx[2] - gmn[2]) * s); }
   state.dirty = true;
@@ -1854,7 +2286,7 @@ let rotFrame = 0;
 function previewOrientation() {
   if (rotFrame) return;
   rotFrame = requestAnimationFrame(() => {
-    rotFrame = 0; const m = state.mesh; if (!m || !m.R) return;
+    rotFrame = 0; const m = state.mesh; if (!m || !m.R) return; clearMeasure();
     const pt = selectedPart(); if (pt) { rotatePart(pt, false); return; }
     const D = mul3(mul3(eulerMatrix(m.rot), m.base), transpose3(m.R)), p = m.pos;
     let mnx = Infinity, mny = Infinity, mnz = Infinity, mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
@@ -1910,24 +2342,6 @@ $("layFlat").addEventListener("click", () => {
   showToast((pt ? "„" + pt.name + "“: " : "") + "Größte ebene Fläche liegt jetzt auf dem Druckbett.", "info");
 });
 
-// Bild speichern: Android-App über die Brücke (Galerie), sonst – z. B. iPhone – über das Teilen-Menü („Bild sichern“)
-const shotName = () => (state.mesh ? state.mesh.name : "modell").replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_") + "_" + Date.now() + ".png";
-const canShareFiles = (() => { try { return window.top === window && !!navigator.canShare && navigator.canShare({ files: [new File([new Uint8Array(1)], "t.png", { type: "image/png" })] }); } catch (_) { return false; } })();
-if (window.Android && typeof window.Android.saveImage === "function") {
-  $("shot").hidden = false;
-  $("shot").addEventListener("click", () => { draw(); const data = canvas.toDataURL("image/png").split(",")[1];
-    window.Android.saveImage(data, shotName()); });
-} else if (canShareFiles) {
-  $("shot").hidden = false; $("shot").title = "Bild teilen oder sichern"; $("shot").setAttribute("aria-label", "Bild teilen oder sichern");
-  $("shot").addEventListener("click", async () => {
-    draw();   // synchron erzeugen, damit das Teilen noch als direkte Reaktion auf das Tippen gilt
-    const bin = atob(canvas.toDataURL("image/png").split(",")[1]); const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    try { await navigator.share({ files: [new File([u8], shotName(), { type: "image/png" })], title: "3D Viewer" }); }
-    catch (e) { if (e && e.name !== "AbortError") showToast("Das Bild konnte nicht geteilt werden."); }
-  });
-}
-
 // iPhone/iPad: Die Dateiauswahl kennt STL & Co. nicht und würde sie ausgrauen – deshalb alle Dateien zulassen.
 // Außerdem das Seiten-Zoomen per Pinch-Geste von Safari unterdrücken, die Geste gehört dem 3D-Modell.
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1944,6 +2358,185 @@ if (isIOS) {
   $("fileInput").removeAttribute("accept");
   ["gesturestart", "gesturechange"].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 }
+
+/* ---------------- Export & Teilen ----------------
+   STL (binär, alle Teile in einer Datei) oder 3MF (jedes Teil als eigenes Objekt), jeweils mit aktueller Drehung,
+   Position und Größe. Android: über die App-Brücke teilen oder per „Speichern unter“ ablegen.
+   Browser/iPhone: Teilen-Menü (iOS: „In Dateien sichern“), sonst normaler Download. */
+const exportBase = () => (state.mesh && !state.mesh.demo ? state.mesh.parts && state.mesh.parts.length > 1 ? "Platte" : state.mesh.name : "modell")
+  .replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "modell";
+const hasFileBridge = !!(window.Android && ["fileBegin", "fileAppend", "fileShare", "fileSave"].every(k => typeof window.Android[k] === "function"));
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8, crc = 0) { let c = crc ^ 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+function buildSTL() {
+  const m = state.mesh, p = m.pos, s = state.scale, n = m.triCount;
+  const buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf), u8 = new Uint8Array(buf);
+  const head = "Binary STL exported by 3D Viewer"; for (let i = 0; i < head.length; i++) u8[i] = head.charCodeAt(i);
+  dv.setUint32(80, n, true);
+  let o = 84;
+  for (let i = 0; i < p.length; i += 9) {
+    const ux = p[i+3]-p[i], uy = p[i+4]-p[i+1], uz = p[i+5]-p[i+2], vx = p[i+6]-p[i], vy = p[i+7]-p[i+1], vz = p[i+8]-p[i+2];
+    let nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx; const l = Math.hypot(nx, ny, nz) || 1;
+    dv.setFloat32(o, nx / l, true); dv.setFloat32(o + 4, ny / l, true); dv.setFloat32(o + 8, nz / l, true); o += 12;
+    for (let k = 0; k < 9; k++) { dv.setFloat32(o, p[i + k] * s, true); o += 4; }
+    o += 2;   // Attribut-Bytes = 0
+  }
+  return new Blob([buf], { type: "model/stl" });
+}
+
+const xmlEsc = (t) => String(t).replace(/[<>&"']/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]);
+const num4 = (v) => { const r = Math.round(v * 1e4) / 1e4; return Object.is(r, -0) ? "0" : String(r); };
+async function build3MF() {
+  const m = state.mesh, p = m.pos, s = state.scale, enc = new TextEncoder();
+  const parts = m.parts && m.parts.length ? m.parts : [{ name: m.name, start: 0, end: p.length }];
+  const chunks = []; let crc = 0, size = 0, buf = "";
+  const flush = () => { if (!buf) return; const u = enc.encode(buf); chunks.push(u); crc = crc32(u, crc); size += u.length; buf = ""; };
+  const add = (t) => { buf += t; if (buf.length > 1 << 20) flush(); };
+  add('<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="de-DE" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'
+    + '<metadata name="Application">3D Viewer</metadata>\n<resources>\n');
+  const local = m.vid ? new Int32Array(m.uniqueVerts).fill(-1) : null;
+  for (let k = 0; k < parts.length; k++) {
+    const pt = parts[k];
+    add('<object id="' + (k + 1) + '" name="' + xmlEsc(pt.name) + '" type="model"><mesh><vertices>\n');
+    const tri = []; let nv = 0; const used = [];
+    for (let i = pt.start; i < pt.end; i += 3) {
+      let idx;
+      if (local) { const g = m.vid[i / 3]; idx = local[g]; if (idx < 0) { idx = local[g] = nv++; used.push(g); add('<vertex x="' + num4(p[i] * s) + '" y="' + num4(p[i+1] * s) + '" z="' + num4(p[i+2] * s) + '"/>\n'); } }
+      else { idx = nv++; add('<vertex x="' + num4(p[i] * s) + '" y="' + num4(p[i+1] * s) + '" z="' + num4(p[i+2] * s) + '"/>\n'); }
+      tri.push(idx);
+      if (tri.length % 300000 === 0) await tick();
+    }
+    if (local) for (const g of used) local[g] = -1;
+    add('</vertices><triangles>\n');
+    for (let t = 0; t < tri.length; t += 3) {
+      const a = tri[t], b = tri[t + 1], c = tri[t + 2];
+      if (a !== b && b !== c && a !== c) add('<triangle v1="' + a + '" v2="' + b + '" v3="' + c + '"/>\n');
+    }
+    add('</triangles></mesh></object>\n');
+    await tick();
+  }
+  // Druckbett-Mitte: Slicer zählen ab der Ecke, der Viewer ab der Mitte
+  const tx = num4(state.printer[0] / 2), ty = num4(state.printer[1] / 2);
+  add('</resources>\n<build>\n');
+  parts.forEach((_, k) => add('<item objectid="' + (k + 1) + '" transform="1 0 0 0 1 0 0 0 1 ' + tx + ' ' + ty + ' 0"/>\n'));
+  add('</build>\n</model>\n'); flush();
+  const file = (name, text) => { const u = enc.encode(text); return { name, chunks: [u], crc: crc32(u), size: u.length }; };
+  return zipStore([
+    file("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>'),
+    file("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>'),
+    { name: "3D/3dmodel.model", chunks, crc, size }
+  ], "model/3mf");
+}
+// ZIP schreiben; große Einträge werden mit Deflate gepackt, wenn der Browser das kann
+async function zipStore(files, type) {
+  const enc = new TextEncoder(), out = [], central = []; let offset = 0;
+  for (const f of files) {
+    let data = new Blob(f.chunks), method = 0;
+    if (typeof CompressionStream === "function" && f.size > 1024) {
+      try { data = await new Response(data.stream().pipeThrough(new CompressionStream("deflate-raw"))).blob(); method = 8; }
+      catch (_) { data = new Blob(f.chunks); method = 0; }
+    }
+    const name = enc.encode(f.name), lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, method, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, f.crc, true); lh.setUint32(18, data.size, true); lh.setUint32(22, f.size, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    out.push(lh, name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, method, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, f.crc, true); ch.setUint32(20, data.size, true); ch.setUint32(24, f.size, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(ch, name);
+    offset += 30 + name.length + data.size;
+  }
+  const cdSize = central.reduce((n, x) => n + x.byteLength, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...out, ...central, end], { type });
+}
+
+let exp = null;   // { blob, name, mime, url, token }
+function openExport() {
+  closeViewMenu(); finishMove();
+  if (!state.mesh) return;
+  resetExport();
+  const multi = multiPart();
+  $("exp3mf").querySelector("small").textContent = multi ? "Für Bambu Studio, Orca & Prusa – " + state.mesh.parts.length + " Teile bleiben einzeln" : "Für Bambu Studio, Orca & Prusa";
+  $("expStl").querySelector("small").textContent = multi ? "Für jeden Slicer – alle Teile in einer Datei" : "Für jeden Slicer";
+  $("expBackdrop").hidden = false; $("expDialog").focus({ preventScroll: true });
+}
+function resetExport() {
+  if (exp && exp.url) URL.revokeObjectURL(exp.url);
+  exp = null; $("expChoices").hidden = false; $("expReady").hidden = true; $("expTitle").textContent = "Exportieren & teilen";
+  $("expSub").textContent = "Die Platte so, wie du sie siehst – mit Drehung, Position und Größe.";
+  ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = false));
+}
+function closeExport() { $("expBackdrop").hidden = true; resetExport(); }
+async function makeExport(kind) {
+  const m = state.mesh; if (!m) return;
+  ["expStl", "exp3mf", "shot"].forEach(id => ($(id).disabled = true));
+  $("expSub").textContent = "Datei wird erstellt …";
+  await tick(); await new Promise(r => requestAnimationFrame(() => r()));
+  try {
+    const blob = kind === "stl" ? buildSTL() : await build3MF();
+    await readyExport(blob, exportBase() + (kind === "stl" ? ".stl" : ".3mf"), kind === "stl" ? "model/stl" : "model/3mf");
+  } catch (err) {
+    console.warn(err); resetExport();
+    showToast(err instanceof RangeError ? "Für den Export reicht der Speicher des Geräts nicht." : "Die Datei konnte nicht erstellt werden.");
+  }
+}
+// Fertige Datei anbieten. Android: einmal an die App übergeben, danach Teilen/Speichern ohne Wartezeit.
+async function readyExport(blob, name, mime) {
+  exp = { blob, name, mime };
+  if (hasFileBridge) {
+    $("expSub").textContent = "Datei wird vorbereitet …";
+    const token = window.Android.fileBegin(name); if (!token) throw new Error("fileBegin");
+    const CH = 3 * 262144;   // durch 3 teilbar → Base64 ohne Füllzeichen in der Mitte
+    for (let o = 0; o < blob.size; o += CH) {
+      const u8 = new Uint8Array(await blob.slice(o, o + CH).arrayBuffer()); let bin = "";
+      for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+      if (!window.Android.fileAppend(token, btoa(bin))) throw new Error("fileAppend");
+    }
+    exp.token = token;
+  }
+  $("expFile").textContent = name; $("expSize").textContent = fmtBytes(blob.size);
+  $("expTitle").textContent = "Datei ist fertig"; $("expSub").textContent = "Wohin soll sie?";
+  $("expChoices").hidden = true; $("expReady").hidden = false;
+  const file = new File([blob], name, { type: mime });
+  const canShare = !hasFileBridge && (() => { try { return window.top === window && !!navigator.canShare && navigator.canShare({ files: [file] }); } catch (_) { return false; } })();
+  exp.file = file;
+  $("expShare").hidden = !(hasFileBridge || canShare);
+  $("expShare").textContent = hasFileBridge ? "Teilen …" : isIOS ? "Teilen / In Dateien sichern" : "Teilen …";
+  $("expSave").hidden = !hasFileBridge;
+  const dl = $("expDownload"); dl.hidden = hasFileBridge;
+  if (!hasFileBridge) { exp.url = URL.createObjectURL(blob); dl.href = exp.url; dl.download = name; dl.classList.toggle("btn-primary", !canShare); }
+  ($("expShare").hidden ? dl : $("expShare")).focus({ preventScroll: true });
+}
+$("expShare").addEventListener("click", async () => {
+  if (!exp) return;
+  if (hasFileBridge) { window.Android.fileShare(exp.token, "application/octet-stream"); return; }
+  try { await navigator.share({ files: [exp.file], title: exp.name }); }
+  catch (e) { if (e && e.name !== "AbortError") showToast("Teilen hat nicht geklappt – nutze „Herunterladen“."); }
+});
+$("expSave").addEventListener("click", () => { if (exp && hasFileBridge) window.Android.fileSave(exp.token, "application/octet-stream"); });
+window.exportSaved = (ok) => { if (ok) { closeExport(); showToast("Datei gespeichert.", "info"); } else if (ok === false) showToast("Die Datei konnte nicht gespeichert werden."); };
+$("exportBtn").addEventListener("click", openExport);
+$("expStl").addEventListener("click", () => makeExport("stl"));
+$("exp3mf").addEventListener("click", () => makeExport("3mf"));
+$("expClose").addEventListener("click", closeExport);
+$("expBackdrop").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeExport(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("expBackdrop").hidden) closeExport(); });
+
+// Bild der Ansicht: Android-App speichert direkt in der Galerie, sonst wie die anderen Exporte
+const shotName = () => exportBase() + "_" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".png";
+$("shot").addEventListener("click", async () => {
+  draw();   // synchron zeichnen, damit der Puffer das aktuelle Bild enthält
+  const data = canvas.toDataURL("image/png");
+  if (window.Android && typeof window.Android.saveImage === "function") { window.Android.saveImage(data.split(",")[1], shotName()); closeExport(); return; }
+  const blob = await (await fetch(data)).blob();
+  try { await readyExport(blob, shotName(), "image/png"); } catch (_) { resetExport(); showToast("Das Bild konnte nicht erstellt werden."); }
+});
 
 /* ---------------- Beispielmodell: Torusknoten ---------------- */
 function demoKnot() {

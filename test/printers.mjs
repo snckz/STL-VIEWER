@@ -8,7 +8,7 @@ let fails = 0; const check = (n, c, g) => { if (!c) { fails++; console.log("FEHL
 const get = () => p.evaluate(() => ({ time: estTime.textContent, w: estWeight.textContent, len: estLen.textContent, layers: estLayers.textContent, lh: estLayerH.textContent,
   matLabel: estMatLabel.textContent, price: priceLabel.textContent, mats: [...document.querySelectorAll("#material option")].map(o => o.value),
   lhs: [...document.querySelectorAll("#layerH option")].map(o => o.value), infillHidden: document.querySelector("#infill").closest("[data-fdm]").hidden,
-  hollowHidden: document.getElementById("optHollow").closest("[data-resin]").hidden, fit: document.getElementById("fit-chip").textContent, cost: estCostNote.textContent }));
+  hollowHidden: document.getElementById("optHollow").closest("[data-resin]").hidden, fit: document.querySelector("#checks .check b").textContent, cost: estCostNote.textContent }));
 const info = await p.evaluate(() => ({ groups: [...document.querySelectorAll("#printer optgroup")].map(g => g.label + ":" + g.children.length), total: document.querySelectorAll("#printer option").length }));
 console.log(JSON.stringify(info));
 check("mindestens 50 Drucker, gruppiert", info.total >= 50 && info.groups.length >= 10, info);
@@ -47,7 +47,7 @@ const back = await p.evaluate(() => [material.value, layerH.value]);
 check("Resin-Einstellungen gemerkt (ABS-ähnlich, 0,1 mm)", back[0] === "abs" && back[1] === "0.1", back);
 // großes Modell passt nicht auf kleines Resin-Bett
 await p.setInputFiles("#fileInput", "test/tall.stl"); await p.waitForTimeout(400);
-check("300 mm hoch passt nicht auf Mars 5 Ultra", (await get()).fit.startsWith("Nein"), null);
+check("300 mm hoch passt nicht auf Mars 5 Ultra", (await get()).fit.startsWith("Zu groß"), null);
 // Neu laden: Auswahl bleibt erhalten
 await p.reload(); await p.waitForTimeout(500);
 const persisted = await p.evaluate(() => [printer.value, material.value, layerH.value, estMatLabel.textContent]);
