@@ -1,4 +1,6 @@
 <!-- Neuerungen der nächsten Version. Jede Zeile mit „- “ erscheint in der App im Update-Hinweis. -->
+- ZIP-Auswahl: Beim Öffnen einer ZIP zeigt die App alle Ordner und Dateien – ganze ZIP, einzelne Ordner oder einzelne Modelle wählen
+- Weitere Modelle aus derselben ZIP jederzeit nachladen (Bereich „Modell“ → „Dateien wählen“)
 - Neu gestaltete Bedienung: vier klare Bereiche – Modell, Bearbeiten, Druck und Aussehen
 - Messen: zwei Punkte am Modell antippen und den Abstand in mm ablesen
 - Teile verschieben: ausgewähltes Teil einfach mit dem Finger über das Druckbett ziehen

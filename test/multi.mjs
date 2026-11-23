@@ -12,7 +12,7 @@ const info = () => p.evaluate(() => ({ name: fileName.textContent, meta: fileMet
 const wait = () => p.waitForTimeout(700);
 check("Hinzufügen-Knopf beim Beispiel versteckt", !(await info()).add, null);
 // ZIP
-await p.setInputFiles("#fileInput", "test/models.zip"); await wait();
+await p.setInputFiles("#fileInput", "test/models.zip"); await p.waitForSelector("#zipBackdrop:not([hidden])"); await p.click("#zipOk"); await wait();
 let r = await info();
 check("ZIP: 3 Modelle, Müll/Nicht-Modelle ignoriert", r.name === "3 Teile" && r.parts.join("|") === "Würfel.obj|cube_le.ply|cube20.stl" && r.partsShown, r);
 check("ZIP: Volumen = 1 + 8 + 1 cm³", /^10,00? cm³$/.test(r.vol) && r.mf.includes("geschlossen"), r);

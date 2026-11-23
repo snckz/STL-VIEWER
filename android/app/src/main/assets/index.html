@@ -233,6 +233,39 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .exp-ready .btn{min-height:50px;text-decoration:none}
 .upd-actions.one{grid-template-columns:1fr}
 
+/* ZIP-Auswahl */
+.zipdlg{max-height:88%}
+.zip-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 0}
+.zip-count{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-align:right}
+.zcheck{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;min-height:40px}
+.ztree,.ztree ul{list-style:none;margin:0;padding:0;display:block}
+.ztree li{padding:0;line-height:normal}
+.ztree li::before{content:none;display:none}
+.ztree{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1 1 auto;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+.zrow{display:flex;align-items:center;gap:10px;min-height:46px;padding:2px 8px 2px calc(4px + var(--d,0) * 18px);border-radius:10px;cursor:pointer}
+.zrow:hover{background:var(--bg-2)}
+.zrow input[type=checkbox],.zcheck input{flex:none;width:20px;height:20px;margin:0;accent-color:var(--accent);cursor:pointer}
+.zrow input:disabled{cursor:default;opacity:.45}
+.zchev{flex:none;width:28px;height:28px;margin:0 -6px 0 -4px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.zchev svg{width:16px;height:16px;transition:transform .2s}
+.zchev[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.zspace{flex:none;width:22px}
+.zico{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--muted)}
+.zico svg{width:20px;height:20px}
+.zfolder .zico{color:var(--accent)}
+.zname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zfolder > .zrow .zname{font-weight:600}
+.zmeta{flex:none;font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.zext{flex:none;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.04em;padding:2px 6px;border-radius:6px;background:var(--bg-2);color:var(--muted);text-transform:uppercase}
+.ztag{flex:none;font-size:11px;font-weight:600;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);padding:2px 8px;border-radius:99px}
+.zip-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface)}
+.zr-ico{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.zr-ico svg{width:20px;height:20px}
+.zr-text{flex:1;min-width:0;display:grid;gap:2px}
+.zr-text b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zr-text small{color:var(--muted);font-size:12px}
+.zip-row .btn{flex:none;font-family:var(--font-body);font-size:12.5px}
+
 /* Mehrere Modelle */
 .icon-btn{width:40px;padding:0;flex:none}
 .parts-box{display:grid;gap:8px}
@@ -406,6 +439,24 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
     <div class="overlay drop" id="dropOverlay" hidden><div class="box">Datei hier ablegen</div></div>
     <div class="overlay" id="loading" hidden><div class="box"><div class="spinner"></div><div id="loadingText">Modell wird geladen …</div></div></div>
     <div class="toast" id="toast" role="alert" hidden><p id="toastText"></p><button id="toastClose" aria-label="Meldung schließen">×</button></div>
+    <div class="upd-backdrop" id="zipBackdrop" hidden>
+      <section class="upd sheet zipdlg" id="zipDialog" role="dialog" aria-modal="true" aria-labelledby="zipTitle" tabindex="-1">
+        <div class="upd-head">
+          <h2 id="zipTitle">Was soll geöffnet werden?</h2>
+          <p class="upd-ver" id="zipSub">–</p>
+        </div>
+        <div class="zip-tools">
+          <label class="zcheck"><input type="checkbox" id="zipAll"><span>Alles auswählen</span></label>
+          <span class="zip-count" id="zipCount">–</span>
+        </div>
+        <ul class="ztree" id="zipTree" role="tree" aria-labelledby="zipTitle"></ul>
+        <p class="note" id="zipWarn" hidden></p>
+        <div class="upd-actions">
+          <button class="btn" id="zipCancel">Abbrechen</button>
+          <button class="btn btn-primary" id="zipOk">Öffnen</button>
+        </div>
+      </section>
+    </div>
     <div class="upd-backdrop" id="expBackdrop" hidden>
       <section class="upd sheet" id="expDialog" role="dialog" aria-modal="true" aria-labelledby="expTitle" tabindex="-1">
         <div class="upd-head">
@@ -466,6 +517,11 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
       <div class="facts">
         <div class="fact"><small>Volumen</small><span id="vol">–</span></div>
         <div class="fact"><small>Geschlossenes Netz</small><span id="manifold">–</span></div>
+      </div>
+      <div class="zip-row" id="zipRow" hidden>
+        <span class="zr-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v2M12 14v2"/></svg></span>
+        <span class="zr-text"><b id="zipRowName">–</b><small id="zipRowInfo">–</small></span>
+        <button class="btn mini" id="zipMore">Dateien wählen</button>
       </div>
       <div class="sec" id="partsBox" hidden>
         <div class="sec-head"><h3 class="sec-title" id="partsTitle">Auf der Platte</h3><button class="link-btn" id="arrangeBtn2">Anordnen</button></div>
@@ -794,6 +850,7 @@ function persist() { try { localStorage.setItem("modellblick", JSON.stringify({ 
 
 /* ---------------- Parser ---------------- */
 class ViewerError extends Error {}
+class PickCancel extends Error {}   // ZIP-Auswahl abgebrochen – kein Fehler, nichts melden
 // Wachsende typisierte Arrays: speichersparend statt JS-Arrays mit Millionen Zahlen
 class Grow {
   constructor(Type, cap = 1 << 16) { this.T = Type; this.a = new Type(cap); this.n = 0; }
@@ -947,6 +1004,7 @@ async function readZip(buf) {
   }
   return {
     names: [...entries.values()].map(e => e.name),
+    size: (n) => { const e = entries.get(n.replace(/^\/+/, "").toLowerCase()); return e ? e.usize : 0; },
     has: (n) => entries.has(n.replace(/^\/+/, "").toLowerCase()),
     stream(n) {   // entpackter Inhalt als Datenstrom – große Modelle müssen nie komplett als Text im Speicher liegen
       const e = entries.get(n.replace(/^\/+/, "").toLowerCase()); if (!e) return null;
@@ -1422,7 +1480,7 @@ function pan(dx, dy) {
 }
 function zoom(f) { state.cam.dist *= f; clampCam(); state.dirty = true; }
 window.addEventListener("keydown", (e) => {
-  if (!$("updBackdrop").hidden || !$("expBackdrop").hidden || e.defaultPrevented) return;   // Dialog offen: Tasten gehören dem Dialog
+  if (!$("updBackdrop").hidden || !$("expBackdrop").hidden || !$("zipBackdrop").hidden || e.defaultPrevented) return;   // Dialog offen: Tasten gehören dem Dialog
   if (e.key === "Escape") {
     if (!$("viewMenu").hidden) closeViewMenu(true); else if (state.measure.on) setMeasure(false); else if (state.sel >= 0) selectPart(-1);
     return;
@@ -1467,7 +1525,7 @@ $("measureDone").addEventListener("click", () => setMeasure(false));
 const MODEL_RE = /\.(stl|3mf|obj|ply)$/i, MAX_PARTS = 200, PART_GAP = 5;
 const baseName = (n) => String(n).split(/[\\/]/).pop();
 // Eine Datei lesen; ZIP-Archive liefern alle enthaltenen Modelle
-async function parseSource(buf, name, depth = 0) {
+async function parseSource(buf, name, depth = 0, opts = {}) {
   const ext = (name.split(".").pop() || "").toLowerCase();
   const sig = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
   const isZip = sig[0] === 0x50 && sig[1] === 0x4b && sig[2] === 3 && sig[3] === 4;
@@ -1480,11 +1538,21 @@ async function parseSource(buf, name, depth = 0) {
     if (depth > 0) return [];
     const entries = zip.names.filter(n => MODEL_RE.test(n) && !/(^|\/)(__MACOSX|\.)/.test(n)).sort((a, b) => a.localeCompare(b, "de", { numeric: true }));
     if (!entries.length) throw new ViewerError("In „" + name + "“ wurde kein 3D-Modell gefunden (STL, 3MF, OBJ oder PLY).");
-    if (entries.length > MAX_PARTS) throw new ViewerError("Die ZIP-Datei enthält " + entries.length + " Modelle – höchstens " + MAX_PARTS + " lassen sich gleichzeitig anzeigen.");
+    // Mehrere Modelle: nachfragen, was geöffnet werden soll (Ordner, einzelne Dateien oder alles)
+    let chosen = entries;
+    if (entries.length > 1 || opts.loaded) {
+      showLoading(false);
+      chosen = await pickZip(name, zip, entries, opts);
+      if (!chosen) throw new PickCancel();
+      showLoading(true, "Entpacke …");
+    }
+    lastZip.next = { name, buf, count: entries.length };   // für „Dateien wählen“ – bleibt nur im Speicher der App
+    if (chosen.length > MAX_PARTS) throw new ViewerError("Höchstens " + MAX_PARTS + " Modelle lassen sich gleichzeitig anzeigen – bitte weniger auswählen.");
     const out = [];
-    for (let i = 0; i < entries.length; i++) {
-      showLoading(true, "Entpacke " + (i + 1) + " von " + entries.length + " …"); await new Promise(r => setTimeout(r, 0));
-      const b = await zip.bytes(entries[i]); out.push(...await parseSource(b, baseName(entries[i]), depth + 1));
+    for (let i = 0; i < chosen.length; i++) {
+      showLoading(true, "Entpacke " + (i + 1) + " von " + chosen.length + " …"); await new Promise(r => setTimeout(r, 0));
+      const b = await zip.bytes(chosen[i]);
+      for (const it of await parseSource(b, baseName(chosen[i]), depth + 1)) { it.zip = name; it.zipPath = chosen[i]; out.push(it); }
     }
     return out;
   }
@@ -1549,7 +1617,7 @@ async function loadSources(sources, add) {
   if (sources.reduce((n, f) => n + (f.size || 0), 0) > 400 * 1048576) { showToast("Zusammen sind die Dateien größer als 400 MB – bitte weniger auf einmal öffnen."); return; }
   showLoading(true, sources.length > 1 ? "Lese 1 von " + sources.length + " …" : "Modell wird gelesen …");
   await new Promise(r => setTimeout(r, 30));
-  const blocks = [], failed = [];
+  const blocks = [], failed = []; let cancelled = 0; lastZip.next = null;
   try {
     const cur = state.mesh;
     if (add && cur && !cur.demo) blocks.push({ pos: cur.pos, parts: cur.parts.map(p => ({ ...p })) });
@@ -1558,22 +1626,26 @@ async function loadSources(sources, add) {
       if (sources.length > 1) showLoading(true, "Lese " + (i + 1) + " von " + sources.length + ": " + src.name);
       await new Promise(r => setTimeout(r, 0));
       try {
-        const items = await parseSource(await src.read(), src.name);
+        const items = await parseSource(await src.read(), src.name, 0, src.zipOpts || {});
         for (const it of items) {
           if (!it.parsed.pos.length) continue;
-          blocks.push({ pos: it.parsed.pos, parts: [{ name: it.name, fmt: it.parsed.fmt, header: it.parsed.header, size: it.size, start: 0, end: it.parsed.pos.length }] });
+          blocks.push({ pos: it.parsed.pos, parts: [{ name: it.name, fmt: it.parsed.fmt, header: it.parsed.header, size: it.size, start: 0, end: it.parsed.pos.length, zip: it.zip, zipPath: it.zipPath }] });
         }
       } catch (err) {
+        if (err instanceof PickCancel) { cancelled++; continue; }
         if (sources.length === 1 || err instanceof RangeError) throw err;
         console.warn(err); failed.push(src.name);
       }
       if (blocks.reduce((n, b) => n + b.parts.length, 0) > MAX_PARTS) throw new ViewerError("Höchstens " + MAX_PARTS + " Modelle lassen sich gleichzeitig anzeigen.");
     }
     const added = blocks.filter(b => !(add && cur && !cur.demo && b === blocks[0]));
+    if (!added.length && cancelled && !failed.length) return;   // Auswahl abgebrochen: alles bleibt, wie es war
     if (!added.length) throw new ViewerError(failed.length ? "Keine der Dateien ließ sich lesen." : "Die Datei enthält keine Dreiecke.");
     showLoading(true, "Netz wird analysiert …"); await new Promise(r => setTimeout(r, 16));
     const { pos, parts } = blocks.length === 1 ? { pos: blocks[0].pos, parts: blocks[0].parts } : combineBlocks(blocks);
     setMesh(pos, parts, add && cur && !cur.demo);
+    if (lastZip.next) lastZip.cur = lastZip.next; else if (!add) lastZip.cur = null;
+    updateZipRow();
     if (failed.length) showToast("Nicht lesbar und übersprungen: " + failed.join(", "));
     else if (parts.length > 1) showToast(parts.length + " Teile auf der Platte. Tippe ein Teil an, um es auszuwählen – Doppeltippen zoomt darauf.", "info");
   } catch (err) {
@@ -1669,6 +1741,114 @@ if ("launchQueue" in window) {
 }
 window.showMessage = (t) => showToast(t);
 
+/* ---------------- ZIP-Auswahl ----------------
+   Zeigt Ordner und Dateien der ZIP als Baum. Ganze ZIP, ganze Ordner oder einzelne Dateien wählbar.
+   Entpackt wird nur im Speicher – nichts landet in Downloads oder anderen Ordnern. */
+const lastZip = { cur: null, next: null };
+const ZI = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+const ZI_FOLDER = ZI('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>');
+const ZI_FILE = ZI('<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>');
+const ZI_CHEV = ZI('<path d="m6 9 6 6 6-6"/>');
+let zipPick = null;   // { resolve, files:[{path, size, el, loaded}], folders:[{el, box, files}] }
+function pickZip(name, zip, entries, opts) {
+  return new Promise((resolve) => {
+    const loaded = opts.loaded || new Set();
+    // Baum aus den Pfaden bauen
+    const root = { dirs: new Map(), files: [] };
+    for (const path of entries) {
+      const segs = path.split("/").filter(Boolean); let node = root;
+      for (const d of segs.slice(0, -1)) { if (!node.dirs.has(d)) node.dirs.set(d, { dirs: new Map(), files: [] }); node = node.dirs.get(d); }
+      node.files.push({ path, label: segs[segs.length - 1], size: zip.size(path), loaded: loaded.has(path) });
+    }
+    const files = [], folders = [], ul = $("zipTree"); ul.textContent = "";
+    const firstTime = !opts.loaded, manyFolders = entries.length > 40;
+    const render = (node, parent, depth) => {
+      for (const [dname, sub] of [...node.dirs].sort((a, b) => a[0].localeCompare(b[0], "de", { numeric: true }))) {
+        const li = document.createElement("li"); li.className = "zfolder"; li.setAttribute("role", "treeitem");
+        const row = document.createElement("div"); row.className = "zrow"; row.style.setProperty("--d", depth);
+        const chev = document.createElement("button"); chev.type = "button"; chev.className = "zchev"; chev.innerHTML = ZI_CHEV;
+        const box = document.createElement("input"); box.type = "checkbox";
+        const ico = document.createElement("span"); ico.className = "zico"; ico.innerHTML = ZI_FOLDER;
+        const nm = document.createElement("span"); nm.className = "zname"; nm.textContent = dname;
+        const meta = document.createElement("span"); meta.className = "zmeta";
+        row.append(chev, box, ico, nm, meta); li.appendChild(row);
+        const kids = document.createElement("ul"); kids.setAttribute("role", "group"); li.appendChild(kids);
+        const f = { el: li, box, files: [] }; folders.push(f);
+        const startLen = files.length; render(sub, kids, depth + 1); f.files = files.slice(startLen);
+        meta.textContent = f.files.length + (f.files.length === 1 ? " Datei" : " Dateien");
+        box.setAttribute("aria-label", "Ordner " + dname + " auswählen");
+        const setOpen = (o) => { kids.hidden = !o; chev.setAttribute("aria-expanded", String(o)); li.setAttribute("aria-expanded", String(o)); };
+        setOpen(!manyFolders || depth > 0 ? !manyFolders : false);
+        chev.setAttribute("aria-label", "Ordner " + dname + " auf- oder zuklappen");
+        chev.addEventListener("click", (e) => { e.stopPropagation(); setOpen(kids.hidden); });
+        box.addEventListener("change", () => { f.files.forEach(x => { if (!x.loaded) x.box.checked = box.checked; }); syncZip(); });
+        row.addEventListener("click", (e) => { if (e.target === box || e.target.closest(".zchev")) return; box.checked = !box.checked; box.dispatchEvent(new Event("change")); });
+        parent.appendChild(li);
+      }
+      for (const fl of node.files.sort((a, b) => a.label.localeCompare(b.label, "de", { numeric: true }))) {
+        const li = document.createElement("li"); li.setAttribute("role", "treeitem");
+        const row = document.createElement("label"); row.className = "zrow"; row.style.setProperty("--d", depth);
+        const sp = document.createElement("span"); sp.className = "zspace";
+        const box = document.createElement("input"); box.type = "checkbox"; box.checked = fl.loaded || firstTime; box.disabled = fl.loaded;
+        const ico = document.createElement("span"); ico.className = "zico"; ico.innerHTML = ZI_FILE;
+        const nm = document.createElement("span"); nm.className = "zname"; nm.textContent = fl.label.replace(/\.[^.]+$/, "");
+        const ext = document.createElement("span"); ext.className = "zext"; ext.textContent = (fl.label.split(".").pop() || "").toUpperCase();
+        const meta = document.createElement("span"); meta.className = fl.loaded ? "ztag" : "zmeta"; meta.textContent = fl.loaded ? "geladen" : fmtBytes(fl.size);
+        row.append(sp, box, ico, nm, ext, meta); li.appendChild(row); parent.appendChild(li);
+        box.addEventListener("change", syncZip);
+        fl.box = box; files.push(fl);
+      }
+    };
+    render(root, ul, 0);
+    zipPick = { resolve, files, folders };
+    const nDirs = folders.length, total = files.reduce((n, f) => n + f.size, 0);
+    $("zipTitle").textContent = opts.loaded ? "Weitere Dateien wählen" : "Was soll geöffnet werden?";
+    $("zipSub").textContent = name + " · " + entries.length + " Modelle" + (nDirs ? " in " + nDirs + (nDirs === 1 ? " Ordner" : " Ordnern") : "") + " · " + fmtBytes(total);
+    syncZip();
+    $("zipBackdrop").hidden = false; $("zipDialog").focus({ preventScroll: true }); ul.scrollTop = 0;
+  });
+}
+function syncZip() {
+  if (!zipPick) return;
+  const { files, folders } = zipPick, free = files.filter(f => !f.loaded), sel = free.filter(f => f.box.checked);
+  for (const f of folders) {
+    const fr = f.files.filter(x => !x.loaded), n = fr.filter(x => x.box.checked).length;
+    f.box.checked = fr.length ? n === fr.length : f.files.length > 0;   // ganz geladen: abgehakt und gesperrt
+    f.box.indeterminate = n > 0 && n < fr.length; f.box.disabled = !fr.length;
+  }
+  const all = $("zipAll"); all.checked = free.length > 0 && sel.length === free.length; all.indeterminate = sel.length > 0 && sel.length < free.length; all.disabled = !free.length;
+  const bytes = sel.reduce((n, f) => n + f.size, 0);
+  $("zipCount").textContent = sel.length + " von " + free.length + " · " + fmtBytes(bytes);
+  $("zipOk").disabled = !sel.length;
+  $("zipOk").textContent = sel.length ? (sel.length === 1 ? "1 Modell öffnen" : sel.length + " Modelle öffnen") : "Nichts ausgewählt";
+  const plate = state.mesh && !state.mesh.demo ? state.mesh.parts.length : 0, warn = $("zipWarn");
+  warn.hidden = !(bytes > 300 * 1048576 || sel.length + plate > MAX_PARTS);
+  warn.textContent = sel.length + plate > MAX_PARTS ? "Höchstens " + MAX_PARTS + " Modelle passen gleichzeitig auf die Platte." : "Das ist viel auf einmal – am Handy kann der Speicher knapp werden.";
+}
+function closeZip(result) {
+  if (!zipPick) return; const { resolve, files } = zipPick; zipPick = null;
+  $("zipBackdrop").hidden = true; $("zipTree").textContent = "";
+  resolve(result ? files.filter(f => !f.loaded && f.box.checked).map(f => f.path) : null);
+}
+$("zipAll").addEventListener("change", (e) => { if (!zipPick) return; zipPick.files.forEach(f => { if (!f.loaded) f.box.checked = e.target.checked; }); syncZip(); });
+$("zipOk").addEventListener("click", () => closeZip(true));
+$("zipCancel").addEventListener("click", () => closeZip(false));
+$("zipBackdrop").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeZip(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && zipPick) { e.preventDefault(); closeZip(false); } });
+// Zeile im Modell-Tab: zuletzt geöffnete ZIP, weitere Dateien daraus nachladen
+function updateZipRow() {
+  const z = lastZip.cur, m = state.mesh, row = $("zipRow");
+  if (!z || !m || m.demo) { row.hidden = true; return; }
+  const onPlate = m.parts.filter(p => p.zip === z.name).length;
+  row.hidden = false; $("zipRowName").textContent = z.name;
+  $("zipRowInfo").textContent = onPlate + " von " + z.count + " Modellen auf der Platte";
+}
+$("zipMore").addEventListener("click", () => {
+  const z = lastZip.cur, m = state.mesh; if (!z) return;
+  const loaded = new Set(m && !m.demo ? m.parts.filter(p => p.zip === z.name && p.zipPath).map(p => p.zipPath) : []);
+  loadSources([{ name: z.name, size: z.buf.byteLength, read: async () => z.buf, zipOpts: { loaded } }], true);
+});
+
 /* ---------------- UI ---------------- */
 function showLoading(on, text) { $("loading").hidden = !on; if (text) $("loadingText").textContent = text; }
 function showToast(text, kind) { const t = $("toast"); $("toastText").textContent = text; t.className = "toast" + (kind ? " " + kind : ""); t.hidden = false;
@@ -1709,7 +1889,7 @@ function updateInfo() {
       li.append(n, meta, b); ul.appendChild(li);
     });
   }
-  updatePartsUI();
+  updatePartsUI(); updateZipRow();
   m.bedInfo = null;   // Auflage/Schweben für den Druck-Check neu berechnen
   updateEstimate();
   $("scaleOut").textContent = fmtNum(state.scale * 100, state.scale * 100 % 1 ? 1 : 0) + " %";

@@ -67,3 +67,13 @@ def binply(path, endian):
     open(path,'wb').write(hdr+body)
 binply('cube_le.ply','little'); binply('cube_be.ply','big')
 open('cloud.ply','w').write('ply\nformat ascii 1.0\nelement vertex 3\nproperty float x\nproperty float y\nproperty float z\nend_header\n0 0 0\n1 0 0\n0 1 0\n')
+
+# ZIP mit Unterordnern für die ZIP-Auswahl
+import zipfile, os
+_d = os.path.dirname(os.path.abspath(__file__))
+with zipfile.ZipFile(os.path.join(_d, "folders.zip"), "w", zipfile.ZIP_DEFLATED) as z:
+    z.write(os.path.join(_d, "cube20.stl"), "Projekt/Gehäuse/Deckel.stl")
+    z.write(os.path.join(_d, "cube_ascii.stl"), "Projekt/Gehäuse/Boden.stl")
+    z.write(os.path.join(_d, "cube.obj"), "Projekt/Halter/Halter.obj")
+    z.write(os.path.join(_d, "cube_le.ply"), "Projekt/Schraube.ply")
+    z.writestr("Projekt/liesmich.txt", "kein Modell")

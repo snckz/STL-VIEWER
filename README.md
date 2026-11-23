@@ -55,7 +55,7 @@ Die Bedienung ist in vier Bereiche aufgeteilt – **Modell**, **Bearbeiten**, **
 - **Analyse:** Überhänge über 45° rot markieren, Drahtgitter, Schnittansicht nach Höhe, glatte und orthografische Darstellung.
 - **Android:** Modelldateien direkt aus Dateimanager oder Downloads mit „Öffnen mit …“ bzw. „Teilen“ öffnen. Ansicht als Bild in der Galerie speichern (`Bilder/3D-Viewer`).
 
-- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet. Ein Teil antippen wählt es aus (blau markiert), Doppeltippen zoomt darauf. Ein ausgewähltes Teil lässt sich mit dem Finger verschieben, kopieren, entfernen oder unter **Bearbeiten** einzeln drehen. **Anordnen** verteilt alle Teile platzsparend auf dem Bett.
+- **Mehrere Modelle:** mehrere Dateien auf einmal öffnen oder über **+** hinzufügen, ZIP-Archive direkt öffnen. Bei mehreren Modellen in einer ZIP erscheint eine Auswahl mit allen Ordnern und Unterordnern: ganze ZIP, ganze Ordner oder einzelne Dateien. Entpackt wird nur im Speicher der App – es landen keine Dateien in Downloads. Unter **Modell → Dateien wählen** lassen sich später weitere Modelle aus derselben ZIP nachladen. Die Modelle werden nebeneinander auf dem Druckbett angeordnet. Ein Teil antippen wählt es aus (blau markiert), Doppeltippen zoomt darauf. Ein ausgewähltes Teil lässt sich mit dem Finger verschieben, kopieren, entfernen oder unter **Bearbeiten** einzeln drehen. **Anordnen** verteilt alle Teile platzsparend auf dem Bett.
 
 Unterstützte Formate:
 
@@ -116,6 +116,7 @@ node test/formats.mjs
 node test/multi.mjs
 node test/select.mjs
 node test/edit.mjs
+node test/zippick.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 
