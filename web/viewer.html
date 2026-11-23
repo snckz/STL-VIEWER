@@ -67,6 +67,10 @@ button,input,select{font:inherit;color:inherit}
 .tool[aria-pressed="true"] span,.tool[aria-expanded="true"] span{color:var(--accent-ink)}
 @media (max-height:640px){ .tool{width:52px;height:50px} .tool span{font-size:10px} .tools{gap:6px} }
 /* Wenig Platz (Querformat): Knöpfe in mehrere Spalten von rechts nach links umbrechen – Zeilenzahl setzt das Skript */
+.tools.compact{gap:6px}
+.tools.compact .tool{width:54px;height:48px;gap:2px;border-radius:13px}
+.tools.compact .tool svg{width:19px;height:19px}
+.tools.compact .tool span{font-size:9.5px}
 .tools.grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows), auto);direction:rtl;gap:6px}
 .tools.grid > *{direction:ltr}
 .tool-wrap{position:relative}
@@ -367,6 +371,8 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .dim::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--ax)}
 .dim:nth-child(1){--ax:#ef6a5b}.dim:nth-child(2){--ax:#5cc98a}.dim:nth-child(3){--ax:#5fa8f5}
 .dim span{font-size:17px;font-weight:600}
+.dim b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:380px){ .dim b{font-size:10px} .dim span{font-size:15px} }
 .est-main{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 24%,var(--surface)) 0%,color-mix(in srgb,var(--accent) 7%,var(--surface)) 100%);border-color:color-mix(in srgb,var(--accent) 40%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 26px rgba(0,0,0,.18)}
 .est-main span{font-size:34px}
 .btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
@@ -1474,7 +1480,8 @@ function updatePartsUI() {
   $("rotAll").hidden = !sp;
   $("editHint").hidden = !multi || !!sp;
   // Auswahl-Leiste über der 3D-Ansicht
-  const bar = $("selBar"); bar.hidden = !sp || state.measure.on;
+  const bar = $("selBar"), wasHidden = bar.hidden; bar.hidden = !sp || state.measure.on;
+  if (wasHidden !== bar.hidden) requestAnimationFrame(layoutTools);
   if (sp) { $("selName").textContent = sp.name; bar.style.setProperty("--sel", rgbToHex(selColor())); hideHint(); }
   // Platte: Kopie / Anordnen / Entfernen
   const canCopy = !!m && (sp || !multi);
@@ -2014,8 +2021,10 @@ $("collapse").addEventListener("click", () => setSheet($("panel").classList.cont
 })();
 function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
   const tools = document.querySelector(".tools"), stage = $("stage");
-  tools.classList.remove("grid");
-  const free = stage.clientHeight - tools.offsetTop - 84;   // unten Platz für Auswahl-Leiste und Hinweise lassen
+  tools.classList.remove("grid", "compact");
+  const bar = $("selBar"), below = bar.hidden ? 20 : stage.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 10;
+  const free = stage.clientHeight - tools.offsetTop - below;   // unten Platz für die Auswahl-Leiste lassen
+  if (tools.offsetHeight > free) tools.classList.add("compact");   // erst etwas kleiner, bevor sie in zwei Spalten umbricht
   if (tools.offsetHeight > free) {
     const btn = tools.querySelector(".tool").offsetHeight + 8;
     tools.style.setProperty("--rows", Math.max(2, Math.floor((free + 8) / btn)));
