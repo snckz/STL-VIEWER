@@ -1,4 +1,5 @@
 <!-- Neuerungen der nächsten Version. Jede Zeile mit „- “ erscheint in der App im Update-Hinweis. -->
+- Schönere Darstellung: Studio-Licht, weiche Schatten unter den Modellen und ein Hintergrund mit sanftem Verlauf
 - ZIP-Auswahl: Beim Öffnen einer ZIP zeigt die App alle Ordner und Dateien – ganze ZIP, einzelne Ordner oder einzelne Modelle wählen
 - Weitere Modelle aus derselben ZIP jederzeit nachladen (Bereich „Modell“ → „Dateien wählen“)
 - Neu gestaltete Bedienung: vier klare Bereiche – Modell, Bearbeiten, Druck und Aussehen

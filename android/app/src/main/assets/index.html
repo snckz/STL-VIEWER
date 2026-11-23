@@ -35,7 +35,11 @@ button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .app{position:relative;height:100%;display:flex;flex-direction:column}
-.stage{position:relative;flex:1;min-height:0}
+.stage{position:relative;flex:1;min-height:0;background:radial-gradient(130% 95% at 50% 28%, #262d38 0%, #181c23 52%, #0e1115 100%)}
+.stage[data-bg="grey"]{background:radial-gradient(130% 95% at 50% 28%, #6c727b 0%, #4c5159 55%, #353940 100%)}
+.stage[data-bg="light"]{background:radial-gradient(130% 95% at 50% 28%, #ffffff 0%, #e7e9ed 55%, #cdd1d7 100%)}
+.stage::after{content:"";position:absolute;left:0;right:0;top:0;height:110px;pointer-events:none;background:linear-gradient(to bottom, rgba(10,12,16,.55), transparent);z-index:1}
+.stage[data-bg="light"]::after{background:linear-gradient(to bottom, rgba(255,255,255,.6), transparent)}
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl:active{cursor:grabbing}
 
@@ -360,6 +364,36 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 /* iPhone-Home-Bildschirm-App: volle Bildschirmhöhe (iOS meldet sonst die Höhe ohne Statusleiste) */
 .pwa .app{height:var(--app-h, 100%)}
 .pwa body{background:var(--bg-2)}
+/* Feinschliff: Tiefe, Licht und ruhige Akzente */
+.panel{background:linear-gradient(180deg,#1e232b 0%,#1a1e25 140px,#191d24 100%)}
+.dim,.fact,.stat,.target,.check,.zip-row,.note.tip,.file{border:1px solid rgba(255,255,255,.045);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.dim{position:relative;overflow:hidden;padding-left:14px}
+.dim::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--ax)}
+.dim:nth-child(1){--ax:#ef6a5b}.dim:nth-child(2){--ax:#5cc98a}.dim:nth-child(3){--ax:#5fa8f5}
+.dim span{font-size:17px;font-weight:600}
+.est-main{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 24%,var(--surface)) 0%,color-mix(in srgb,var(--accent) 7%,var(--surface)) 100%);border-color:color-mix(in srgb,var(--accent) 40%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 26px rgba(0,0,0,.18)}
+.est-main span{font-size:34px}
+.btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.btn-primary{background:linear-gradient(180deg,#f7b860 0%,#ee9c32 100%);border-color:#f0a540;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px rgba(242,165,65,.28)}
+.btn-primary:hover{background:linear-gradient(180deg,#f9c375 0%,#f1a743 100%)}
+.btn-primary:disabled{box-shadow:none}
+.tool{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 8px 20px rgba(0,0,0,.25)}
+.tool:hover{transform:translateY(-1px)}
+.tool[aria-pressed="true"],.tool[aria-expanded="true"]{background:linear-gradient(180deg,#f7b860,#ee9c32);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 8px 20px rgba(242,165,65,.3)}
+.tab[aria-selected="true"]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent)}
+.brand svg{filter:drop-shadow(0 0 10px rgba(242,165,65,.35))}
+.file{background:color-mix(in srgb,var(--bg) 62%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.sw{box-shadow:inset 0 -6px 10px rgba(0,0,0,.18),inset 0 4px 8px rgba(255,255,255,.18);transition:transform .15s}
+.sw:hover{transform:scale(1.06)}
+.sw[aria-checked="true"]{box-shadow:0 0 0 2px var(--bg-2),0 0 0 4px var(--fg),inset 0 -6px 10px rgba(0,0,0,.18)}
+.parts li{border-radius:12px}
+.upd{background:linear-gradient(180deg,#252b34 0%,var(--surface) 160px)}
+.pane{scrollbar-width:thin;scrollbar-color:#3a414d transparent}
+.pane::-webkit-scrollbar{width:6px}.pane::-webkit-scrollbar-thumb{background:#3a414d;border-radius:3px}
+input[type=range]{accent-color:var(--accent);height:24px}
+.seg .btn[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 16%,var(--surface));border-color:color-mix(in srgb,var(--accent) 65%,transparent);color:var(--accent)}
+.hint{border:1px solid rgba(255,255,255,.05);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+
 /* Handy: Bedienbereich als Sheet mit Griff, durchgehend bis zum unteren Rand */
 @media (max-width:899px){
   .app{--sheet-overlap:20px}
@@ -731,7 +765,7 @@ function program(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, shad
   for (let i = 0; i < n; i++) { const name = gl.getActiveUniform(p, i).name; u[name] = gl.getUniformLocation(p, name); }
   return { p, u }; }
 
-let meshProg, lineProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf, measVAO, measBuf;
+let meshProg, lineProg, shProg, meshVAO, bufPos, bufNor, bedVAO, bedBuf, measVAO, measBuf, shVAO, shBuf;
 const MESH_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNor;
 uniform mat4 uVP; uniform float uScale; uniform mat3 uRot; uniform vec3 uOff;
@@ -740,7 +774,7 @@ void main(){ vec3 p = (uRot * aPos + uOff) * uScale; vPos = p; vNor = uRot * aNo
 const MESH_FS = `#version 300 es
 precision highp float;
 in vec3 vNor; in vec3 vPos; in vec3 vBar;
-uniform vec3 uColor; uniform vec3 uEye; uniform float uGloss; uniform float uClip; uniform int uSel; uniform vec3 uSelColor;
+uniform vec3 uColor; uniform vec3 uEye; uniform vec3 uKey; uniform vec3 uFill; uniform float uGloss; uniform float uClip; uniform int uSel; uniform vec3 uSelColor;
 uniform int uWire; uniform int uOver; uniform int uOut; uniform float uLayerH; uniform vec3 uAccent;
 out vec4 o;
 void main(){
@@ -753,16 +787,16 @@ void main(){
   if (uSel == 1) base = mix(base, uSelColor, 0.85);   /* ausgewähltes Teil */
   if (uOver == 1 && n.z < -0.7071 && vPos.z > 0.3) base = mix(base, vec3(0.94,0.27,0.22), 0.85);
   if (uOut == 1) base = mix(base, vec3(0.94,0.35,0.3), 0.35);
-  vec3 L1 = normalize(vec3(0.45, -0.6, 0.85));
-  vec3 L2 = normalize(V + vec3(0.0, 0.0, 0.25));
-  float d1 = max(dot(n, L1), 0.0), d2 = max(dot(n, L2), 0.0);
+  /* Studio-Licht: Hauptlicht oben links, Aufhelllicht rechts – beide wandern mit der Kamera, das Modell wirkt aus jedem Winkel plastisch */
+  vec3 L1 = uKey, L2 = uFill;
+  float d1 = max(dot(n, L1), 0.0), d2 = max(dot(n, L2), 0.0), dv = max(dot(n, V), 0.0);
   float hemi = 0.5 + 0.5 * n.z;
-  vec3 amb = mix(vec3(0.20,0.21,0.24), vec3(0.42,0.43,0.46), hemi);
+  vec3 amb = mix(vec3(0.19,0.20,0.23), vec3(0.42,0.43,0.47), hemi);
   vec3 H = normalize(L1 + V);
-  float shin = mix(8.0, 96.0, uGloss);
-  float spec = pow(max(dot(n, H), 0.0), shin) * mix(0.05, 0.65, uGloss);
-  float rim = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.18;
-  vec3 c = base * (amb + 0.62 * d1 + 0.38 * d2) + spec + rim;
+  float shin = mix(10.0, 110.0, uGloss);
+  float spec = pow(max(dot(n, H), 0.0), shin) * mix(0.06, 0.75, uGloss) + pow(max(dot(n, normalize(L2 + V)), 0.0), shin) * mix(0.02, 0.2, uGloss);
+  float rim = pow(1.0 - dv, 3.0) * 0.22;
+  vec3 c = base * (amb + 0.66 * d1 + 0.32 * d2 + 0.12 * dv) + spec + rim * vec3(0.85, 0.9, 1.0);
   if (back && uClip < 1e8) c = vec3(0.52,0.58,0.68) * (0.35 + 0.45 * d2);   /* Schnittfläche (nur bei aktivem Schnitt) */
   if (uLayerH > 0.0) {   /* Druckvorschau: Schichtlinien, oberste Schicht hervorgehoben */
     float t = vPos.z / uLayerH; float fw = fwidth(t);
@@ -780,6 +814,12 @@ void main(){
   o = vec4(pow(c, vec3(1.0/1.12)), 1.0);
 }`;
 
+const SH_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUV; uniform mat4 uVP; out vec2 vUV;
+void main(){ vUV = aUV; gl_Position = uVP * vec4(aPos, 1.0); }`;
+const SH_FS = `#version 300 es
+precision mediump float; in vec2 vUV; uniform float uA; out vec4 o;
+void main(){ vec2 q = abs(vUV); float d = pow(pow(q.x, 4.0) + pow(q.y, 4.0), 0.25); float a = (1.0 - smoothstep(0.3, 1.0, d)); o = vec4(0.0, 0.0, 0.0, a * a * uA); }`;
 const LINE_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec4 aCol;
 uniform mat4 uVP; uniform float uPtSize; out vec4 vCol;
@@ -790,7 +830,12 @@ void main(){ if (uRound == 1) { float d = length(gl_PointCoord - 0.5) * 2.0; if 
 
 /* Alle GPU-Ressourcen anlegen – auch erneut nach Kontextverlust (Android verwirft ihn gern im Hintergrund) */
 function initGL() {
-  meshProg = program(MESH_VS, MESH_FS); lineProg = program(LINE_VS, LINE_FS);
+  meshProg = program(MESH_VS, MESH_FS); lineProg = program(LINE_VS, LINE_FS); shProg = program(SH_VS, SH_FS);
+  shVAO = gl.createVertexArray(); shBuf = gl.createBuffer();
+  gl.bindVertexArray(shVAO); gl.bindBuffer(gl.ARRAY_BUFFER, shBuf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+  gl.bindVertexArray(null);
   meshVAO = gl.createVertexArray(); bufPos = gl.createBuffer(); bufNor = gl.createBuffer();
   gl.bindVertexArray(meshVAO);
   [[bufPos,0],[bufNor,1]].forEach(([b,l]) => { gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0); });
@@ -1271,14 +1316,16 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 function draw() {
-  const c = state.cam; const bg = BG[state.bg];
+  const c = state.cam;
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // Hintergrund-Verlauf liegt per CSS darunter
   const asp = canvas.width / canvas.height; const e = eye();
   const up = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
   const far = c.dist + modelRadius() * 4 + 1200, near = Math.max(0.01, c.dist / 500);
   const proj = state.ortho ? (() => { const h = c.dist * Math.tan(FOV / 2); return M.ortho(h * asp, h, near, far); })() : M.persp(FOV, asp, near, far);
   const vp = M.mul(proj, M.lookAt(e, c.target, up));
+  const fw = norm(sub(c.target, e)), rt = norm(cross(fw, up)), uv = cross(rt, fw);
+  const key = norm([0, 1, 2].map(k => -fw[k] * 0.55 + uv[k] * 0.7 - rt[k] * 0.45)), fill = norm([0, 1, 2].map(k => -fw[k] * 0.6 - uv[k] * 0.15 + rt[k] * 0.75));
 
   gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
   const m = state.mesh;
@@ -1287,6 +1334,7 @@ function draw() {
     gl.uniformMatrix4fv(u.uVP, false, vp); gl.uniform1f(u.uScale, state.scale);
     gl.uniformMatrix3fv(u.uRot, true, state.live.R); gl.uniform3fv(u.uOff, state.live.off);
     gl.uniform3fv(u.uColor, srgbToLin(state.color)); gl.uniform3fv(u.uEye, e); gl.uniform1f(u.uGloss, state.gloss);
+    gl.uniform3fv(u.uKey, key); gl.uniform3fv(u.uFill, fill);
     gl.uniform1f(u.uClip, Number.isFinite(state.clipZ) ? state.clipZ : 1e9);
     gl.uniform1f(u.uLayerH, state.layerPreview ? est.layerH * 1 : 0); gl.uniform3fv(u.uAccent, [0.95, 0.65, 0.25]);
     gl.uniform1i(u.uWire, state.wire ? 1 : 0); gl.uniform1i(u.uOver, state.overhang ? 1 : 0); gl.uniform1i(u.uOut, (state.bed && !fitsBed()) ? 1 : 0);
@@ -1300,16 +1348,45 @@ function draw() {
       gl.drawArrays(gl.TRIANGLES, a, b - a);
     } else { gl.uniform1i(u.uSel, 0); gl.drawArrays(gl.TRIANGLES, 0, m.triCount * 3); }
   }
+  // Transparente Flächen: Farbe vormultipliert, damit sie über dem CSS-Hintergrund richtig erscheinen
+  gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   if (state.bed) {
     gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-    gl.bindVertexArray(bedVAO);
-    gl.drawArrays(gl.TRIANGLES, bedFillStart, 6);
-    gl.drawArrays(gl.LINES, 0, bedLineCount);
-    gl.depthMask(true); gl.disable(gl.BLEND);
+    gl.bindVertexArray(bedVAO); gl.drawArrays(gl.TRIANGLES, bedFillStart, 6);
   }
+  if (m && e[2] > 0) drawShadows(vp);
+  if (state.bed) {
+    gl.useProgram(lineProg.p); gl.uniformMatrix4fv(lineProg.u.uVP, false, vp);
+    gl.bindVertexArray(bedVAO); gl.drawArrays(gl.LINES, 0, bedLineCount);
+  }
+  gl.depthMask(true); gl.disable(gl.BLEND);
   drawMeasure(vp);
   gl.bindVertexArray(null);
+}
+/* Weicher Kontaktschatten unter jedem Teil (abgerundetes Rechteck mit weichem Rand) – lässt Modelle auf dem Bett „stehen“ */
+function shadowBoxes(m) {
+  if (m.shadowBoxes) return m.shadowBoxes;
+  const parts = m.parts && m.parts.length ? m.parts : [{ start: 0, end: m.pos.length }];
+  return (m.shadowBoxes = parts.map(pt => { const { mn, mx } = bbox(m.pos, pt.start, pt.end); return { mn, mx }; }));
+}
+function drawShadows(vp) {
+  const m = state.mesh, R = state.live.R;
+  if (R[0] !== 1 || R[4] !== 1 || R[8] !== 1) return;   // während die Platte live gedreht wird
+  const s = state.scale, sel = state.sel, v = [];
+  shadowBoxes(m).forEach((b, i) => {
+    const o = i === sel && state.dragOff ? state.dragOff : [0, 0, 0];
+    const w = (b.mx[0] - b.mn[0]) * s, d = (b.mx[1] - b.mn[1]) * s, lift = Math.max(0, b.mn[2] * s);
+    if (lift > 40) return;
+    const cx = ((b.mn[0] + b.mx[0]) / 2 + o[0]) * s, cy = ((b.mn[1] + b.mx[1]) / 2 + o[1]) * s;
+    const pad = Math.max(1.5, 0.1 * Math.max(w, d)) + lift * 0.3, hx = w / 2 * 1.15 + pad, hy = d / 2 * 1.15 + pad, z = -0.03;
+    const q = [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]];
+    for (const [a, c] of q) v.push(cx + a * hx, cy + c * hy, z, a, c);
+  });
+  if (!v.length) return;
+  gl.useProgram(shProg.p); gl.uniformMatrix4fv(shProg.u.uVP, false, vp);
+  gl.uniform1f(shProg.u.uA, state.bg === "light" ? 0.22 : state.bg === "grey" ? 0.3 : 0.42);
+  gl.bindVertexArray(shVAO); gl.bindBuffer(gl.ARRAY_BUFFER, shBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.DYNAMIC_DRAW);
+  gl.drawArrays(gl.TRIANGLES, 0, v.length / 5);
 }
 /* Messlinie und -punkte immer obenauf zeichnen; die Beschriftung folgt der Linienmitte auf dem Bildschirm */
 function drawMeasure(vp) {
@@ -1890,7 +1967,7 @@ function updateInfo() {
     });
   }
   updatePartsUI(); updateZipRow();
-  m.bedInfo = null;   // Auflage/Schweben für den Druck-Check neu berechnen
+  m.bedInfo = null; m.shadowBoxes = null;   // Auflage/Schweben und Schatten neu berechnen
   updateEstimate();
   $("scaleOut").textContent = fmtNum(state.scale * 100, state.scale * 100 % 1 ? 1 : 0) + " %";
   state.dirty = true;
@@ -1968,7 +2045,7 @@ function setColor(hex) { state.color = hexToRgb(hex); const cur = rgbToHex(state
 $("gloss").value = Math.round(state.gloss * 100); $("glossOut").textContent = $("gloss").value + " %";
 $("gloss").addEventListener("input", (e) => { state.gloss = e.target.value / 100; $("glossOut").textContent = e.target.value + " %"; state.dirty = true; persist(); });
 document.querySelectorAll("#bgSeg .btn").forEach(b => b.addEventListener("click", () => setBg(b.dataset.bg)));
-function setBg(bg) { state.bg = bg; document.querySelectorAll("#bgSeg .btn").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.bg === bg))); buildBed(); persist(); }
+function setBg(bg) { state.bg = bg; $("stage").dataset.bg = bg; state.dirty = true; document.querySelectorAll("#bgSeg .btn").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.bg === bg))); buildBed(); persist(); }
 
 // Ansicht
 const bindSwitch = (id, key, after) => $(id).addEventListener("change", (e) => { state[key] = e.target.checked; if (after) after(); state.dirty = true; });
@@ -2459,7 +2536,7 @@ function rotatePart(pt, final) {
     if (Z < nz) nz = Z; if (X < nx0) nx0 = X; if (X > nx1) nx1 = X; if (Y < ny0) ny0 = Y; if (Y > ny1) ny1 = Y; }
   const sx = cx - (nx0 + nx1) / 2, sy = cy - (ny0 + ny1) / 2, sz = -nz;   // Mitte behalten, Unterseite auf das Bett
   for (let i = a; i < b; i += 3) { p[i] += sx; p[i+1] += sy; p[i+2] += sz; }
-  pt.R = R;
+  pt.R = R; m.shadowBoxes = null;
   gl.bindBuffer(gl.ARRAY_BUFFER, bufPos); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, p.subarray(a, b));
   if (final && state.smooth) uploadNormals();
   else { gl.bindBuffer(gl.ARRAY_BUFFER, bufNor); gl.bufferSubData(gl.ARRAY_BUFFER, a * 4, faceNormals(p.subarray(a, b))); }
@@ -2734,7 +2811,13 @@ document.addEventListener("keydown", (e) => {
 const shotName = () => exportBase() + "_" + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".png";
 $("shot").addEventListener("click", async () => {
   draw();   // synchron zeichnen, damit der Puffer das aktuelle Bild enthält
-  const data = canvas.toDataURL("image/png");
+  const cv = document.createElement("canvas"); cv.width = canvas.width; cv.height = canvas.height;
+  const g = cv.getContext("2d"), W = cv.width, Hh = cv.height;
+  const stops = { dark: ["#262d38", "#181c23", "#0e1115"], grey: ["#6c727b", "#4c5159", "#353940"], light: ["#ffffff", "#e7e9ed", "#cdd1d7"] }[state.bg] || ["#262d38", "#181c23", "#0e1115"];
+  const grad = g.createRadialGradient(W / 2, Hh * 0.28, 0, W / 2, Hh * 0.28, Math.hypot(W, Hh) * 0.62);
+  grad.addColorStop(0, stops[0]); grad.addColorStop(0.52, stops[1]); grad.addColorStop(1, stops[2]);
+  g.fillStyle = grad; g.fillRect(0, 0, W, Hh); g.drawImage(canvas, 0, 0);
+  const data = cv.toDataURL("image/png");
   if (window.Android && typeof window.Android.saveImage === "function") { window.Android.saveImage(data.split(",")[1], shotName()); closeExport(); return; }
   const gen = ++expGen, blob = await (await fetch(data)).blob();
   try { await readyExport(blob, shotName(), "image/png", gen); } catch (_) { resetExport(); showToast("Das Bild konnte nicht erstellt werden."); }
