@@ -3462,7 +3462,8 @@ function demoKnot() {
 }
 
 /* ---------------- Updates (nur Android-App) ----------------
-   Beim Start höchstens alle 6 Stunden die neueste GitHub-Version abfragen. Ist sie neuer als die installierte,
+   Beim Start und beim Zurückkehren in die App höchstens alle 15 Minuten die neueste GitHub-Version abfragen
+   (GitHub erlaubt 60 Abfragen pro Stunde). Ist sie neuer als die installierte,
    erscheint ein Hinweis mit den Neuerungen aus den Release-Notizen (Text vor der Trennlinie „---“). */
 const UPDATE_API = "https://api.github.com/repos/snckz/STL-VIEWER/releases/latest";
 const hasUpdater = !!(window.Android && typeof window.Android.getVersionCode === "function" && typeof window.Android.downloadUpdate === "function");
@@ -3477,7 +3478,7 @@ function releaseNotes(body) {
 async function checkForUpdate(manual) {
   if (!hasUpdater) return;
   const last = +(lsGet("modellblick-update-check") || 0);
-  if (!manual && Date.now() - last < 6 * 3600e3) return;
+  if (!manual && Date.now() - last < 15 * 60e3) return;
   lsSet("modellblick-update-check", String(Date.now()));
   try {
     const res = await fetch(UPDATE_API, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" });
@@ -3515,6 +3516,9 @@ if (hasUpdater) {
   $("appVer").textContent = (window.Android.getVersionName ? window.Android.getVersionName() : "") || String(window.Android.getVersionCode());
   $("updCheck").addEventListener("click", () => checkForUpdate(true));
   setTimeout(() => checkForUpdate(false), 1500);   // nach dem Start, damit das Modell zuerst erscheint
+  // Android lässt die App oft im Hintergrund weiterlaufen – beim Zurückkehren erneut prüfen
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(false); });
+  window.onAppResume = () => checkForUpdate(false);   // von der Android-App beim Zurückkehren aufgerufen
 }
 
 // Fenster am Griff nach unten ziehen schließt sie – derselbe Weg wie der Schließen-Knopf

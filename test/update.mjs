@@ -43,6 +43,23 @@ async function open(installed, latest) {
   await p.click("#updCheck"); await p.waitForTimeout(500);
   check("Manuell: „neueste Version“", await p.evaluate(() => !toast.hidden && toastText.textContent.includes("neueste")), null);
   await ctx.close(); }
+// Genau der gemeldete Fall: kurz vor dem Release geprüft (1.0.23 aktuell), dann erscheint 1.0.24
+{ let latest = 23, calls = 0;
+  const ctx = await b.newContext({ ...devices["Pixel 7"] });
+  await ctx.addInitScript(() => { window.Android = { getVersionCode: () => 23, getVersionName: () => "1.0.23", downloadUpdate: () => {}, saveImage: () => {} }; });
+  await ctx.route("https://api.github.com/**", r => { calls++; r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(release(latest)) }); });
+  const p = await ctx.newPage(); await p.goto("file://" + process.cwd() + "/dist/index.html"); await p.waitForTimeout(2200);
+  check("Start: aktuell, kein Hinweis", calls === 1 && await p.evaluate(() => updBackdrop.hidden), calls);
+  latest = 24;
+  await p.evaluate(() => localStorage.setItem("modellblick-update-check", String(Date.now() - 5 * 60e3)));
+  await p.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); await p.waitForTimeout(400);
+  check("5 Minuten später: noch keine neue Abfrage", calls === 1, calls);
+  await p.evaluate(() => localStorage.setItem("modellblick-update-check", String(Date.now() - 20 * 60e3)));
+  await p.evaluate(() => document.dispatchEvent(new Event("visibilitychange"))); await p.waitForTimeout(600);
+  check("20 Minuten später, zurück in die App: Update 1.0.24 erscheint", calls === 2 && await p.evaluate(() => !updBackdrop.hidden && updTo.textContent === "1.0.24"), calls);
+  await p.evaluate(() => { localStorage.setItem("modellblick-update-check", String(Date.now() - 20 * 60e3)); window.onAppResume(); }); await p.waitForTimeout(400);
+  check("Signal der Android-App beim Zurückkehren löst Prüfung aus", calls === 3, calls);
+  await ctx.close(); }
 { const ctx = await b.newContext(devices["Pixel 7"]); const p = await ctx.newPage(); let hit = false;
   await ctx.route("https://api.github.com/**", r => { hit = true; r.abort(); });
   await p.goto("file://" + process.cwd() + "/dist/index.html"); await p.waitForTimeout(2200);

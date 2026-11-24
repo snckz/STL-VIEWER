@@ -305,6 +305,23 @@ public class MainActivity extends Activity {
         webView.saveState(outState);
     }
 
+    /** Im Hintergrund Zeichnen und Timer der Seite anhalten (spart Akku). */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView != null) webView.onPause();
+    }
+
+    /** Zurück in der App: Seite fortsetzen und Bescheid geben (z. B. für die Update-Prüfung). */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.onResume();
+            js("window.onAppResume && window.onAppResume()");
+        }
+    }
+
     @Override
     protected void onDestroy() {
         try { unregisterReceiver(downloadDone); } catch (Exception ignored) { }
