@@ -1178,7 +1178,7 @@ async function parse3MF(buf) {
           const name = latin.decode(b.subarray(ns, ne));
           if (closing) { if (name === "object") obj = null; else if (name === "build") inBuild = false; continue; }
           const at = attrs(utf8.decode(b.subarray(ne, gt)));
-          if (name === "object") { obj = { id: at.id, v: null, t: null, comps: [] }; objects.set(String(at.id), obj); if (b[gt - 1] === 47) obj = null; }
+          if (name === "object") { obj = { id: at.id, name: at.name || "", v: null, t: null, comps: [] }; objects.set(String(at.id), obj); if (b[gt - 1] === 47) obj = null; }
           else if (name === "component" && obj) obj.comps.push({ id: at.objectid, path: at["p:path"] || at.path || null, transform: at.transform });
           else if (name === "build") inBuild = b[gt - 1] !== 47;
           else if (name === "item" && inBuild) { if (at.printable !== "0") build.push({ id: at.objectid, path: at["p:path"] || at.path || null, transform: at.transform }); }
@@ -1208,20 +1208,41 @@ async function parse3MF(buf) {
   }
   const rootModel = await loadModel(root);
   const items = rootModel.build.length ? rootModel.build : [...rootModel.objects.keys()].map(id => ({ id, path: null, transform: null }));
-  for (const it of items) await collect(it.path || root, it.id, parseT(it.transform) || ID, 0);
+  // Objektnamen: Bambu Studio / OrcaSlicer legen sie in Metadata/model_settings.config ab, sonst steht name="…" am Objekt
+  const names = new Map();
+  for (const cfg of ["Metadata/model_settings.config", "Metadata/Slic3r_PE_model.config"]) {
+    const txt = zip.has(cfg) ? await zip.text(cfg) : null; if (!txt) continue;
+    const re = /<object\b[^>]*\bid\s*=\s*"(\d+)"[^>]*>([\s\S]*?)<\/object>/gi; let m;
+    while ((m = re.exec(txt))) { const n = /<metadata\b[^>]*\bkey\s*=\s*"name"[^>]*\bvalue\s*=\s*"([^"]*)"/i.exec(m[2]); if (n && n[1] && !names.has(m[1])) names.set(m[1], n[1]); }
+  }
+  const unesc = (t) => t.replace(/&(lt|gt|quot|apos|amp);/g, (_, e) => ({ lt: "<", gt: ">", quot: '"', apos: "'", amp: "&" })[e]);
+  // Jedes Druckobjekt (Eintrag im build) wird ein eigenes Teil – auswählbar, verschiebbar, einzeln drehbar
+  const groups = [];
+  for (const it of items) {
+    const from = inst.length;
+    await collect(it.path || root, it.id, parseT(it.transform) || ID, 0);
+    if (inst.length > from) { const ob = it.path ? null : rootModel.objects.get(String(it.id)); groups.push({ from, to: inst.length, name: unesc(names.get(String(it.id)) || (ob && ob.name) || "") }); }
+  }
   const total = inst.reduce((n, x) => n + x.obj.tris.length, 0);
   if (!total) throw new ViewerError("Die 3MF-Datei enthält keine Dreiecke.");
   const pos = new Float32Array(total * 3); let o = 0;
+  const starts = [];
   for (const { obj, M, s } of inst) {
+    starts.push(o);
     const v = obj.vertices, t = obj.tris, nV = v.length / 3;
     for (let i = 0; i < t.length; i++) { const k = t[i]; if (k >= nV) throw new ViewerError("Die 3MF-Datei verweist auf einen nicht vorhandenen Punkt.");
       const x = v[k*3], y = v[k*3+1], z = v[k*3+2];
       pos[o++] = (x*M[0] + y*M[3] + z*M[6] + M[9]) * s; pos[o++] = (x*M[1] + y*M[4] + z*M[7] + M[10]) * s; pos[o++] = (x*M[2] + y*M[5] + z*M[8] + M[11]) * s; }
   }
+  starts.push(o);
   files.clear();   // Zwischendaten freigeben
-  const parts = inst.length;
-  const info = [rootModel.app ? "Erstellt mit " + rootModel.app : "", parts > 1 ? parts + " Teile" : ""].filter(Boolean).join(" · ");
-  return { pos, fmt: "3MF", header: info };
+  const used = new Map(), parts = groups.map((g, k) => {
+    let nm = g.name.trim();   // leer = unbenannt; der Aufrufer ergänzt den Dateinamen
+    if (nm) { const c = (used.get(nm) || 0) + 1; used.set(nm, c); if (c > 1) nm += " (" + c + ")"; }   // gleiche Namen unterscheidbar machen
+    return { name: nm, start: starts[g.from], end: starts[g.to] };
+  });
+  const info = [rootModel.app ? "Erstellt mit " + rootModel.app : "", parts.length > 1 ? parts.length + " Teile" : ""].filter(Boolean).join(" · ");
+  return { pos, fmt: "3MF", header: info, parts: parts.length > 1 && parts.length <= MAX_PARTS ? parts : null };
 }
 
 /* ---------------- Netz vorbereiten ---------------- */
@@ -1901,8 +1922,9 @@ function setMesh(pos, parts, keepScale, opt = {}) {
   if (!opt.keepPlace) placeOnBed(pos);
   const fmts = [...new Set(parts.map(p => p.fmt))];
   const single = parts.length === 1;
-  const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single ? parts[0].header : "" },
-    single ? parts[0].name : parts.length + " Teile", parts.reduce((n, p) => n + (p.size || 0), 0));
+  const oneFile = !single && parts[0].file && parts.every(p => p.file === parts[0].file);   // mehrere Objekte aus einer 3MF
+  const mesh = prepareMesh({ pos, fmt: fmts.length > 2 ? "Gemischt" : fmts.join(" + "), header: single || oneFile ? parts[0].header : "" },
+    single ? parts[0].name : parts[0].file && parts.every(p => p.file === parts[0].file) ? parts[0].file : parts.length + " Teile", parts.reduce((n, p) => n + (p.size || 0), 0));
   for (const pt of parts) if (!pt.uid) pt.uid = ++partUid;   // feste Kennung je Teil (überlebt Kopieren der Teile-Liste)
   mesh.parts = parts; state.sel = -1; state.dragOff = null; if (opt.demo) mesh.demo = true;
   stats(mesh); initOrientation(mesh, opt.keepRot);
@@ -1934,7 +1956,10 @@ async function loadSources(sources, add) {
         const items = await parseSource(await src.read(), src.name, 0, src.zipOpts || {});
         for (const it of items) {
           if (!it.parsed.pos.length) continue;
-          blocks.push({ pos: it.parsed.pos, parts: [{ name: it.name, fmt: it.parsed.fmt, header: it.parsed.header, size: it.size, start: 0, end: it.parsed.pos.length, zip: it.zip, zipPath: it.zipPath }] });
+          const sub = it.parsed.parts;
+          blocks.push({ pos: it.parsed.pos, parts: sub
+            ? sub.map((pt, k) => ({ name: pt.name || it.name.replace(/\.3mf$/i, "") + " · Teil " + (k + 1), fmt: it.parsed.fmt, header: it.parsed.header, size: k ? 0 : it.size, start: pt.start, end: pt.end, zip: it.zip, zipPath: it.zipPath, file: it.name }))
+            : [{ name: it.name, fmt: it.parsed.fmt, header: it.parsed.header, size: it.size, start: 0, end: it.parsed.pos.length, zip: it.zip, zipPath: it.zipPath }] });
         }
       } catch (err) {
         if (err instanceof PickCancel) { cancelled++; continue; }
@@ -2144,7 +2169,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && zipPick)
 function updateZipRow() {
   const z = lastZip.cur, m = state.mesh, row = $("zipRow");
   if (!z || !m || m.demo) { row.hidden = true; return; }
-  const onPlate = m.parts.filter(p => p.zip === z.name).length;
+  const onPlate = new Set(m.parts.filter(p => p.zip === z.name).map(p => p.zipPath)).size;   // Dateien zählen, nicht Objekte einer 3MF
   row.hidden = false; $("zipRowName").textContent = z.name;
   $("zipRowInfo").textContent = onPlate + " von " + z.count + " Modellen auf der Platte";
 }

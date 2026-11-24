@@ -101,3 +101,24 @@ def plate_hole(path, W=40.0, H=10.0, R=4.0, N=48):
         f.write(b"plate with hole".ljust(80, b" ")); f.write(struct.pack("<I", len(tris)))
         for t in tris: f.write(struct.pack("<3f", 0, 0, 0)); [f.write(struct.pack("<3f", *v)) for v in t]; f.write(b"\0\0")
 plate_hole(os.path.join(_d, "plate_hole.stl"))
+
+# 3MF im Stil von Bambu Studio: zwei Objekte (Unterdatei + Komponenten), Lage per Transformation, Namen in model_settings.config
+def box_mesh(oid, w, d, h):
+    v = [(x, y, z) for z in (0, h) for y in (0, d) for x in (0, w)]
+    t = [(0,2,1),(1,2,3),(4,5,6),(5,7,6),(0,1,4),(1,5,4),(2,6,3),(3,6,7),(0,4,2),(2,4,6),(1,3,5),(3,7,5)]
+    vs = "".join('<vertex x="%g" y="%g" z="%g"/>' % p for p in v); ts = "".join('<triangle v1="%d" v2="%d" v3="%d"/>' % q for q in t)
+    return '<object id="%d" type="model"><mesh><vertices>%s</vertices><triangles>%s</triangles></mesh></object>' % (oid, vs, ts)
+def bambu_3mf(path):
+    ns = 'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"'
+    sub = '<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" %s><resources>%s%s</resources><build/></model>' % (ns, box_mesh(1, 20, 20, 20), box_mesh(2, 10, 30, 5))
+    root = ('<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" %s requiredextensions="p"><metadata name="Application">BambuStudio-02.04.00.70</metadata><resources>'
+            '<object id="3" type="model"><components><component p:path="/3D/Objects/object_1.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></components></object>'
+            '<object id="4" type="model"><components><component p:path="/3D/Objects/object_1.model" objectid="2" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></components></object>'
+            '</resources><build><item objectid="3" transform="1 0 0 0 1 0 0 0 1 100 100 0" printable="1"/><item objectid="4" transform="1 0 0 0 1 0 0 0 1 140 100 0" printable="1"/></build></model>') % ns
+    cfg = ('<?xml version="1.0" encoding="UTF-8"?><config><object id="3"><metadata key="name" value="Deckel"/><part id="1" subtype="normal_part"><metadata key="name" value="Deckel-Körper"/></part></object>'
+           '<object id="4"><metadata key="name" value="Halter &amp; Clip"/></object><plate><metadata key="plater_id" value="1"/></plate></config>')
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>')
+        z.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+        z.writestr("3D/3dmodel.model", root); z.writestr("3D/Objects/object_1.model", sub); z.writestr("Metadata/model_settings.config", cfg)
+bambu_3mf(os.path.join(_d, "bambu_two.3mf"))

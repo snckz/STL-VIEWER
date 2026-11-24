@@ -32,7 +32,7 @@ check("Bis auf eines entfernt: Liste weg, Dateiname", r.name === "cube20.stl" &&
 // Mehrere Dateien auf einmal (ersetzt)
 await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/bambu.3mf", "test/garbage.stl"]); await wait();
 r = await info();
-check("Mehrfachauswahl: 2 gelesen, kaputte übersprungen", r.name === "2 Teile" && r.parts.join("|") === "cube20.stl|bambu.3mf" && r.vol === "24,0 cm³" && /übersprungen: garbage\.stl/.test(r.toast || ""), r);
+check("Mehrfachauswahl: 2 gelesen, kaputte übersprungen (3MF mit 2 Objekten = 2 Teile)", r.name === "3 Teile" && r.parts.join("|") === "cube20.stl|bambu · Teil 1|bambu · Teil 2" && r.vol === "24,0 cm³" && /übersprungen: garbage\.stl/.test(r.toast || ""), r);
 await p.evaluate(() => { toast.hidden = true; });
 // Hinzufügen ersetzt das Beispielmodell
 await p.reload(); await p.waitForTimeout(500);
