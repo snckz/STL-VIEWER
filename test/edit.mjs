@@ -86,9 +86,13 @@ check("Teil entfernt", await V(() => __viewer.state.mesh.parts.length === 1 && s
 // --- Export STL (Download) und 3MF (Rundlauf durch den eigenen Parser)
 await V(() => __viewer.state.scale = 1);
 await p.click("#exportBtn"); await p.click("#expStl"); await p.waitForSelector("#expReady:not([hidden])");
-check("STL fertig, Dateiname", await V(() => expFile.textContent === "cube20.stl" && expSize.textContent === "684 B"), await V(() => [expFile.textContent, expSize.textContent]));
+check("STL fertig, Dateiname als Vorschlag", await V(() => expName.value === "cube20" && expExt.textContent === ".stl" && expSize.textContent === "684 B"), await V(() => [expName.value, expExt.textContent, expSize.textContent]));
+// Umbenennen: Name eintippen, Endung bleibt; verbotene Zeichen werden ersetzt
+await p.fill("#expName", "Mein Halter: V2");
+await p.keyboard.press("Enter");
 const [dl] = await Promise.all([p.waitForEvent("download"), p.click("#expDownload")]);
 const stl = (await import("node:fs")).readFileSync(await dl.path());
+check("Download heißt wie eingegeben (mit Endung)", dl.suggestedFilename() === "Mein Halter_ V2.stl", dl.suggestedFilename());
 check("STL binär mit 12 Dreiecken", stl.length === 684 && stl.readUInt32LE(80) === 12, stl.length);
 await p.click("#expClose"); await p.waitForTimeout(300);
 // Zweites Modell dazu und als 3MF wieder einlesen

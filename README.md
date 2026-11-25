@@ -119,6 +119,7 @@ node test/edit.mjs
 node test/zippick.mjs
 node test/snap.mjs
 node test/threemf_parts.mjs
+node test/export_name.mjs
 node test/e2e.mjs . <ordner-fuer-screenshots>
 ```
 

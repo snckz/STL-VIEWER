@@ -333,7 +333,7 @@ public class MainActivity extends Activity {
     // ---------------- Export ----------------
 
     private static String safeFileName(String name) {
-        String n = name == null ? "" : name.replaceAll("[^\\p{L}\\p{N}._\\-]", "_").replaceAll("^\\.+", "");
+        String n = name == null ? "" : name.replaceAll("[^\\p{L}\\p{N}._\\- ()]", "_").replaceAll("^[.\\s]+", "").trim();
         if (n.isEmpty()) n = "modell.stl";
         return n.length() > 100 ? n.substring(n.length() - 100) : n;
     }
