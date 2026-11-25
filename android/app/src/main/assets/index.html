@@ -575,6 +575,44 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
 /* Fenster */
 .upd{background:var(--glass-shine),var(--glass-tint-strong)}
 .upd-backdrop{background:rgba(4,4,8,.38)}
+
+/* ===== Bereiche im Stil von „Exportieren & teilen“: großer Titel, Untertitel, Karten mit Symbol-Kachel ===== */
+.pane-head{display:grid;gap:4px;padding:2px 2px 2px}
+.pane-head h2{margin:0;font-family:var(--font-display);font-size:24px;line-height:1.15;letter-spacing:-.01em;color:var(--fg)}
+.pane-head p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.sec,.pane > .sec:first-child{border-top:0!important;padding-top:4px}
+.sec-title{font-family:var(--font-display);font-size:17px;letter-spacing:-.005em;text-transform:none;color:var(--fg);font-weight:700}
+.sec-head output{font-size:13px}
+/* Aktionsknöpfe als Karten mit Kachel */
+.quick .btn{justify-content:flex-start;gap:12px;min-height:60px;padding:8px 12px 8px 8px;border-radius:18px;font-size:15px;font-weight:600;text-align:left;
+  background:var(--card);border:1px solid var(--card-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.quick .btn svg{flex:none;box-sizing:content-box;width:21px;height:21px;padding:10px;border-radius:13px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.quick.three .btn{flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:7px;min-height:96px;padding:10px 6px;font-size:13.5px}
+.quick:not(.three) .btn{font-size:14.5px;gap:10px;white-space:nowrap}
+.quick:not(.three) .btn svg{padding:9px}
+.label{font-size:13px!important;letter-spacing:0!important;text-transform:none!important;color:var(--muted);font-weight:600}
+.quick .btn.danger-tile svg{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.quick .btn:active:not(:disabled){transform:scale(.985)}
+.quick .btn:disabled svg{filter:grayscale(1);opacity:.6}
+/* Schalter als gruppierte Karte */
+.switches{background:var(--card);border:1px solid var(--card-line);border-radius:18px;padding:0 14px;gap:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.switch:last-child{border-bottom:0}
+.switch > span{font-size:15px}
+.switch small{font-size:12.5px;line-height:1.4}
+/* einheitliche, weichere Karten */
+.dim,.fact,.stat,.target,.zip-row,.note.tip,.est-main{border-radius:18px}
+.check{border-radius:18px;grid-template-columns:42px minmax(0,1fr) auto;padding:12px 14px 12px 12px}
+.check .ci{width:42px;height:42px;border-radius:13px}
+.check .ci svg{width:21px;height:21px}
+.check b{font-size:15px}
+.check small{font-size:12.5px}
+.parts .swipe-content,.menu-item{border-radius:18px}
+.btn,select,.num{border-radius:14px}
+.seg .btn{min-height:44px;border-radius:14px;font-size:14px}
+.rot-list{background:var(--card);border:1px solid var(--card-line);border-radius:18px;padding:6px 12px}
+.more{border:1px solid var(--card-line);border-radius:18px;background:var(--card);padding:0 14px}
+.more summary{color:var(--fg)}
+@media (max-width:380px){ .check{grid-template-columns:38px minmax(0,1fr)} .check .ci{width:38px;height:38px} .quick .btn{font-size:14px;white-space:normal!important} .quick:not(.three) .btn{flex-direction:column;justify-content:center;text-align:center;gap:6px;min-height:84px;padding:10px 6px} .quick.three .btn{font-size:12.5px;min-height:88px} }
 /* Ohne Unschärfe-Unterstützung: deckender, damit es lesbar bleibt */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
   .panel,.tool,.file,.toast,.selbar,.modebar,.pop,.hint,.upd,#addBtn,.brand{background:#1c2129}
@@ -740,6 +778,7 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
 
     <div class="pane-pager"><div class="pane-track">
     <section class="pane" id="pane-model" role="tabpanel" aria-labelledby="tab-model">
+      <header class="pane-head"><h2>Dein Modell</h2><p>Maße, Volumen und Teile auf einen Blick.</p></header>
       <div class="dims">
         <div class="dim"><b class="x">Breite · X</b><span id="dimX">–</span><small>mm</small></div>
         <div class="dim"><b class="y">Tiefe · Y</b><span id="dimY">–</span><small>mm</small></div>
@@ -777,6 +816,7 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
     </section>
 
     <section class="pane" id="pane-edit" role="tabpanel" aria-labelledby="tab-edit" hidden>
+      <header class="pane-head"><h2>Bearbeiten</h2><p>Drehen, anordnen und skalieren – live im 3D-Fenster.</p></header>
       <div class="target" id="rotTarget" hidden>
         <span class="rt-label">Bearbeitet wird<b id="rotTargetName">ganze Platte</b></span>
         <button class="btn mini" id="rotAll" hidden>Alle Teile</button>
@@ -814,7 +854,7 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
         <div class="quick three">
           <button class="btn" id="dupBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Kopie</button>
           <button class="btn" id="arrangeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Anordnen</button>
-          <button class="btn" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Entfernen</button>
+          <button class="btn danger-tile" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Entfernen</button>
         </div>
         <p class="note" id="plateHint">Ein ausgewähltes Teil verschiebst du, indem du es im 3D-Fenster mit dem Finger ziehst.</p>
       </div>
@@ -831,6 +871,7 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
     </section>
 
     <section class="pane" id="pane-print" role="tabpanel" aria-labelledby="tab-print" hidden>
+      <header class="pane-head"><h2>Druck</h2><p>Zeit, Material und Kosten für deinen Drucker.</p></header>
       <div class="estimate">
         <div class="est-main"><small>Geschätzte Druckzeit</small><span id="estTime">–</span><small id="estPrep">–</small></div>
         <div class="est-grid">
@@ -886,6 +927,7 @@ body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(2
     </section>
 
     <section class="pane" id="pane-look" role="tabpanel" aria-labelledby="tab-look" hidden>
+      <header class="pane-head"><h2>Aussehen</h2><p>Farbe, Darstellung und Hintergrund der Ansicht.</p></header>
       <div class="sec">
         <h3 class="sec-title">Farbe</h3>
         <div class="swatches" id="swatches" role="radiogroup" aria-label="Farbe"></div>
