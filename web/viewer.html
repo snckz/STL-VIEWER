@@ -119,7 +119,7 @@ button,input,select{font:inherit;color:inherit}
 .sel-btn.danger{color:var(--bad)}
 .sel-close{flex:none;width:36px;height:36px;margin-left:2px;border-radius:50%;border:0;background:var(--bg-2);color:var(--muted);font-size:20px;line-height:1;cursor:pointer}
 @keyframes barIn{from{opacity:0;transform:translateY(8px)}}
-@media (max-width:380px){ .sel-btn{width:48px} .sel-btn span{font-size:10px} .sel-text small{display:none} }
+@media (max-width:380px){ #openBtn .lbl{display:none} #openBtn{padding:0 14px} .sel-btn{width:48px} .sel-btn span{font-size:10px} .sel-text small{display:none} }
 
 .hint{position:absolute;z-index:3;left:max(16px, env(safe-area-inset-left,0px));right:86px;bottom:calc(14px + var(--sheet-overlap,0px));width:fit-content;max-width:calc(100% - 82px);font-size:12px;line-height:1.4;color:var(--muted);background:color-mix(in srgb,var(--bg) 80%,transparent);padding:6px 12px;border-radius:10px;transition:opacity .4s}
 .hint.gone{opacity:0;pointer-events:none}
@@ -426,7 +426,7 @@ select,.num{height:40px;border-radius:10px;border:1px solid var(--line);backgrou
 .dim:nth-child(1){--ax:#ef6a5b}.dim:nth-child(2){--ax:#5cc98a}.dim:nth-child(3){--ax:#5fa8f5}
 .dim span{font-size:17px;font-weight:600}
 .dim b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:380px){ .dim b{font-size:10px} .dim span{font-size:15px} }
+@media (max-width:380px){ .dim b{font-size:10px} .dim span{font-size:15px} .fact .chip{font-size:11px;padding:3px 7px;gap:4px} }
 .est-main{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 24%,var(--surface)) 0%,color-mix(in srgb,var(--accent) 7%,var(--surface)) 100%);border-color:color-mix(in srgb,var(--accent) 40%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 26px rgba(0,0,0,.18)}
 .est-main span{font-size:34px}
 .btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
@@ -496,13 +496,87 @@ select:focus,.num:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0
 .target .rt-label{font-size:11px;letter-spacing:.06em}
 .upd-ver{font-family:var(--font-body)!important}
 
-/* Handy: Bedienbereich als Sheet mit Griff, durchgehend bis zum unteren Rand */
-@media (max-width:899px){
-  .app{--sheet-overlap:20px}
-  .panel{border-top:0;border-radius:20px 20px 0 0;margin-top:-20px;box-shadow:0 -10px 30px rgba(0,0,0,.28)}
-  .handle{padding-top:16px}
-  .handle::before{content:"";position:absolute;top:6px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:var(--line)}
-  .panel.collapsed{max-height:calc(76px + env(safe-area-inset-bottom,0px))}
+/* ================= Liquid Glass =================
+   Die 3D-Ansicht füllt den ganzen Bildschirm; Kopfzeile, Werkzeuge und Bedienbereich schweben als Glas darüber.
+   Glas = halbtransparente Tönung + starke, gesättigte Unschärfe + Lichtkante (Verlaufsrand) + innere Spiegelung. */
+:root{
+  --glass-tint:rgba(24,28,36,.38);
+  --glass-tint-strong:rgba(22,26,33,.52);
+  --glass-blur:blur(28px) saturate(185%) brightness(1.06);
+  --glass-rim:linear-gradient(155deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.12) 22%,rgba(255,255,255,.04) 55%,rgba(255,255,255,.10) 78%,rgba(255,255,255,.32) 100%);
+  --glass-shine:linear-gradient(180deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.035) 38%,rgba(255,255,255,0) 60%);
+  --glass-shadow:0 18px 50px rgba(0,0,0,.42),0 2px 8px rgba(0,0,0,.22);
+  --glass-inner:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(255,255,255,.04);
+  --card:rgba(255,255,255,.055);
+  --card-line:rgba(255,255,255,.08);
+}
+/* Über hellem/grauem Hintergrund: dichteres, dunkleres Glas, damit Schrift und Symbole klar lesbar bleiben */
+body[data-bg="grey"]{--glass-tint:rgba(22,26,33,.64);--glass-tint-strong:rgba(20,24,30,.76);--glass-blur:blur(28px) saturate(160%)}
+body[data-bg="light"]{--glass-tint:rgba(22,26,33,.80);--glass-tint-strong:rgba(20,24,30,.86);--glass-blur:blur(28px) saturate(150%) brightness(.9);
+  --glass-shadow:0 18px 44px rgba(20,24,32,.30),0 2px 8px rgba(20,24,32,.18)}
+.app{display:block}
+.stage{position:absolute;inset:0}
+.glass,.panel,.tool,.file,.toast,.selbar,.modebar,.pop,.hint,.upd,.top .icon-btn,#addBtn{position:relative;isolation:isolate;
+  background:var(--glass-shine),var(--glass-tint);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid transparent;box-shadow:var(--glass-inner),var(--glass-shadow)}
+.tools .tool,.top .file{position:relative}
+.panel::before,.tool::before,.file::before,.toast::before,.selbar::before,.modebar::before,.pop::before,.upd::before,#addBtn::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:var(--glass-rim);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none;z-index:2}
+.toast,.selbar,.modebar,.pop,.tools,.hint{position:absolute}
+/* Bedienbereich als schwebende Glasplatte */
+.panel{position:absolute;z-index:6;left:max(8px, env(safe-area-inset-left,0px));right:max(8px, env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  border-radius:30px;padding:0;background:var(--glass-shine),var(--glass-tint-strong);max-height:46%}
+.panel.collapsed{max-height:76px}
+.handle{padding-top:16px}
+.handle::before{content:"";position:absolute;top:6px;left:50%;width:38px;height:5px;margin-left:-19px;border-radius:3px;background:rgba(255,255,255,.28)}
+.pane{padding:14px 16px 20px}
+/* Reiter: Glas-Linse statt Fläche */
+.tabs{position:relative}
+.tab-lens{position:absolute;z-index:0;left:0;top:0;height:56px;border-radius:16px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05));box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.10),0 6px 18px rgba(0,0,0,.25);
+  transition:transform .42s cubic-bezier(.2,.9,.25,1.12), width .42s cubic-bezier(.2,.9,.25,1)}
+.tab{z-index:1;background:none!important;box-shadow:none!important;color:rgba(235,238,243,.62)}
+.tab[aria-selected="true"]{color:var(--accent)}
+/* Karten im Glas: leicht aufgehellt statt deckend */
+.dim,.fact,.stat,.target,.check,.zip-row,.note.tip,.parts .swipe-content,.file-pill,.menu-item,.est-grid .stat{background:var(--card);border:1px solid var(--card-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn,select,.num,.seg .btn,.pop-btn{background-color:rgba(255,255,255,.07);border-color:var(--card-line)}
+.btn:hover{border-color:rgba(255,255,255,.18)}
+.btn-primary{background:linear-gradient(180deg,#f9c06c 0%,#ef9d34 100%);border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 6px rgba(160,80,0,.25),0 8px 22px rgba(242,165,65,.32)}
+.est-main{background:linear-gradient(135deg,rgba(242,165,65,.30),rgba(242,165,65,.08));border:1px solid rgba(242,165,65,.35)}
+.parts .swipe-content{background:rgba(40,45,55,.72)}
+.parts li.sel .swipe-content{background:rgba(42,70,110,.78)}
+.sec{border-top-color:rgba(255,255,255,.07)}
+.switch{border-bottom-color:rgba(255,255,255,.07)}
+/* Kopfzeile: einzelne Glaskapseln */
+.top{padding-top:12px}
+.file{border-radius:18px;padding:7px 14px}
+#addBtn,.top .btn{border-radius:16px;min-height:44px}
+.brand{width:44px;height:44px;border-radius:16px;justify-content:center;background:var(--glass-shine),var(--glass-tint);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:var(--glass-inner),var(--glass-shadow)}
+.stage::after{height:90px;background:linear-gradient(to bottom, rgba(8,10,14,.35), transparent)}
+/* Werkzeuge: runde Glas-Knöpfe */
+.tool{border-radius:18px}
+.tool[aria-pressed="true"],.tool[aria-expanded="true"]{background:linear-gradient(180deg,#f9c06c,#ef9d34)}
+.pop{border-radius:22px}
+/* Leisten über dem Glas-Bereich */
+.selbar{bottom:calc(var(--sheet-h,0px) + 12px);right:calc(12px + var(--side-w,0px));border-radius:22px}
+.hint{bottom:calc(var(--sheet-h,0px) + 12px);border-radius:14px;color:rgba(235,238,243,.78)}
+.toast{border-radius:20px}
+.modebar{border-radius:22px}
+/* Fenster */
+.upd{background:var(--glass-shine),var(--glass-tint-strong)}
+.upd-backdrop{background:rgba(4,4,8,.38)}
+/* Ohne Unschärfe-Unterstützung: deckender, damit es lesbar bleibt */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .panel,.tool,.file,.toast,.selbar,.modebar,.pop,.hint,.upd,#addBtn,.brand{background:#1c2129}
+}
+/* Desktop: Glas-Seitenleiste rechts */
+@media (min-width:900px){
+  .panel{left:auto;top:12px;right:12px;bottom:12px;width:372px;max-height:none!important;padding-top:0;border-radius:30px}
+  .handle::before{display:none}
+  .top{right:calc(var(--side-w,0px) + 4px)}
+  .tools{right:calc(var(--side-w,0px) + 12px);top:80px}
+  .modebar{right:calc(var(--side-w,0px) + 86px)}
+  .toast{right:calc(var(--side-w,0px) + 84px)}
 }
 </style>
 
@@ -521,9 +595,9 @@ select:focus,.num:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0
       <label class="btn icon-btn" for="addInput" role="button" tabindex="0" id="addBtn" title="Weitere Modelle hinzufügen" aria-label="Weitere Modelle hinzufügen" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </label>
-      <label class="btn btn-primary" for="fileInput" role="button" tabindex="0" id="openBtn">
+      <label class="btn btn-primary" for="fileInput" role="button" tabindex="0" id="openBtn" aria-label="Öffnen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        Öffnen
+        <span class="lbl">Öffnen</span>
       </label>
       <input type="file" id="fileInput" multiple accept=".stl,.3mf,.obj,.ply,.zip,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/zip,application/x-zip-compressed,application/octet-stream" hidden>
       <input type="file" id="addInput" multiple accept=".stl,.3mf,.obj,.ply,.zip,model/stl,model/3mf,model/obj,application/sla,application/vnd.ms-pki.stl,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,application/zip,application/x-zip-compressed,application/octet-stream" hidden>
@@ -644,7 +718,7 @@ select:focus,.num:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0
 
   <aside class="panel" id="panel">
     <div class="handle">
-      <div class="tabs" role="tablist" aria-label="Bereiche">
+      <div class="tabs" role="tablist" aria-label="Bereiche"><span class="tab-lens" aria-hidden="true"></span>
         <button class="tab" role="tab" id="tab-model" aria-controls="pane-model" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span>Modell</span></button>
         <button class="tab" role="tab" id="tab-edit" aria-controls="pane-edit" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Bearbeiten</span></button>
         <button class="tab" role="tab" id="tab-print" aria-controls="pane-print" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 17v4h10v-4"/></svg><span>Druck</span><i class="tab-dot" id="printDot" hidden></i></button>
@@ -1420,12 +1494,21 @@ function buildBed() {
 const FOV = 40 * Math.PI / 180;
 function modelRadius() { const m = state.mesh; if (!m) return 50; const s = state.scale;
   return Math.max(1, Math.hypot(m.max[0] - m.min[0], m.max[1] - m.min[1], m.max[2] - m.min[2]) * s / 2); }
+/* Freier Bereich der 3D-Ansicht: Die Leinwand läuft unter dem Glas weiter, das Modell wird aber im sichtbaren Teil
+   (unter der Kopfzeile, über bzw. neben dem Bedienbereich) zentriert. Liefert Verschiebung in NDC und Anteile. */
+const wideMQ = matchMedia("(min-width:900px)");
+function viewArea() {
+  const W = Math.max(1, canvas.clientWidth), H = Math.max(1, canvas.clientHeight), cr = canvas.getBoundingClientRect(), pr = $("panel").getBoundingClientRect();
+  let l = 0, r = W, t = Math.min(64, H * 0.12), b = H;
+  if (wideMQ.matches) r = Math.max(W * 0.4, Math.min(W, pr.left - cr.left - 8)); else b = Math.max(H * 0.25, Math.min(H, pr.top - cr.top - 8));
+  return { ox: ((l + r) / 2 - W / 2) / (W / 2), oy: -((t + b) / 2 - H / 2) / (H / 2), fw: (r - l) / W, fh: (b - t) / H, W, H };
+}
 function fitView(view) {
   const m = state.mesh; const s = state.scale; const r = modelRadius();
   const c = state.cam;
   c.target = m ? [(m.min[0] + m.max[0]) / 2 * s, (m.min[1] + m.max[1]) / 2 * s, (m.min[2] + m.max[2]) / 2 * s] : [0, 0, 0];
-  const asp = canvas.clientWidth / Math.max(1, canvas.clientHeight);
-  c.dist = r / Math.sin(FOV / 2) / Math.min(1, asp) * 1.08;
+  const va = viewArea(), asp = va.W / va.H;
+  c.dist = r / Math.sin(FOV / 2) / Math.min(va.fh, asp * va.fw) * 0.98;   // Hüllkugel ist großzügig – so füllt das Modell die freie Fläche
   if (view === "front") { c.theta = -Math.PI / 2; c.phi = 0; }
   else if (view === "top") { c.theta = -Math.PI / 2; c.phi = Math.PI / 2 - 0.001; }
   else if (view === "side") { c.theta = 0; c.phi = 0; }
@@ -1439,7 +1522,7 @@ function clampCam() { const c = state.cam; const lim = Math.PI / 2 - 0.001; c.ph
 
 /* ---------------- Rendern ---------------- */
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; state.dirty = true; }
 }
@@ -1465,6 +1548,9 @@ function draw() {
   const up = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
   const far = c.dist + modelRadius() * 4 + 1200, near = Math.max(0.01, c.dist / 500);
   const proj = state.ortho ? (() => { const h = c.dist * Math.tan(FOV / 2); return M.ortho(h * asp, h, near, far); })() : M.persp(FOV, asp, near, far);
+  // Bildmitte in den freien Bereich verschieben (gleiche Verschiebung nutzt cameraRay fürs Antippen)
+  const va = viewArea(); state.viewOff = [va.ox, va.oy];
+  for (let k = 0; k < 4; k++) { proj[k * 4] += va.ox * proj[k * 4 + 3]; proj[k * 4 + 1] += va.oy * proj[k * 4 + 3]; }
   const vp = M.mul(proj, M.lookAt(e, c.target, up)); state.lastVP = vp;
   const fw = norm(sub(c.target, e)), rt = norm(cross(fw, up)), uv = cross(rt, fw);
   const key = norm([0, 1, 2].map(k => -fw[k] * 0.55 + uv[k] * 0.7 - rt[k] * 0.45)), fill = norm([0, 1, 2].map(k => -fw[k] * 0.6 - uv[k] * 0.15 + rt[k] * 0.75));
@@ -1572,7 +1658,7 @@ const multiPart = () => !!(state.mesh && state.mesh.parts && state.mesh.parts.le
 const selectedPart = () => multiPart() && state.sel >= 0 ? state.mesh.parts[state.sel] || null : null;
 function cameraRay(clientX, clientY) {
   const c = state.cam, r = canvas.getBoundingClientRect();
-  const nx = (clientX - r.left) / r.width * 2 - 1, ny = 1 - (clientY - r.top) / r.height * 2;
+  const off = state.viewOff || [0, 0], nx = (clientX - r.left) / r.width * 2 - 1 - off[0], ny = 1 - (clientY - r.top) / r.height * 2 - off[1];
   const e = eye(), f = norm(sub(c.target, e));
   const upv = Math.abs(Math.sin(c.phi)) > 0.999 ? [Math.cos(c.theta + Math.PI), Math.sin(c.theta + Math.PI), 0] : [0, 0, 1];
   const right = norm(cross(f, upv)), u = cross(right, f), asp = r.width / Math.max(1, r.height), t = Math.tan(FOV / 2);
@@ -1901,7 +1987,7 @@ function snapMeasure(sx, sy) {
     let bent = false; for (let i = 1; i < c.dirs.length && !bent; i++) if (Math.abs(dot(c.dirs[0], c.dirs[i])) < 0.9) bent = true;
     if (!bent) continue;
     const d = Math.hypot(c.sc[0] - sx, c.sc[1] - sy);
-    if (d < 18 && near(c.P) && (!bestC || d < bestC.d)) bestC = { d, P: c.P };
+    if (d < 24 && near(c.P) && (!bestC || d < bestC.d)) bestC = { d, P: c.P };   // Fingerbreite: Ecke hat Vorrang vor Kante
   }
   if (bestC) return { p: bestC.P, kind: "corner" };
   // 3. Kante
@@ -2638,7 +2724,12 @@ function layoutPanes() {
     else { delete pn.dataset.dir; pn.inert = false; pn.removeAttribute("aria-hidden"); }
   });
 }
-function markTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; }); }
+function markTab(t) { tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", on); x.tabIndex = on ? 0 : -1; }); placeLens(); }
+// Glas-Linse gleitet hinter den aktiven Reiter (wie die Tab-Leiste in iOS 26)
+function placeLens() {
+  const lens = document.querySelector(".tab-lens"), t = document.querySelector('.tab[aria-selected="true"]'); if (!lens || !t) return;
+  lens.style.width = t.offsetWidth + "px"; lens.style.transform = "translateX(" + t.offsetLeft + "px)";
+}
 let tabSwipe = null;
 function selectTab(t, dir) {
   if (tabSwipe) tabSwipe.finish();   // laufendes Einrasten zuerst abschließen (Paket: finish)
@@ -2703,8 +2794,9 @@ $("collapse").addEventListener("click", () => setSheet($("panel").classList.cont
 function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
   const tools = document.querySelector(".tools"), stage = $("stage");
   tools.classList.remove("grid", "compact");
-  const bar = $("selBar"), below = bar.hidden ? 20 : stage.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 10;
-  const free = stage.clientHeight - tools.offsetTop - below;   // unten Platz für die Auswahl-Leiste lassen
+  const bar = $("selBar"), below = bar.hidden ? 16 : bar.offsetHeight + 26;
+  const sheet = parseFloat(stage.style.getPropertyValue("--sheet-h")) || 0;
+  const free = stage.clientHeight - sheet - tools.offsetTop - below;   // unten Platz für Glas-Bereich und Auswahl-Leiste lassen
   if (tools.offsetHeight > free) tools.classList.add("compact");   // erst etwas kleiner, bevor sie in zwei Spalten umbricht
   if (tools.offsetHeight > free) {
     const btn = tools.querySelector(".tool").offsetHeight + 8;
@@ -2712,7 +2804,14 @@ function layoutTools() {   // Knopfleiste an die Höhe der 3D-Ansicht anpassen
     tools.classList.add("grid");
   }
 }
-new ResizeObserver(() => { state.dirty = true; layoutTools(); }).observe($("stage"));
+function syncSheetVars() {
+  const st = $("stage"), sr = st.getBoundingClientRect(), pr = $("panel").getBoundingClientRect();
+  const sheetH = wideMQ.matches ? 0 : Math.max(0, sr.bottom - pr.top), sideW = wideMQ.matches ? Math.max(0, sr.right - pr.left) : 0;
+  st.style.setProperty("--sheet-h", sheetH + "px"); st.style.setProperty("--side-w", sideW + "px");
+  placeLens();
+}
+new ResizeObserver(() => { state.dirty = true; syncSheetVars(); layoutTools(); }).observe($("stage"));
+new ResizeObserver(() => { state.dirty = true; syncSheetVars(); layoutTools(); }).observe($("panel"));
 
 // Farben
 const COLORS = [["Bernstein","#f2a541"],["Weiß","#eeeeea"],["Schwarz","#2b2d31"],["Grau","#8c9096"],["Rot","#d6403a"],["Orange","#ee7a2b"],["Gelb","#f2cf3c"],["Grün","#3fae5c"],["Blau","#2f6fd6"],["Türkis","#26a6a6"],["Lila","#8a55c9"],["Pink","#e66aa6"],["Holz","#b58553"],["Silber","#c5cbd3"]];
@@ -2730,7 +2829,7 @@ function setColor(hex) { state.color = hexToRgb(hex); const cur = rgbToHex(state
 $("gloss").value = Math.round(state.gloss * 100); $("glossOut").textContent = $("gloss").value + " %";
 $("gloss").addEventListener("input", (e) => { state.gloss = e.target.value / 100; $("glossOut").textContent = e.target.value + " %"; state.dirty = true; persist(); });
 document.querySelectorAll("#bgSeg .btn").forEach(b => b.addEventListener("click", () => setBg(b.dataset.bg)));
-function setBg(bg) { state.bg = bg; $("stage").dataset.bg = bg; state.dirty = true; document.querySelectorAll("#bgSeg .btn").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.bg === bg))); buildBed(); persist(); }
+function setBg(bg) { state.bg = bg; $("stage").dataset.bg = bg; document.body.dataset.bg = bg; state.dirty = true; document.querySelectorAll("#bgSeg .btn").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.bg === bg))); buildBed(); persist(); }
 
 // Ansicht
 const bindSwitch = (id, key, after) => $(id).addEventListener("change", (e) => { state[key] = e.target.checked; if (after) after(); state.dirty = true; });

@@ -9,15 +9,13 @@ let fails = 0; const check = (n, c, g) => { if (!c) { fails++; console.log("FEHL
 const V = (f, a) => p.evaluate(f, a);
 const ptr = (list) => V((list) => { const c = document.getElementById("gl");
   for (const [t, x, y] of list) c.dispatchEvent(new PointerEvent(t, { pointerId: 5, clientX: x, clientY: y, bubbles: true, pointerType: "touch", isPrimary: true, button: 0 })); }, list);
-// Weltpunkt (Modellkoordinaten) → Bildschirm, gleiche Kamera wie draw()
-const screen = (P) => V((P) => {
-  const s = __viewer.state.scale, c = __viewer.state.cam; P = P.map(v => v * s);
-  const e = [c.target[0] + c.dist * Math.cos(c.phi) * Math.cos(c.theta), c.target[1] + c.dist * Math.cos(c.phi) * Math.sin(c.theta), c.target[2] + c.dist * Math.sin(c.phi)];
-  const sub = (a, b) => a.map((v, k) => v - b[k]), dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-  const cr = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]], nm = (a) => { const l = Math.hypot(...a); return a.map(v => v / l); };
-  const f = nm(sub(c.target, e)), r = nm(cr(f, [0, 0, 1])), u = cr(r, f), q = sub(P, e), dz = dot(q, f);
-  const t = Math.tan(20 * Math.PI / 180), rect = document.getElementById("gl").getBoundingClientRect(), asp = rect.width / rect.height;
-  return [rect.left + (dot(q, r) / dz / t / asp + 1) / 2 * rect.width, rect.top + (1 - dot(q, u) / dz / t) / 2 * rect.height];
+// Weltpunkt (Modellkoordinaten) → Bildschirm: dieselbe Matrix wie der letzte gezeichnete Frame (inkl. Versatz der Glas-Bedienfläche)
+const screen = (P) => V(async (P) => {
+  __viewer.state.dirty = true; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const vp = __viewer.state.lastVP, s = __viewer.state.scale, [x, y, z] = P.map(v => v * s);
+  const cx = vp[0]*x + vp[4]*y + vp[8]*z + vp[12], cy = vp[1]*x + vp[5]*y + vp[9]*z + vp[13], cw = vp[3]*x + vp[7]*y + vp[11]*z + vp[15];
+  const r = document.getElementById("gl").getBoundingClientRect();
+  return [r.left + (cx / cw * 0.5 + 0.5) * r.width, r.top + (0.5 - cy / cw * 0.5) * r.height];
 }, P);
 const partCenter = (i) => V((i) => { const m = __viewer.state.mesh, pt = m.parts[i]; const mn = [1e9,1e9,1e9], mx = [-1e9,-1e9,-1e9];
   for (let k = pt.start; k < pt.end; k += 3) for (let a = 0; a < 3; a++) { mn[a] = Math.min(mn[a], m.pos[k+a]); mx[a] = Math.max(mx[a], m.pos[k+a]); }

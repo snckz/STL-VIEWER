@@ -9,17 +9,14 @@ let fails = 0; const check = (n, c, g) => { if (!c) { fails++; console.log("FEHL
 await p.setInputFiles("#fileInput", ["test/cube20.stl", "test/tall.stl", "test/cube.obj"]); await p.waitForTimeout(800);
 await p.evaluate(() => { toast.hidden = true; hint.classList.add("gone"); });
 // Bildschirmposition der Mitte eines Teils berechnen (gleiche Kamera wie draw())
-const screenOf = (i) => p.evaluate((i) => {
+const screenOf = (i) => p.evaluate(async (i) => {
+  __viewer.state.dirty = true; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   const m = __viewer.state.mesh, pt = m.parts[i], s = __viewer.state.scale; let x = 0, y = 0, z = 0, n = 0;
   for (let k = pt.start; k < pt.end; k += 3) { x += m.pos[k]; y += m.pos[k + 1]; z += m.pos[k + 2]; n++; }
-  const P = [x / n * s, y / n * s, z / n * s], c = __viewer.state.cam;
-  const e = [c.target[0] + c.dist * Math.cos(c.phi) * Math.cos(c.theta), c.target[1] + c.dist * Math.cos(c.phi) * Math.sin(c.theta), c.target[2] + c.dist * Math.sin(c.phi)];
-  const sub = (a, b) => a.map((v, k) => v - b[k]), dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-  const cr = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]], nm = (a) => { const l = Math.hypot(...a); return a.map(v => v / l); };
-  const f = nm(sub(c.target, e)), r = nm(cr(f, [0, 0, 1])), u = cr(r, f), q = sub(P, e), dz = dot(q, f);
-  const t = Math.tan(20 * Math.PI / 180), rect = document.getElementById("gl").getBoundingClientRect(), asp = rect.width / rect.height;
-  const nx = dot(q, r) / dz / t / asp, ny = dot(q, u) / dz / t;
-  return [rect.left + (nx + 1) / 2 * rect.width, rect.top + (1 - ny) / 2 * rect.height];
+  x = x / n * s; y = y / n * s; z = z / n * s; const vp = __viewer.state.lastVP;   // dieselbe Matrix wie der letzte Frame
+  const cx = vp[0]*x + vp[4]*y + vp[8]*z + vp[12], cy = vp[1]*x + vp[5]*y + vp[9]*z + vp[13], cw = vp[3]*x + vp[7]*y + vp[11]*z + vp[15];
+  const rect = document.getElementById("gl").getBoundingClientRect();
+  return [rect.left + (cx / cw * 0.5 + 0.5) * rect.width, rect.top + (0.5 - cy / cw * 0.5) * rect.height];
 }, i);
 const tap = async (x, y) => p.evaluate(([x, y]) => { const c = document.getElementById("gl");
   const ev = (t) => c.dispatchEvent(new PointerEvent(t, { pointerId: 3, clientX: x, clientY: y, bubbles: true, pointerType: "touch", isPrimary: true }));
