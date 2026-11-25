@@ -31,13 +31,13 @@ check("Messmodus aktiv", await V(() => !modeBar.hidden && measureBtn.getAttribut
 await p.click("#tab-look"); await p.click("#tab-model");   // Ansicht bleibt
 // Würfel liegt nach placeOnBed bei x,y ∈ [-10,10], z ∈ [0,20] → zwei Punkte auf der Oberseite
 await V(() => { __viewer.state.cam.theta = -Math.PI / 2; __viewer.state.cam.phi = Math.PI / 2 - 0.01; __viewer.state.dirty = true; });
-let a = await screen([-8, 0, 20]), c2 = await screen([8, 0, 20]);
+let a = await screen([-5, 0, 20]), c2 = await screen([5, 0, 20]);   // weit genug von den Kanten, damit nichts einrastet
 await ptr([["pointerdown", ...a], ["pointerup", ...a]]); await p.waitForTimeout(100);
 check("Erster Punkt gesetzt", await V(() => __viewer.state.measure.pts.length === 1 && measureMain.textContent.includes("Zweiten")), null);
 await p.waitForTimeout(400);
 await ptr([["pointerdown", ...c2], ["pointerup", ...c2]]); await p.waitForTimeout(200);
 const meas = await V(() => ({ main: measureMain.textContent, sub: measureSub.textContent, label: !measureLabel.hidden }));
-check("Abstand ≈ 16 mm gemessen", /^1[56],\d\d mm$/.test(meas.main) && meas.label, meas);
+check("Abstand ≈ 10 mm gemessen", /^(9,9\d|10,0\d) mm$/.test(meas.main) && meas.label, meas);
 if (shots) await p.screenshot({ path: shots + "/30_measure.png" });
 await p.click("#measureDone");
 check("Messmodus beendet", await V(() => modeBar.hidden && measureLabel.hidden), null);
